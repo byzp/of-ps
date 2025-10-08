@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+/tmp
+/proto/OverField_pb2.py
