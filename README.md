@@ -1,5 +1,6 @@
 # of-ps
 of emu server
 
-- 主要逻辑和proto来自[OverFieldPS](https://github.com/qinfyy/OverFieldPS)
-- 尚不可用
+- 含有大量硬编码数据
+- 处于早期开发阶段
+- 

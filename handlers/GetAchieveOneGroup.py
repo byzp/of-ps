@@ -1,0 +1,45 @@
+from network.packet_handler import PacketHandler, packet_handler
+from network.cmd_id import CmdId
+import logging
+
+import proto.OverField_pb2 as GetAchieveOneGroupRsp_pb2
+import proto.OverField_pb2 as GetAchieveOneGroupReq_pb2
+import proto.OverField_pb2 as StatusCode_pb2
+from utils.bin import bin
+
+logger = logging.getLogger(__name__)
+
+
+@packet_handler(CmdId.GetAchieveOneGroupReq)
+class GetArchiveInfoHandler(PacketHandler):
+    def handle(self, session, data: bytes, packet_id: int):
+        req = GetAchieveOneGroupReq_pb2.GetAchieveOneGroupReq()
+        req.ParseFromString(data)
+
+        rsp = GetAchieveOneGroupRsp_pb2.GetAchieveOneGroupRsp()
+        rsp.status = StatusCode_pb2.StatusCode_OK
+        # session.send(CmdId.GetAchieveOneGroupRsp, rsp) #1761,1762
+
+        i = req.group_id
+        if i == 60010000:
+            session.sbin(1762, bin["1762-1"], False, packet_id)
+        if i == 60020000:
+            session.sbin(1762, bin["1762-2"], False, packet_id)
+        if i == 60030000:
+            session.sbin(1762, bin["1762-3"], False, packet_id)
+        if i == 60040000:
+            session.sbin(1762, bin["1762-4"], False, packet_id)
+        if i == 60050000:
+            session.sbin(1762, bin["1762-5"], False, packet_id)
+        if i == 60060000:
+            session.sbin(1762, bin["1762-6"], False, packet_id)
+        if i == 60070000:
+            session.sbin(1762, bin["1762-7"], False, packet_id)
+        if i == 60080000:
+            session.sbin(1762, bin["1762-8"], False, packet_id)
+        if i == 60090000:
+            session.sbin(1762, bin["1762-9"], False, packet_id)
+        if i == 60100000:
+            session.sbin(1762, bin["1762-10"], False, packet_id)
+        if i == 60110000:
+            session.sbin(1762, bin["1762-11"], False, packet_id)

@@ -3,20 +3,29 @@ from network.cmd_id import CmdId
 import proto.OverField_pb2 as VerifyLoginTokenReq_pb2
 import proto.OverField_pb2 as VerifyLoginTokenRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
+import utils.db as db
 
 
 @packet_handler(CmdId.VerifyLoginTokenReq)
 class VerifyLoginTokenHandler(PacketHandler):
-    def handle(self, session, data: bytes):
+    def handle(self, session, data: bytes, packet_id: int):
         req = VerifyLoginTokenReq_pb2.VerifyLoginTokenReq()
         req.ParseFromString(data)
-        
+
         rsp = VerifyLoginTokenRsp_pb2.VerifyLoginTokenRsp()
+        rsp.status = StatusCode_pb2.StatusCode_OK
+        user_id = db.get_user_id(req.sdk_uid)
+        if user_id:
+            session.user_id = user_id
+        else:
+            rsp.status = StatusCode_pb2.StatusCode_FAIL
+            session.send(CmdId.VerifyLoginTokenRsp, rsp)
+            return
+        rsp.user_id = user_id
         rsp.account_type = req.account_type
-        rsp.device_uuid = req.device_uuid
-        rsp.is_server_open = True
         rsp.sdk_uid = req.sdk_uid
-        rsp.status = StatusCode_pb2.StatusCode_Ok
-        rsp.user_id = 1234567
-        
-        session.send(CmdId.VerifyLoginTokenRsp, rsp)
+        rsp.is_server_open = True
+        rsp.time_left = 4294967295
+        rsp.device_uuid = req.device_uuid
+
+        session.send(CmdId.VerifyLoginTokenRsp, rsp, True, packet_id)

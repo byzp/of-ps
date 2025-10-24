@@ -7,25 +7,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 @packet_handler(CmdId.PlayerPingReq)
 class PlayerPingHandler(PacketHandler):
-    """
-      request:  PlayerPingReq { int64 client_time_ms }
-      response: PlayerPingRsp { StatusCode status; int64 client_time_ms; int64 server_time_ms }
-    """
-    def handle(self, session, data: bytes):
-        try:
-            req = OverField_pb2.PlayerPingReq()
-            req.ParseFromString(data)
+    def handle(self, session, data: bytes, packet_id: int):
+        req = OverField_pb2.PlayerPingReq()
+        req.ParseFromString(data)
 
-            rsp = OverField_pb2.PlayerPingRsp()
-            rsp.client_time_ms = req.client_time_ms
-            rsp.server_time_ms = int(time.time() * 1000)
+        rsp = OverField_pb2.PlayerPingRsp()
+        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp.client_time_ms = req.client_time_ms
+        rsp.server_time_ms = int(time.time() * 1000)
 
-            rsp.status = StatusCode_pb2.StatusCode_Ok
-
-            session.send(CmdId.PlayerPingRsp, rsp)
-
-        except Exception as e:
-            logger.exception("failed to handle PlayerPingReq")
-            print(str(e))
+        session.send(CmdId.PlayerPingRsp, rsp, True, packet_id)
