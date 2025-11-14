@@ -7,7 +7,7 @@ import utils.db as db
 
 
 @packet_handler(CmdId.VerifyLoginTokenReq)
-class VerifyLoginTokenHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = VerifyLoginTokenReq_pb2.VerifyLoginTokenReq()
         req.ParseFromString(data)
@@ -17,6 +17,7 @@ class VerifyLoginTokenHandler(PacketHandler):
         user_id = db.get_user_id(req.sdk_uid)
         if user_id:
             session.user_id = user_id
+            session.player_name = db.get_player_name(user_id)
         else:
             rsp.status = StatusCode_pb2.StatusCode_FAIL
             session.send(CmdId.VerifyLoginTokenRsp, rsp)
@@ -28,4 +29,4 @@ class VerifyLoginTokenHandler(PacketHandler):
         rsp.time_left = 4294967295
         rsp.device_uuid = req.device_uuid
 
-        session.send(CmdId.VerifyLoginTokenRsp, rsp, True, packet_id)
+        session.send(CmdId.VerifyLoginTokenRsp, rsp, True, packet_id) #1001,1002

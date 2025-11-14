@@ -6,7 +6,7 @@ import proto.OverField_pb2 as StatusCode_pb2
 
 
 @packet_handler(CmdId.PlayerAbilityListReq)
-class PlayerAbilityListHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
 
         rsp = PlayerAbilityListRsp_pb2.PlayerAbilityListRsp()

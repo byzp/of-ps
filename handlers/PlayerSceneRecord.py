@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 @packet_handler(CmdId.PlayerSceneRecordReq)
-class PlayerSceneRecordHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = OverField_pb2.PlayerSceneRecordReq()
         req.ParseFromString(data)
@@ -29,8 +29,8 @@ class PlayerSceneRecordHandler(PacketHandler):
         for k, v in get_recorder(session.scene_id, session.channel_id).items():
             tmp = rsp.data.add()
             tmp.player_id = k
-            tmp.data.add().parseFromString(v)
-        print(rsp)
+            tmp.data.add().ParseFromString(v)
+
         session.send(
             CmdId.PlayerSceneSyncDataNotice, rsp, False, packet_id
         )  # 1203,1206

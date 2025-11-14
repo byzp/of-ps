@@ -7,7 +7,7 @@ from utils.bin import bin
 
 
 @packet_handler(CmdId.ManualListReq)
-class PosterIllustrationListHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         rsp = ManualListRsp_pb2.ManualListRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK

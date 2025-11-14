@@ -7,7 +7,7 @@ import utils.db as db
 
 
 @packet_handler(CmdId.SupplyBoxInfoReq)
-class PosterIllustrationListHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         rsp = SupplyBoxInfoRsp_pb2.SupplyBoxInfoRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 @packet_handler(CmdId.GetAchieveOneGroupReq)
-class GetArchiveInfoHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = GetAchieveOneGroupReq_pb2.GetAchieveOneGroupReq()
         req.ParseFromString(data)

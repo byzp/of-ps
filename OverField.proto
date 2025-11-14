@@ -14321,32 +14321,423 @@ enum PhotoOperateType {
 }
 
 message PhotoShareCopyFashionDyeReq {
-  int64 code = 1;
-  PhotoShareOutfit outfit = 2;
-  uint32 activity_id = 3;
+    int64 code = 1;
+    PhotoShareOutfit outfit = 2;
+    uint32 activity_id = 3;
 }
 
 message PhotoShareCopyFashionDyeRsp {
-  StatusCode status = 1;
+    StatusCode status = 1;
 }
 
 message FreezePlayerActionNotice {
-  StatusCode status = 1;
-  uint32 verification_code = 2;
-}
+    StatusCode status = 1;
+    uint32 verification_code = 2;
+    }
 
 message UnfreezePlayerActionReq {
-  uint32 verification_code = 1;
+    uint32 verification_code = 1;
 }
 
 message UnfreezePlayerActionRsp {
-  StatusCode status = 1;
+    StatusCode status = 1;
 }
 
 message UploadFGBytesNotice {
-  StatusCode status = 1;
+    StatusCode status = 1;
 }
 
 message UploadFGBytesReq {
-  bytes info = 1;
+    bytes info = 1;
+}
+
+message UploadFGBytesRsp {
+    StatusCode status = 1;
+}
+
+message CollectMoonInfoUpdateNotice {
+    StatusCode status = 1;
+}
+
+message DailyTaskExchangeReq {
+    bool exchange_all = 1;
+}
+
+message OutfitHideSwitchReq {
+    uint32 char_id = 1;
+    OutfitHideInfo hide_info = 2;
+}
+
+message OutfitHideSwitchRsp {
+    StatusCode status = 1;
+    uint32 char_id = 2;
+    OutfitHideInfo hide_info = 3;
+}
+
+message UpdatePlayerAppearanceReq {
+    PlayerAppearance appearance = 1;
+}
+
+message UpdatePlayerAppearanceRsp {
+    StatusCode status = 1;
+    PlayerAppearance appearance = 2;
+}
+
+message ActivityTurntableDataNotice {
+    StatusCode status = 1;
+    repeated PlayerActivityTurntable activities = 2;
+}
+
+message PlayerActivityTurntable {
+    uint32 activity_id = 1;
+    int64 open_time = 2;
+    int64 close_time = 3;
+    map<uint32, TurntableItem> items = 4;
+    bool single_discount = 5;
+}
+
+message TurntableItem {
+    uint32 index = 1;
+    uint32 item_id = 2;
+    uint32 item_num = 3;
+    int32 remain_count = 4;
+    bool is_special = 5;
+}
+
+// 消息ID: 2635
+message ActivityTurntableDrawReq {
+    uint32 activity_id = 1;
+    uint32 draw_times = 2;
+}
+
+// 消息ID: 2636
+message ActivityTurntableDrawRsp {
+    StatusCode status = 1;
+    uint32 activity_id = 2;
+    repeated uint32 reward_indexes = 3;
+    repeated ItemDetail rewards = 4;
+}
+
+message ActivityTurntableRecordReq {
+    uint32 activity_id = 1;
+    uint32 page = 2;
+}
+
+message ActivityTurntableRecordRsp {
+    StatusCode status = 1;
+    uint32 activity_id = 2;
+    uint32 page = 3;
+    uint32 total_page = 4;
+    repeated TurntableDrawRecord records = 5;
+}
+
+message TurntableDrawRecord {
+    uint32 index = 1;
+    uint32 item_id = 2;
+    uint32 item_num = 3;
+    int64 draw_time = 4;
+}
+
+message BossRushQuestRewardRsp {
+    StatusCode status = 1;
+    uint32 season_id = 2;
+    uint32 achieve_id = 3;
+    repeated ItemDetail rewards = 4;
+}
+
+
+// 消息ID: 2531
+message BuyGameCoinReq {
+    uint32 buy_count = 1;
+}
+
+// 消息ID: 2532
+message BuyGameCoinRsp {
+    StatusCode status = 1;
+    repeated ItemDetail item_details = 2;
+}
+
+message ChangeHideTypeReq {
+    HideType hide_type = 1;
+}
+
+// 消息ID: 2318
+message ChangeHideTypeRsp {
+    StatusCode status = 1;
+    uint32 hide_value = 2;
+}
+
+enum HideType {
+    TYPE_NONE_none = 0;
+    TYPE_NONE_account_type = 1;
+    TYPE_NONE_sign_type = 2;
+    TYPE_NONE_abyss_rank_type = 4;
+}
+
+
+// 消息ID: 2603
+message DailyTaskExchangeRsp {
+    StatusCode status = 1;
+    repeated ItemDetail rewards = 2;
+    uint32 today_converted = 3;
+    uint32 exchange_times_left = 4;
+}
+
+message DailyTaskUpdateNotice {
+    StatusCode status = 1;
+    uint32 today_converted = 3;
+    uint32 exchange_times_left = 4;
+    uint32 progress = 5;
+}
+
+message GMRecommendChannelNotice {
+    StatusCode status = 1;
+    repeated GMRecommendChannel channel_list = 2;
+}
+
+message GMRecommendChannel {
+    uint32 index = 1;
+    uint32 channel_id = 2;
+    string image_url = 3;
+    string image_id = 4;
+    string title = 5;
+}
+
+// 消息ID: 2320
+message GameRefreshNotice {
+    StatusCode status = 1;
+}
+
+message GardenFurnitureApplySchemeReq {
+    uint32 scheme_id = 1;
+}
+
+message GetExpressAddressReq {
+}
+
+message GetExpressAddressRsp {
+    StatusCode status = 1;
+    string name = 2;
+    string phone = 3;
+    string address = 4;
+    repeated BaseItem items = 5;
+    string order_no = 6;
+}
+
+// 消息ID: 2469
+message MPBeaconPlayerReadyReq {
+    uint32 team_id = 1;
+    bool is_ready = 2;
+}
+
+// 消息ID: 2470
+message MPBeaconPlayerReadyRsp {
+    StatusCode status = 1;
+}
+
+message MPGameStartReq {
+}
+
+message MPGameStartRsp {
+    StatusCode status = 1;
+    uint32 team_id = 2;
+}
+
+message MPGameWeaponUpdateNotice {
+    StatusCode status = 1;
+    uint32 instance_id = 2;
+}
+
+// 消息ID: 2519
+message MPPlayRoomExitNotice {
+    StatusCode status = 1;
+    uint32 team_id = 2;
+    uint32 player_id = 3;
+}
+
+message MPPlayRoomExitReq {
+}
+
+message MPPlayRoomExitRsp {
+    StatusCode status = 1;
+    uint32 team_id = 2;
+}
+
+message MPPlayRoomRewardInfoReq {
+}
+
+message MPPlayRoomRewardInfoRsp {
+    StatusCode status = 1;
+    uint32 score_day_remain = 2;
+    uint32 score_week_remain = 3;
+    uint32 extra_bonus_day_remain = 4;
+    uint32 extra_bonus_week_remain = 5;
+    uint32 extra_mag_day_remain = 6;
+    uint32 extra_mag_week_remain = 7;
+}
+
+// 消息ID: 2514
+message MPPlayRoomSettlementNotice {
+    StatusCode status = 1;
+    MPPlayRoomRankInfo rank = 2;
+    uint32 gameplay_id = 3;
+    int32 play_mode = 4;
+    repeated ItemDetail rewards = 5;
+    repeated ItemDetail extra_rewards = 6;
+    int64 total_consume_time = 7;
+}
+
+message MPRoomEnterNotice {
+    StatusCode status = 1;
+    MPPlayRoomInfo room_info = 2;
+    MPGameModeInfo game_mode_info = 3;
+}
+
+message MPTeamRenameNotice {
+    StatusCode status = 1;
+    uint32 team_id = 2;
+    string team_name = 3;
+}
+
+// 消息ID: 1454
+message ModuleCloseNotice {
+    StatusCode status = 1;
+    repeated CloseModuleData data = 2;
+}
+
+message CloseModuleData {
+    uint32 module_id = 1;
+    repeated uint32 event_id = 2;
+}
+
+// 消息ID: 2106
+message PackNotShowNotice {
+    StatusCode status = 1;
+    repeated ItemDetail items = 2;
+}
+
+message PhotoSharePaymentAddUploadGridReq {
+}
+
+message PhotoSharePaymentAddUploadGridRsp {
+    StatusCode status = 1;
+}
+
+// 消息ID: 2462
+message PlayerMPGameNotice {
+    StatusCode status = 1;
+    MPTeamDetail mp_team = 2;
+    MPPlayRoomInfo mp_room = 3;
+    MPBeacon beacon = 4;
+}
+
+// 消息ID: 1781
+message SetFriendExtInfoReq {
+    uint32 player_id = 1;
+    repeated SetFriendExtInfoData data = 2;
+}
+
+// 消息ID: 1782
+message SetFriendExtInfoRsp {
+    StatusCode status = 1;
+    uint32 player_id = 2;
+    repeated SetFriendExtInfoData data = 3;
+}
+
+message SetFriendExtInfoData {
+    uint32 type = 1;
+    string value = 3;
+    uint32 int_value = 4;
+}
+
+// 消息ID: 2573
+message UploadExpressAddressReq {
+    string name = 1;
+    string phone = 2;
+    string address = 3;
+    repeated BaseItem items = 4;
+}
+
+// 消息ID: 2574
+message UploadExpressAddressRsp {
+    StatusCode status = 1;
+    repeated BaseItem items = 2;
+    string order_no = 3;
+}
+
+// 消息ID: 2688
+message WishListBuyNotice {
+    StatusCode status = 1;
+    uint32 shop_id = 2;
+    ShopGrid grids = 3;
+}
+
+// 消息ID: 2689
+message WishListBuyReq {
+    uint32 player_id = 1;
+    WishListInfo info = 2;
+}
+
+message WishListInfo {
+    uint32 shop_id = 1;
+    uint32 grid_id = 2;
+    uint32 pool_id = 3;
+    int64 create_time = 4;
+}
+
+// 消息ID: 2690
+message WishListBuyRsp {
+    StatusCode status = 1;
+    uint32 player_id = 2;
+    WishListInfo info = 3;
+    uint32 week_send_count = 4;
+}
+
+// 消息ID: 2685
+message WishListByFriendIdReq {
+    uint32 player_id = 1;
+}
+
+// 消息ID: 2686
+message WishListByFriendIdRsp {
+    StatusCode status = 1;
+    uint32 player_id = 2;
+    repeated WishListInfo wish_list = 3;
+    uint32 week_send_count = 4;
+}
+
+
+// 消息ID: 2683
+message WishListByShopIdReq {
+  uint32 shop_id = 1;
+  uint32 grid_id = 2;
+}
+
+// 消息ID: 2684
+message WishListByShopIdRsp {
+  StatusCode status = 1;
+  repeated FriendBriefInfo info = 2;
+  uint32 week_send_count = 3;
+}
+
+// 消息ID: 2681
+message WishListOperateReq {
+  WishListOperateType operate_type = 1;
+  uint32 shop_id = 2;
+  uint32 grid_id = 3;
+}
+
+// 消息ID: 2682
+message WishListOperateRsp {
+  StatusCode status = 1;
+  WishListOperateType operate_type = 2;
+  uint32 shop_id = 3;
+  uint32 grid_id = 4;
+  uint32 pool_id = 5;
+}
+
+enum WishListOperateType {
+    WISH_LIST_OPERATE_TYPE_NONE = 0;
+    WISH_LIST_OPERATE_TYPE_ADD = 1;
+    WISH_LIST_OPERATE_TYPE_DEL = 2;
 }

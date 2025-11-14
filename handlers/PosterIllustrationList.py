@@ -6,7 +6,7 @@ from utils.bin import bin
 
 
 @packet_handler(CmdId.PosterIllustrationListReq)
-class PosterIllustrationListHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         rsp = OverField_pb2.PosterIllustrationListRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK

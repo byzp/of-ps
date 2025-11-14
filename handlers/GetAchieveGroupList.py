@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 
 
 @packet_handler(CmdId.GetAchieveGroupListReq)
-class GetArchiveInfoHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         rsp = GetAchieveGroupListRsp_pb2.GetAchieveGroupListRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        # session.send(CmdId.GenericGameBReq, rsp) #
-        session.sbin(1758, bin["1758"], False, packet_id)
+        session.send(CmdId.GetAchieveGroupListRsp, rsp, False, packet_id)
+        # session.sbin(1758, bin["1758"], False, packet_id)

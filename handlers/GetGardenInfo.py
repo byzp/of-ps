@@ -8,7 +8,7 @@ import utils.db as db
 
 
 @packet_handler(CmdId.GetGardenInfoReq)
-class PosterIllustrationListHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         rsp = GetGardenInfoRsp_pb2.GetGardenInfoRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK

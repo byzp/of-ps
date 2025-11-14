@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 @packet_handler(CmdId.WishListByFriendIdReq)
-class GetArchiveInfoHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         rsp = GetArchiveInfoRsp_pb2.GetArchiveInfoRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK

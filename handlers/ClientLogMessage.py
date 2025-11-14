@@ -7,7 +7,7 @@ import proto.OverField_pb2 as StatusCode_pb2
 
 
 @packet_handler(CmdId.ClientLogMessageReq)
-class PosterIllustrationListHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = ClientLogMessageReq_pb2.ClientLogMessageReq()
         req.ParseFromString(data)

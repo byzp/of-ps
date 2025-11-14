@@ -14,12 +14,17 @@ logger = logging.getLogger(__name__)
 class GameSession:
     HEADER_LENGTH = 2
     user_id = None
+    player_name = None
     scene_id = 1
     channel_id = 1
+    chat_channel_id = 1
     seq_id = 1
+    avatar_id = 41101  # head
+    badge_id = 0
 
-    def __init__(self, client_socket: socket.socket):
+    def __init__(self, client_socket: socket.socket, address: str):
         self.socket = client_socket
+        self.address = address
         self.buffer = BytesIO()
         self.running = True
 
@@ -38,6 +43,8 @@ class GameSession:
             logger.error(f"Connection error: {e}")
         finally:
             self.close()
+            self.running = False
+            logger.info(f"Socket closed: {self.address}")
 
     def process_buffer(self):
         """Process buffered data"""
@@ -66,7 +73,7 @@ class GameSession:
                 body_data = data[self.HEADER_LENGTH + header_len : total_length]
                 body_data = self._process_body(packet_head.flag, body_data)
 
-                logger.info(f"Received message: {packet_head.msg_id}")
+                logger.debug(f"Received message: {packet_head.msg_id}")
                 PacketFactory.process_packet(
                     packet_head.msg_id, body_data, packet_head.packet_id, self
                 )
@@ -115,8 +122,11 @@ class GameSession:
         head_data = packet_head.SerializeToString()
         head_len = struct.pack(">H", len(head_data))
 
-        self.socket.sendall(head_len + head_data + body_data)
-        logger.info(f"Sending message: {cmd_id}")
+        try:
+            self.socket.sendall(head_len + head_data + body_data)
+        except Exception as e:
+            print(e)
+        logger.debug(f"Sending message: {cmd_id}")
 
     def sbin(self, cmd_id: int, path: str, sync: bool, packet_id: int):
         """Send protobuf message to client"""
@@ -175,8 +185,11 @@ class GameSession:
             stop=0
             return
         """
-        self.socket.sendall(head_len + head_data + body_data)
-        logger.info(f"Sending message: {cmd_id}")
+        try:
+            self.socket.sendall(head_len + head_data + body_data)
+        except Exception as e:
+            print(e)
+        logger.debug(f"Sending message: {cmd_id}")
 
     def close(self):
         """Close connection"""

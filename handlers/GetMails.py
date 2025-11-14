@@ -7,7 +7,7 @@ from utils.bin import bin
 
 
 @packet_handler(CmdId.GetMailsReq)
-class PlayerAbilityListHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
 
         rsp = GetMailsRsp_pb2.GetMailsRsp()

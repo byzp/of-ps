@@ -7,7 +7,7 @@ from utils.res_loader import res
 
 
 @packet_handler(CmdId.WorldLevelAchieveListReq)
-class WorldLevelAchieveListHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         rsp = WorldLevelAchieveList_pb2.WorldLevelAchieveListRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK

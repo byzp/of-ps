@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 @packet_handler(CmdId.PlayerPingReq)
-class PlayerPingHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = OverField_pb2.PlayerPingReq()
         req.ParseFromString(data)

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 @packet_handler(CmdId.ChangeMusicalItemReq)
-class GetArchiveInfoHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         rsp = GetArchiveInfoRsp_pb2.GetArchiveInfoRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -26,4 +26,4 @@ class GetArchiveInfoHandler(PacketHandler):
         server_data_entry.action_type = 23
         server_data_entry.player.CopyFrom(Scene_pb2.SceneServerData().player)
         # session.send(CmdId.ServerSceneSyncDataNotice, notice)
-        session.sbin(1208, bin["1208"], False, packet_id)
+        session.sbin(1208, bin["1208"], False, packet_id)  # TODO

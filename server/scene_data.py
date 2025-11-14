@@ -2,17 +2,21 @@ import time
 import threading
 
 scene = {}
+action = {}
+chat_msg = {"default": {}, "chat_room": {}}
 
-sync_lock = threading.Lock()
+lock_scene = threading.Lock()
+lock_action = threading.Lock()
+lock_chat_msg = threading.Lock()
 
 
 def get_recorder(scene_id, channel_id):
-    with sync_lock:
+    with lock_scene:
         return scene[scene_id][channel_id]
 
 
 def up_recorder(scene_id, channel_id, user_id, rec_data):
-    with sync_lock:
+    with lock_scene:
         global scene
         if scene.get(scene_id) is None:
             scene[scene_id] = {}
@@ -24,6 +28,28 @@ def up_recorder(scene_id, channel_id, user_id, rec_data):
             scene[scene_id][channel_id][user_id] = rec_data
             return
         scene[scene_id][channel_id][user_id] = rec_data
+
+
+def up_action(user_id, player_name, scene_id, channel_id, action_id):
+    with lock_action:
+        global action
+        action[user_id] = [scene_id, channel_id, action_id, player_name]
+
+
+def up_chat_msg(type, user_id, text, expression, scene_id, channel_id):
+    with lock_chat_msg:
+        # up_chat_msg(req.type, session.player_id, req.text, req.expression, session.scene_id, session.channel_id)
+        global chat_msg
+        if type == 0:
+            if chat_msg["default"].get(scene_id) is None:
+                chat_msg["default"][scene_id] = {}
+        with lock_chat_msg:
+            if type == 0:
+                if expression == 0:
+                    chat_msg["default"][scene_id][channel_id] == [
+                        type,
+                        user_id,
+                    ]
 
 
 def get_scene_id(user_id):

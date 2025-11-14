@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 @packet_handler(CmdId.ShopInfoReq)
-class GetArchiveInfoHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = ShopInfoReq_pb2.ShopInfoReq()
         req.ParseFromString(data)

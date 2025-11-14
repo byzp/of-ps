@@ -7,7 +7,7 @@ from utils.bin import bin
 
 
 @packet_handler(CmdId.SetArchiveInfoReq)
-class PosterIllustrationListHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         rsp = SetArchiveInfoRsp_pb2.SetArchiveInfoRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK

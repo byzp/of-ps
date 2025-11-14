@@ -8,10 +8,11 @@ import proto.OverField_pb2 as PlayerLoginReq_pb2
 import proto.OverField_pb2 as PlayerLoginRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 import utils.db as db
+import server.scene_data as scene_data
 
 
 @packet_handler(CmdId.PlayerLoginReq)
-class PlayerLoginHandler(PacketHandler):
+class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = PlayerLoginReq_pb2.PlayerLoginReq()
         req.ParseFromString(data)
@@ -29,7 +30,7 @@ class PlayerLoginHandler(PacketHandler):
         )  # int(datetime.now(timezone.utc).astimezone().utcoffset().total_seconds())
         rsp.player_name = db.get_player_name(user_id)
         rsp.client_log_server_token = db.get_client_log_server_token(user_id)
-        rsp.scene_id = 9999
-        rsp.channel_id = 1
+        rsp.scene_id = scene_data.get_scene_id(user_id)
+        rsp.channel_id = scene_data.get_channel_id(user_id)
 
         session.send(CmdId.PlayerLoginRsp, rsp, True, packet_id)  # 1003,1004
