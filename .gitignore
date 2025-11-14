@@ -2,6 +2,8 @@ __pycache__/
 *.pyc
 /tmp
 /proto/OverField_pb2.py
+/proto/cfg_pb2.py
+/proto/net_pb2.py
 /trash
 /resources
 /player.db
