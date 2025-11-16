@@ -27,6 +27,7 @@ class GameSession:
         self.address = address
         self.buffer = BytesIO()
         self.running = True
+        self.logged_in = False
 
     def run(self):
         """Main session loop"""

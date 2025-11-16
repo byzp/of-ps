@@ -5,6 +5,7 @@ import logging
 import pickle
 import json
 from config import Config
+import secrets
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,13 @@ if not os.path.exists(Config.DB_PATH):
             equipment_preset BLOB,
             PRIMARY KEY(user_id, character_id),
             FOREIGN KEY(user_id) REFERENCES users(user_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS sdk_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            user_token TEXT NOT NULL
         );
         
         INSERT INTO id_maps (sdk_uid, user_id) VALUES (123, 10000000);
@@ -184,6 +192,47 @@ def init_user(user_id):
     )
 
     db.commit()
+
+
+def verify_sdk_user_info(sdk_uid, login_token):
+    return True
+    cur = db.execute(
+        "SELECT id, username, user_token FROM sdk_users WHERE id = ? AND user_token = ?",
+        (
+            sdk_uid,
+            login_token,
+        ),
+    )
+    row = cur.fetchone()
+    if row:
+        return True
+    return False
+
+
+def get_sdk_user_info(username, password):
+
+    cur = db.execute(
+        "SELECT id, username, user_token FROM sdk_users WHERE username = ?",
+        (username,),
+    )
+    row = cur.fetchone()
+    if row:
+        if row[1] == password:
+            return {"id": row[0], "username": row[1], "user_token": row[2]}
+        else:
+            return None
+    else:
+
+        auth_token = secrets.token_hex(16)
+        cur = db.execute(
+            "INSERT INTO sdk_users (username, password, user_token) VALUES (?, ?, ?)",
+            (username, password, auth_token),
+        )
+        return {
+            "id": get_user_id(0),
+            "username": username,
+            "user_token": auth_token,
+        }
 
 
 def get_user_id(sdk_uid):
@@ -383,7 +432,7 @@ def get_characters(user_id):
     from utils.res_loader import res
 
     for i in res["Character"]["character"]["datas"]:
-        if i["i_d"] in [102002, 102001, 401001, 103002, 302002, 201001, 101001, 403002]:
+        if i["i_d"] in [101001, 102001, 102002, 103002, 201001, 302002, 401001, 403002]:
             continue
         if i.get("ex_spell_i_ds") is None:
             continue
@@ -397,7 +446,7 @@ def get_characters(user_id):
                     "exp": 200,
                     "star": 2,
                     "equipment_presets": [
-                        # {"weapon": 32},
+                        {"weapon": 16},
                         {"preset_index": 1},
                         {"preset_index": 2},
                     ],

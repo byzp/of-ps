@@ -1,0 +1,1 @@
+nuitka --standalone --show-memory --show-progress --output-dir=out main.py --mingw64 --include-package=handlers --include-package=utils

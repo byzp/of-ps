@@ -1,110 +1,150 @@
+from fastapi import FastAPI, Request, Response, HTTPException, status
+from fastapi.responses import JSONResponse, PlainTextResponse, FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from pathlib import Path
 import logging
-from flask import Flask, request, jsonify
 import time
+import uvicorn
 
-from config import Config
-from http_server.handlers.oauth_handler import OAuthHandler
-from http_server.handlers.login_handler import LoginHandler
 from http_server.handlers.dispatch_handler import DispatchHandler
+from http_server.handlers.oauth_handler import OAuthHandler
+import utils.db as db
 
 logger = logging.getLogger(__name__)
 
+APP_DIR = Path(__file__).resolve().parent
+WEBSTATIC_DIR = APP_DIR / "webstatic"
 
-class HTTPServer:
-    def __init__(self):
-        self.app = Flask(__name__)
-        self.setup_routes()
-        self.setup_middleware()
+app = FastAPI(title="gadget")
 
-    def setup_routes(self):
-        """Configure all routes"""
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-        # Static routes (use a named function instead of a lambda)
-        def hello_world():
-            return "hello, World"
 
-        self.app.route("/")(hello_world)
+class LoginRequest(BaseModel):
+    username: str
+    password: str
 
-        # Dispatch routes (these are methods on DispatchHandler)
-        self.app.route("/dispatch/client_hot_update", methods=["POST"])(
-            DispatchHandler.hot_update
-        )
-        self.app.route("/dispatch/region_info", methods=["POST"])(
-            DispatchHandler.region_info
-        )
 
-        def a():
-            return '{"data":[]}'
+def millis() -> int:
+    return round(time.time() * 1000)
 
-        self.app.route("/dispatch/get_notice_url_list", methods=["POST"])(a)
 
-        def b():
-            t = time.time()
-            return '{"data":[], "serverTime":' + str(round(t * 1000)) + "}}"
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.time()
+    response = await call_next(request)
+    duration = (time.time() - start) * 1000.0
+    logger.info(
+        "<< %s %s - %s (%.2f ms)",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration,
+    )
+    return response
 
-        self.app.route("/dispatch/get_notice_list", methods=["POST"])(b)
 
-        def c():
-            t = time.time()
-            return (
-                '{"code":0,"data":{"server_timestamp":'
-                + str(round(t * 1000))
-                + ',"sync_batch_size":100,"sync_interval":90},"msg":""}'
-            )
+@app.get("/", response_class=PlainTextResponse)
+async def hello_world():
+    return "hello, World"
 
-        self.app.route("/config", methods=["GET"])(c)
 
-        def cc():
-            return '{"status": true,"data": {"needLogout": 0,"needLogoutTip": 0},"message": ""}'
+@app.post("/dispatch/client_hot_update")
+async def route_client_hot_update(request: Request):
+    return JSONResponse(DispatchHandler.hot_update())
 
-        self.app.route("/onlineHeartbeat", methods=["GET"])(cc)
 
-        def d():
-            return '{"code":0}'
+@app.post("/dispatch/region_info")
+async def route_region_info(request: Request):
+    return JSONResponse(DispatchHandler.region_info())
 
-        self.app.route("/openCenter/setGameRoleInfo", methods=["POST"])(d)
 
-        def e():
-            return '{"status":true,"data":null,"message":"role up success"}'
+@app.post("/dispatch/get_notice_url_list")
+async def get_notice_url_list():
+    return JSONResponse({"data": []})
 
-        self.app.route("/sync", methods=["POST"])(e)
 
-        # Use a named function that returns JSON instead of a lambda
-        def get_login_url_list():
-            # If you want valid JSON: return jsonify([])
-            return jsonify({})
+@app.post("/dispatch/get_notice_list")
+async def get_notice_list():
+    t = millis()
+    return JSONResponse({"data": [], "serverTime": t})
 
-        self.app.route("/dispatch/get_login_url_list", methods=["POST"])(
-            get_login_url_list
-        )
 
-        # OAuth routes
-        self.app.route("/open/oauth", methods=["GET"])(OAuthHandler.oauth_page)
-        self.app.route("/open/scode", methods=["GET"])(OAuthHandler.security_code)
+@app.get("/config")
+async def get_config():
+    t = millis()
+    return JSONResponse(
+        {
+            "code": 0,
+            "data": {
+                "server_timestamp": t,
+                "sync_batch_size": 100,
+                "sync_interval": 90,
+            },
+            "msg": "",
+        }
+    )
 
-        # Login routes
-        self.app.route("/open/uloginDo", methods=["POST"])(LoginHandler.handle_login)
 
-        # Use a named function instead of lambda for /login.success
-        def login_success():
-            # returning empty body and 500 status as in original code
-            return ("", 500)
+@app.get("/onlineHeartbeat")
+async def online_heartbeat():
+    return JSONResponse(
+        {"status": True, "data": {"needLogout": 0, "needLogoutTip": 0}, "message": ""}
+    )
 
-        self.app.route("/login.success", methods=["GET"])(login_success)
 
-    def setup_middleware(self):
-        """Setup middleware"""
+@app.post("/openCenter/setGameRoleInfo")
+async def set_game_role_info():
+    return JSONResponse({"code": 0})
 
-        @self.app.after_request
-        def log_request(response):
-            logger.info(f"<< {request.method} {request.path} - {response.status_code}")
-            return response
 
-    def start(self):
-        """Start HTTP server"""
-        logger.info(
-            f"HTTP server started at http://{Config.HTTP_HOST}:{Config.HTTP_PORT}/"
-        )
-        self.app.run(
-            host=Config.HTTP_HOST, port=Config.HTTP_PORT, debug=False, threaded=True
-        )
+@app.post("/sync")
+async def sync_endpoint():
+    return JSONResponse({"status": True, "data": None, "message": "role up success"})
+
+
+@app.post("/dispatch/get_login_url_list")
+async def dispatch_get_login_url_list():
+    return JSONResponse({})
+
+
+@app.get("/open/oauth")
+async def open_oauth():
+    return OAuthHandler.oauth_page()
+
+
+@app.post("/api/login")
+async def api_login(login: LoginRequest):
+    user = db.get_sdk_user_info(login.username, login.password)
+    if not user:
+        return JSONResponse({"success": False, "msg": "密码错误"}, status_code=200)
+
+    uid = str(user["id"])
+    username = user["username"]
+    user_token = user["user_token"]
+
+    success_url = (
+        "https://sdkapi-of.inutan.com/loginSuccess.html?"
+        f"uid={uid}&username={username}&userToken={user_token}&authToken={user_token}&timeleft=-1"
+    )
+
+    return JSONResponse({"success": True, "successUrl": success_url})
+
+
+@app.get("/loginSuccess.html")
+async def login_success():
+    return Response(content="", status_code=200)
+
+
+def start():
+    logger.info("HTTP server started at http://0.0.0.0:8000/")
+    uvicorn.run(
+        "http_server.server:app", host="0.0.0.0", port=21000, log_level="warning"
+    )

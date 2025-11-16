@@ -84,7 +84,7 @@ class Handler(PacketHandler):
             # tmp.max_level = chr["max_level"]
             # tmp.exp=chr["exp"]
             # tmp.star=chr["star"]
-            # t1=tmp.equipment_presets.add()
+            # t1=tmp.equipment_presets.add(
             # t1.armors.add()
             # t1.armors.add().equip_type=PlayerMainDataRsp_pb2.EEquipType_Chest
             # t1.armors.add().equip_type=PlayerMainDataRsp_pb2.EEquipType_Hand
@@ -109,9 +109,9 @@ class Handler(PacketHandler):
             #     for k, v in i.items():
             #         setattr(tmp1, k, v)
             # break
-        #rsp.team.char_1 = 202004
+        # rsp.team.char_1 = 202004
         # print(rsp)
-        #rsp.characters[5].character_id=202004
+        # rsp.characters[5].character_id=202004
         # rsp.characters[0].equipment_presets[0].weapon=1202101
 
         session.send(CmdId.PlayerMainDataRsp, rsp, True, packet_id)  # 1005,1006
@@ -199,7 +199,7 @@ class Handler(PacketHandler):
         p=dat.players.add() """
         # rsp.data.players[0].player_id=db.get_player_id(user_id)
         # rsp.data.players[0].player_name=db.get_player_name(user_id)
-        rsp.data.players[0].team.char_1.char_id = 403004
+        rsp.data.players[0].team.char_1.char_id = 201003  # 302004 #301003 #201003
 
         session.send(CmdId.SceneDataNotice, rsp, False, packet_id)
         # session.sbin(1016, bin["1016"], False, packet_id)
@@ -223,3 +223,4 @@ class Handler(PacketHandler):
         # session.sbin(1938, bin["1938-2"], False, packet_id)
 
         # session.sbin(2016, "tmp\\bin\\packet_25_2016_servertoclient_body.bin")
+        session.loged = True

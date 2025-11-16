@@ -1,20 +1,19 @@
-from flask import send_file, Response
-import os
+from fastapi import APIRouter, Response
+from fastapi.responses import FileResponse
+from pathlib import Path
+import typing as t
 
 
 class OAuthHandler:
     @staticmethod
-    def oauth_page():
-        """Serve OAuth HTML page"""
-        file_path = os.path.join("webstatic", "oauth.html")
-        if os.path.exists(file_path):
-            return send_file(file_path, mimetype="text/html")
-        return Response(status=404)
+    def _static_file_path(filename: str) -> Path:
+        base_dir = Path(__file__).resolve().parent.parent
+        return base_dir / "webstatic" / filename
 
     @staticmethod
-    def security_code():
-        """Serve security code image"""
-        file_path = os.path.join("webstatic", "scode.png")
-        if os.path.exists(file_path):
-            return send_file(file_path, mimetype="image/png")
-        return Response(status=404)
+    def oauth_page() -> t.Union[FileResponse, Response]:
+        """Serve OAuth HTML page"""
+        file_path = OAuthHandler._static_file_path("oauth.html")
+        if file_path.exists():
+            return FileResponse(path=str(file_path), media_type="text/html")
+        return Response(content="OAuth page not found", status_code=404)

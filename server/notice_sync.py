@@ -48,7 +48,10 @@ def notice_sync_loop():
                 for session in session_list:
                     if session.running == True:
                         session_tmp.append(session)
-                    # 1206
+                    # 确保客户端已完成登录
+                    if session.logged_in == False:
+                        continue
+                    # 1970
                     for k, v in server.scene_data.action.items():
                         if session.user_id == k:
                             continue
@@ -78,4 +81,3 @@ def notice_sync_loop():
             time.sleep(wait_time)
 
         logger.debug(f"notice sync time: {use_time}")
-

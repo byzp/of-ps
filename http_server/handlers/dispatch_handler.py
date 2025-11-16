@@ -1,20 +1,19 @@
-from flask import jsonify
-from dataclasses import asdict
+import json
 from config import Config
 
 
 class DispatchHandler:
     @staticmethod
     def hot_update():
-        return (
+        return json.loads(
             '{"status":true,"message":"success","hotOssUrl":"http://cdn-of.inutan.com/Resources;https://cdn-of.inutan.com/Resources","currentVersion":"'
             + Config.RES_VERSION
-            + '","server":"cn_prod_main","ssAppId":"c969ebf346794cc797ed6eb6c3eac089","ssServerUrl":"https://te-of.inutan.com","open_gm":false,"open_error_log":false,"open_netConnecting_log":false,"ipAddress":"127.0.0.1","payUrl":"http://api-callback-of.inutan.com:19701","isTestServer":true,"error_log_level":0,"server_id":"10001","open_cs":false}'
+            + '","server":"cn_prod_main","ssAppId":"c969ebf346794cc797ed6eb6c3eac089","ssServerUrl":"https://te-of.inutan.com","open_gm":false,"open_error_log":false,"open_netConnecting_log":false,"ipAddress":"127.0.0.1","payUrl":"http://api-callback-of.inutan.com:19701","isTestServer":false,"error_log_level":2,"server_id":"10001","open_cs":false}'
         )
 
     @staticmethod
     def region_info():
-        return (
+        return json.loads(
             '{"status":true,"message":"success","gate_tcp_ip":"'
             + Config.GAME_SERVER_IP
             + '","gate_tcp_port":'

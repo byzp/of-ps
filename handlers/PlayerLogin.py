@@ -20,6 +20,10 @@ class Handler(PacketHandler):
         rsp = PlayerLoginRsp_pb2.PlayerLoginRsp()
 
         user_id = session.user_id
+        if req.is_reconnect == True:
+            rsp.status = StatusCode_pb2.StatusCode_FAIL
+            session.send(CmdId.PlayerLoginRsp, rsp, True, packet_id)
+            return
         rsp.status = StatusCode_pb2.StatusCode_OK
         rsp.server_time_ms = int(time.time() * 1000)
         rsp.region_name = db.get_region_name(user_id)

@@ -1,8 +1,7 @@
 import logging
 import threading
-import time
 
-from http_server.server import HTTPServer
+import http_server.server as http_server
 from network.game_server import GameServer
 import utils.res_loader as res_loader
 
@@ -21,7 +20,6 @@ logger = logging.getLogger(__name__)
 def main():
     logger.info("OverFieldPS Start")
 
-    http_server = HTTPServer()
     http_thread = threading.Thread(target=http_server.start)
     http_thread.daemon = True
     http_thread.start()
