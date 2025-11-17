@@ -23,7 +23,7 @@ class Handler(PacketHandler):
 
         # Set scene_id from request
         rsp.scene_id = req.scene_id
-        
+
         # Hardcoded test data for other fields
         rsp.channel_id = TEST_DATA["channel_id"]
         rsp.channel_label = TEST_DATA["channel_label"]
@@ -31,7 +31,7 @@ class Handler(PacketHandler):
         rsp.target_player_id = TEST_DATA["target_player_id"]
 
         session.send(CmdId.ChangeSceneChannelRsp, rsp, False, packet_id)
-        
+
         # Call SceneDataNotice handler to send scene data notification
         try:
             scene_data_handler = SceneDataNoticeHandler()
@@ -48,5 +48,5 @@ TEST_DATA = {
     "channel_id": 1524,
     "channel_label": 0,
     "password_allow_time": 0,
-    "target_player_id": 0
+    "target_player_id": 0,
 }

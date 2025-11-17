@@ -21,32 +21,32 @@ class Handler(PacketHandler):
         # Hardcoded test data
         # Set status
         rsp.status = TEST_DATA["status"]
-        
+
         # Add rank info
         for rank_data in TEST_DATA["rank_info"]:
             rank_info = rsp.rank_info.add()
-            
+
             # Player info
             player_info = rank_info.player_info
             player_data = rank_data["player_info"]
             for key, value in player_data.items():
                 setattr(player_info, key, value)
-            
+
             # Challenge info
             challenge = rank_info.challenge
             challenge_data = rank_data["challenge"]
             challenge.player_id = challenge_data["player_id"]
-            
+
             for challenge_info_data in challenge_data["challenge_infos"]:
                 challenge_info = challenge.challenge_infos.add()
                 challenge_info.challenge_id = challenge_info_data["challenge_id"]
                 challenge_info.use_time = challenge_info_data["use_time"]
-        
+
         # Self challenge
         self_challenge = rsp.self_challenge
         self_challenge_data = TEST_DATA["self_challenge"]
         self_challenge.player_id = self_challenge_data["player_id"]
-        
+
         for challenge_info_data in self_challenge_data["challenge_infos"]:
             challenge_info = self_challenge.challenge_infos.add()
             challenge_info.challenge_id = challenge_info_data["challenge_id"]
@@ -79,15 +79,15 @@ TEST_DATA = {
                 "account_type": 30114,
                 "birthday": "1992-09-14",
                 "hide_value": 0,
-                "avatar_frame": 7222
+                "avatar_frame": 7222,
             },
             "challenge": {
                 "player_id": 1111111,
                 "challenge_infos": [
                     {"challenge_id": 400003, "use_time": 12521},
-                    {"challenge_id": 1052002, "use_time": 40222}
-                ]
-            }
+                    {"challenge_id": 1052002, "use_time": 40222},
+                ],
+            },
         },
         {
             "player_info": {
@@ -109,23 +109,23 @@ TEST_DATA = {
                 "account_type": 30114,
                 "birthday": "1992-09-14",
                 "hide_value": 0,
-                "avatar_frame": 7222
+                "avatar_frame": 7222,
             },
             "challenge": {
                 "player_id": 2222222,
                 "challenge_infos": [
                     {"challenge_id": 400003, "use_time": 12521},
-                    {"challenge_id": 1052002, "use_time": 40222}
-                ]
-            }
-        }
+                    {"challenge_id": 1052002, "use_time": 40222},
+                ],
+            },
+        },
     ],
     "self_challenge": {
         "player_id": 1234567,
         "challenge_infos": [
             {"challenge_id": 203002, "use_time": 24003},
             {"challenge_id": 1052001, "use_time": 23709},
-            {"challenge_id": 302004, "use_time": 8316}
-        ]
-    }
+            {"challenge_id": 302004, "use_time": 8316},
+        ],
+    },
 }

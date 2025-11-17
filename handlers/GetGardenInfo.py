@@ -19,7 +19,7 @@ class Handler(PacketHandler):
             rsp.garden_info.furniture_num,
             rsp.garden_info.furniture_limit_num,
             rsp.garden_info.is_open,
-        ) = db.get_garden_info(session.user_id)
+        ) = db.get_garden_info(session.player_id)
 
         session.send(CmdId.GetGardenInfoRsp, rsp, False, packet_id)  # 1685,1686
         # session.sbin(1686, bin["1686"])

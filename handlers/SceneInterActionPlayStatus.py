@@ -7,7 +7,9 @@ import proto.net_pb2 as SceneInterActionPlayStatusRsp_pb2
 import proto.net_pb2 as StatusCode_pb2
 
 # Import SceneInterActionPlayStatusNotice handler
-from handlers.SceneInterActionPlayStatusNotice import Handler as SceneInterActionPlayStatusNoticeHandler
+from handlers.SceneInterActionPlayStatusNotice import (
+    Handler as SceneInterActionPlayStatusNoticeHandler,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +22,7 @@ class Handler(PacketHandler):
 
         rsp = SceneInterActionPlayStatusRsp_pb2.SceneInterActionPlayStatusRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        
+
         # Set fields from hardcoded test data
         rsp.status = TEST_DATA["status"]
 
@@ -35,18 +37,16 @@ class Handler(PacketHandler):
                     "value_2": req.action_status.value_2,
                     "value_3": req.action_status.value_3,
                     "value_4": req.action_status.value_4,
-                    "value_5": req.action_status.value_5
+                    "value_5": req.action_status.value_5,
                 },
-                "push_type": req.push_type
+                "push_type": req.push_type,
             }
             notice_handler.handle(session, notice_data, packet_id)
         except Exception as e:
             logger.error(f"Failed to send SceneInterActionPlayStatusNotice: {e}")
-        
+
         session.send(CmdId.SceneInterActionPlayStatusRsp, rsp, False, packet_id)
 
 
 # Hardcoded test data
-TEST_DATA = {
-    "status": 1
-}
+TEST_DATA = {"status": 1}

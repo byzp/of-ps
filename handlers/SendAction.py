@@ -16,7 +16,7 @@ class Handler(PacketHandler):
         req = SendActionReq_pb2.SendActionReq()
         req.ParseFromString(data)
         up_action(
-            session.user_id,
+            session.player_id,
             session.player_name,
             session.scene_id,
             session.channel_id,

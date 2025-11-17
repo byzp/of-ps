@@ -5,7 +5,9 @@ import threading
 from config import Config
 from network.game_session import GameSession
 from network.packet_factory import PacketFactory
-import server.notice_sync
+
+from server.scene_data import _session_list as session_list, lock_session
+import server.notice_sync as notice_sync
 
 logger = logging.getLogger(__name__)
 
@@ -27,13 +29,13 @@ class GameServer:
 
             logger.info(f"Game server started on port {self.port}")
 
-            server.notice_sync.init()
+            notice_sync.init()
             while True:
                 client_socket, address = self.server_socket.accept()
                 logger.info(f"New connection from {address}")
                 session = GameSession(client_socket, address)
-                with server.notice_sync.lock_session:
-                    server.notice_sync.session_list.append(session)
+                with lock_session:
+                    session_list.append(session)
                 thread = threading.Thread(target=session.run)
                 thread.daemon = True
                 thread.start()

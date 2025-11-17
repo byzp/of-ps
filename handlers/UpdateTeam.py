@@ -25,6 +25,4 @@ class Handler(PacketHandler):
 
 
 # Hardcoded test data
-TEST_DATA = {
-    "status": 1
-}
+TEST_DATA = {"status": 1}

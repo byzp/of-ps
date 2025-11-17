@@ -17,7 +17,7 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
         up_chat_msg(
             req.type,
-            session.user_id,
+            session.player_id,
             req.text,
             req.expression,
             session.scene_id,

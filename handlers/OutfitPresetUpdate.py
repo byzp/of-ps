@@ -7,7 +7,9 @@ import proto.OverField_pb2 as OutfitPresetUpdateRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 
 # Import ServerSceneSyncDataNotice handler
-from handlers.ServerSceneSyncDataNotice import Handler as ServerSceneSyncDataNoticeHandler
+from handlers.ServerSceneSyncDataNotice import (
+    Handler as ServerSceneSyncDataNoticeHandler,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +23,7 @@ class Handler(PacketHandler):
         rsp = OutfitPresetUpdateRsp_pb2.OutfitPresetUpdateRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
         rsp.char_id = req.char_id
-        
+
         # Set preset data - hat, hair, clothes from request, others from hardcoded values
         preset = rsp.preset
         preset.preset_index = TEST_DATA["preset"]["preset_index"]
@@ -31,11 +33,15 @@ class Handler(PacketHandler):
         preset.ornament = TEST_DATA["preset"]["ornament"]
         preset.hat_dye_scheme_index = TEST_DATA["preset"]["hat_dye_scheme_index"]
         preset.hair_dye_scheme_index = TEST_DATA["preset"]["hair_dye_scheme_index"]
-        preset.clothes_dye_scheme_index = TEST_DATA["preset"]["clothes_dye_scheme_index"]
-        preset.ornament_dye_scheme_index = TEST_DATA["preset"]["ornament_dye_scheme_index"]
+        preset.clothes_dye_scheme_index = TEST_DATA["preset"][
+            "clothes_dye_scheme_index"
+        ]
+        preset.ornament_dye_scheme_index = TEST_DATA["preset"][
+            "ornament_dye_scheme_index"
+        ]
 
         session.send(CmdId.OutfitPresetUpdateRsp, rsp, False, packet_id)
-        
+
         # Call ServerSceneSyncDataNotice handler to send scene sync data notification
         try:
             scene_sync_handler = ServerSceneSyncDataNoticeHandler()
@@ -58,6 +64,6 @@ TEST_DATA = {
         "hat_dye_scheme_index": 0,
         "hair_dye_scheme_index": 0,
         "clothes_dye_scheme_index": 0,
-        "ornament_dye_scheme_index": 0
-    }
+        "ornament_dye_scheme_index": 0,
+    },
 }

@@ -20,7 +20,7 @@ class Handler(PacketHandler):
 
         rsp = GetCharacterAchievementListRsp_pb2.GetCharacterAchievementListRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        for i in db.get_character_achievement_lst(session.user_id, chr_id):
+        for i in db.get_character_achievement_lst(session.player_id, chr_id):
             tmp = rsp.character_achievement_lst.add()
             tmp.achieve_id = i["achieve_id"]
             tmp.count = 6

@@ -18,7 +18,7 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
         chr_id = req.character_id
         db.up_character_equip(
-            session.user_id, chr_id, req.equipment_presets.SerializeToString()
+            session.player_id, chr_id, req.equipment_presets.SerializeToString()
         )
 
         rsp = CharacterEquipUpdateRsp_pb2.CharacterEquipUpdateRsp()

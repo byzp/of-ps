@@ -19,7 +19,7 @@ import server.scene_data as scene_data
 @packet_handler(CmdId.PlayerMainDataReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        user_id = session.user_id
+        player_id = session.player_id
 
         rsp = PlayerMainDataRsp_pb2.PlayerMainDataRsp()
 
@@ -27,19 +27,19 @@ class Handler(PacketHandler):
             rsp.ParseFromString(f.read())
 
         rsp.status = StatusCode_pb2.StatusCode_OK
-        rsp.player_id = db.get_player_id(user_id)
-        rsp.player_name = db.get_player_name(user_id)
+        rsp.player_id = session.player_id
+        rsp.player_name = session.player_name
         # rsp.player_time_offset = 0  # int64
         # rsp.is_today_first_login = False
-        rsp.unlock_functions.extend(db.get_unlock_functions(user_id))
-        rsp.level = db.get_level(user_id)
-        rsp.exp = db.get_exp(user_id)
-        rsp.head = db.get_head(user_id)
+        rsp.unlock_functions.extend(db.get_unlock_functions(player_id))
+        rsp.level = db.get_level(player_id)
+        rsp.exp = db.get_exp(player_id)
+        rsp.head = db.get_head(player_id)
         # rsp.sign = "hello world"
-        rsp.phone_background = db.get_phone_background(user_id)
+        rsp.phone_background = db.get_phone_background(player_id)
         # rsp.world_level = 5
-        rsp.create_time = db.get_create_time(user_id)
-        # for chr in db.get_characters(user_id):
+        rsp.create_time = db.get_create_time(player_id)
+        # for chr in db.get_characters(player_id):
         #     tmp = rsp.characters.add()
         #     tmp.character_id = chr["character_id"]
         #     tmp.level = chr["level"]
@@ -59,39 +59,41 @@ class Handler(PacketHandler):
         #         for k, v in i.items():
         #             setattr(tmp1, k, v)
 
-        rsp.team.char_1, rsp.team.char_2, rsp.team.char_3 = db.get_team(user_id)
-        rsp.scene_id = scene_data.get_scene_id(user_id)
-        rsp.channel_id = scene_data.get_channel_id(user_id)
+        rsp.team.char_1, rsp.team.char_2, rsp.team.char_3 = db.get_team(player_id)
+        rsp.scene_id = session.scene_id
+        rsp.channel_id = session.channel_id
 
-        rsp.player_label = user_id
-        rsp.channel_label = user_id
-        rsp.month_card_over_due_time = db.get_month_card_over_due_time(user_id)
-        rsp.garden_likes_num, _, _, _, _ = db.get_garden_info(user_id)
-        rsp.month_card_reward_days = db.get_month_card_reward_days(user_id)
-        rsp.birthday = db.get_birthday(user_id)
-        rsp.account_type = db.get_account_type(user_id)
+        rsp.player_label = player_id
+        rsp.channel_label = player_id
+        rsp.month_card_over_due_time = db.get_month_card_over_due_time(player_id)
+        rsp.garden_likes_num, _, _, _, _ = db.get_garden_info(player_id)
+        rsp.month_card_reward_days = db.get_month_card_reward_days(player_id)
+        rsp.birthday = db.get_birthday(player_id)
+        rsp.account_type = db.get_account_type(player_id)
 
         # rsp = PlayerMainDataRsp_pb2.PlayerMainDataRsp()
         # with open(bin["1006"], "rb") as f:
         #     rsp.ParseFromString(f.read())
         ta = rsp.characters[0]
         # rsp.ClearField("characters")
-        for chr in db.get_characters(user_id):
+        for chr in db.get_characters(player_id):
             tmp = rsp.characters.add()
             tmp.CopyFrom(ta)
             tmp.character_id = chr["character_id"]
-            # tmp.level = chr["level"]
-            # tmp.max_level = chr["max_level"]
-            # tmp.exp=chr["exp"]
-            # tmp.star=chr["star"]
-            # t1=tmp.equipment_presets.add(
-            # t1.armors.add()
-            # t1.armors.add().equip_type=PlayerMainDataRsp_pb2.EEquipType_Chest
-            # t1.armors.add().equip_type=PlayerMainDataRsp_pb2.EEquipType_Hand
-            # t1.armors.add().equip_type=PlayerMainDataRsp_pb2.EEquipType_Shoes
-            # t1.posters.add()
-            # t1.posters.add().poster_index=1
-            # t1.posters.add().poster_index=2
+            tmp.level = chr["level"]
+            tmp.max_level = chr["max_level"]
+            tmp.exp = chr["exp"]
+            tmp.star = chr["star"]
+            tmp.ClearField("equipment_presets")
+            t1 = tmp.equipment_presets.add()
+            t1.armors.add()
+            t1.armors.add().equip_type = PlayerMainDataRsp_pb2.EEquipType_Chest
+            t1.armors.add().equip_type = PlayerMainDataRsp_pb2.EEquipType_Hand
+            t1.armors.add().equip_type = PlayerMainDataRsp_pb2.EEquipType_Shoes
+            t1.posters.add()
+            t1.posters.add().poster_index = 1
+            t1.posters.add().poster_index = 2
+
             # for i in chr["equipment_presets"]:
             #     tmp1 = tmp.equipment_presets.add()
             #     for k, v in i.items():
@@ -118,7 +120,7 @@ class Handler(PacketHandler):
         # session.sbin(CmdId.PlayerMainDataRsp, "tmp\\bin\\packet_5_1006_servertoclient_body.bin", True, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
-        rsp.ParseFromString(db.get_items(user_id))
+        rsp.ParseFromString(db.get_items(player_id))
         # session.send(CmdId.PackNotice, rsp, True, packet_id)
         session.sbin(CmdId.PackNotice, bin["1400"], False, packet_id)
 
@@ -193,24 +195,27 @@ class Handler(PacketHandler):
 
         """ rsp.status = SceneDataNotice_pb2.StatusCode_OK
         dat=rsp.data
-        dat.scene_id=scene_data.get_scene_id(user_id)
+        dat.scene_id=scene_data.get_scene_id(player_id)
         gd=dat.scene_garden_data.add()
-        gd.likes_num,gd.access_player_num,_,_,_=db.get_garden_info(user_id)
+        gd.likes_num,gd.access_player_num,_,_,_=db.get_garden_info(player_id)
         p=dat.players.add() """
-        # rsp.data.players[0].player_id=db.get_player_id(user_id)
-        # rsp.data.players[0].player_name=db.get_player_name(user_id)
-        rsp.data.players[0].team.char_1.char_id = 201003  # 302004 #301003 #201003
+        rsp.data.players[0].player_id = session.player_id
+        # rsp.data.players[0].player_name=db.get_player_name(player_id)
+
+        rsp.data.players[0].team.char_1.char_id = db.get_team(player_id)[
+            0
+        ]  # 302004 #301003 #201003
 
         session.send(CmdId.SceneDataNotice, rsp, False, packet_id)
         # session.sbin(1016, bin["1016"], False, packet_id)
 
         rsp = ChangeChatChannelRsp_pb2.ChangeChatChannelRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        rsp.channel_id = scene_data.get_channel_id(user_id)
+        rsp.channel_id = session.channel_id
         session.send(CmdId.ChangeChatChannelRsp, rsp, True, packet_id)
         # session.sbin(1931, bin["1931"], False, packet_id)
 
-        for i in db.get_chat_history(user_id):
+        for i in db.get_chat_history(player_id):
             rsp = ChatMsgRecordInitNotice_pb2.ChatMsgRecordInitNotice()
             rsp.status = StatusCode_pb2.StatusCode_OK
             rsp.type = i["type"]
@@ -223,4 +228,4 @@ class Handler(PacketHandler):
         # session.sbin(1938, bin["1938-2"], False, packet_id)
 
         # session.sbin(2016, "tmp\\bin\\packet_25_2016_servertoclient_body.bin")
-        session.loged = True
+        session.logged_in = True

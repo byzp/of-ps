@@ -33,17 +33,23 @@ class Handler(PacketHandler):
         # Set fields from hardcoded test data
         for reward_data in TEST_DATA["rewards"]:
             reward = rsp.rewards.add()
-            
+
             # Set main_item
             reward.main_item.item_id = reward_data["main_item"]["item_id"]
             reward.main_item.item_tag = reward_data["main_item"]["item_tag"]
             reward.main_item.is_new = reward_data["main_item"]["is_new"]
-            reward.main_item.temp_pack_index = reward_data["main_item"]["temp_pack_index"]
-            
+            reward.main_item.temp_pack_index = reward_data["main_item"][
+                "temp_pack_index"
+            ]
+
             # Set base_item
-            reward.main_item.base_item.item_id = reward_data["main_item"]["base_item"]["item_id"]
-            reward.main_item.base_item.num = reward_data["main_item"]["base_item"]["num"]
-            
+            reward.main_item.base_item.item_id = reward_data["main_item"]["base_item"][
+                "item_id"
+            ]
+            reward.main_item.base_item.num = reward_data["main_item"]["base_item"][
+                "num"
+            ]
+
             # Set weapon
             weapon = reward.main_item.weapon
             weapon_data = reward_data["main_item"]["weapon"]
@@ -61,7 +67,7 @@ class Handler(PacketHandler):
             weapon.durability = weapon_data["durability"]
             weapon.property_index = weapon_data["property_index"]
             weapon.is_lock = weapon_data["is_lock"]
-            
+
             # Set armor
             armor = reward.main_item.armor
             armor_data = reward_data["main_item"]["armor"]
@@ -75,7 +81,7 @@ class Handler(PacketHandler):
             armor.strength_exp = armor_data["strength_exp"]
             armor.property_index = armor_data["property_index"]
             armor.is_lock = armor_data["is_lock"]
-            
+
             # Set poster
             poster = reward.main_item.poster
             poster_data = reward_data["main_item"]["poster"]
@@ -83,7 +89,7 @@ class Handler(PacketHandler):
             poster.instance_id = poster_data["instance_id"]
             poster.wearer_id = poster_data["wearer_id"]
             poster.star = poster_data["star"]
-            
+
             # Set character
             character = reward.main_item.character
             character_data = reward_data["main_item"]["character"]
@@ -92,23 +98,27 @@ class Handler(PacketHandler):
             character.max_level = character_data["max_level"]
             character.exp = character_data["exp"]
             character.star = character_data["star"]
-            character.in_use_equipment_preset_index = character_data["in_use_equipment_preset_index"]
-            character.in_use_outfit_preset_index = character_data["in_use_outfit_preset_index"]
+            character.in_use_equipment_preset_index = character_data[
+                "in_use_equipment_preset_index"
+            ]
+            character.in_use_outfit_preset_index = character_data[
+                "in_use_outfit_preset_index"
+            ]
             character.gather_weapon = character_data["gather_weapon"]
             character.is_unlock_payment = character_data["is_unlock_payment"]
-            
+
             # Set outfit
             outfit = reward.main_item.outfit
             outfit_data = reward_data["main_item"]["outfit"]
             outfit.outfit_id = outfit_data["outfit_id"]
-            
+
             # Set inscription
             inscription = reward.main_item.inscription
             inscription_data = reward_data["main_item"]["inscription"]
             inscription.inscription_id = inscription_data["inscription_id"]
             inscription.level = inscription_data["level"]
             inscription.weapon_instance_id = inscription_data["weapon_instance_id"]
-            
+
             # Set other fields
             reward.pack_type = reward_data["pack_type"]
             reward.extra_quality = reward_data["extra_quality"]
@@ -127,10 +137,7 @@ TEST_DATA = {
                 "item_tag": 9,
                 "is_new": False,
                 "temp_pack_index": 0,
-                "base_item": {
-                    "item_id": 124,
-                    "num": 5
-                },
+                "base_item": {"item_id": 124, "num": 5},
                 "weapon": {
                     "weapon_id": 0,
                     "instance_id": 0,
@@ -146,7 +153,7 @@ TEST_DATA = {
                     "inscription_1": 0,
                     "durability": 0,
                     "property_index": 0,
-                    "is_lock": False
+                    "is_lock": False,
                 },
                 "armor": {
                     "armor_id": 0,
@@ -159,14 +166,9 @@ TEST_DATA = {
                     "strength_level": 0,
                     "strength_exp": 0,
                     "property_index": 0,
-                    "is_lock": False
+                    "is_lock": False,
                 },
-                "poster": {
-                    "poster_id": 0,
-                    "instance_id": 0,
-                    "wearer_id": 0,
-                    "star": 0
-                },
+                "poster": {"poster_id": 0, "instance_id": 0, "wearer_id": 0, "star": 0},
                 "character": {
                     "character_id": 0,
                     "level": 0,
@@ -186,27 +188,24 @@ TEST_DATA = {
                         "water_bottle_instance_id": 0,
                         "mining_hammer_instance_id": 0,
                         "collection_gloves_instance_id": 0,
-                        "fishing_rod_instance_id": 0
+                        "fishing_rod_instance_id": 0,
                     },
                     "character_skill_list": [],
                     "rewarded_achievement_id_lst": [],
                     "is_unlock_payment": False,
-                    "reward_index_lst": []
+                    "reward_index_lst": [],
                 },
-                "outfit": {
-                    "outfit_id": 0,
-                    "dye_schemes": []
-                },
+                "outfit": {"outfit_id": 0, "dye_schemes": []},
                 "inscription": {
                     "inscription_id": 0,
                     "level": 0,
-                    "weapon_instance_id": 0
-                }
+                    "weapon_instance_id": 0,
+                },
             },
             "transformed_item": [],
             "extras": [],
             "pack_type": 0,
-            "extra_quality": 0
+            "extra_quality": 0,
         }
-    ]
+    ],
 }

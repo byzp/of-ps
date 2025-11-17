@@ -16,14 +16,14 @@ class Handler(PacketHandler):
         # Create notice message
         notice = SceneInterActionPlayStatusNotice_pb2.SceneInterActionPlayStatusNotice()
         notice.status = StatusCode_pb2.StatusCode_OK
-        
+
         # Check if data is dict (from SceneInterActionPlayStatusReq) or bytes (direct call)
         if isinstance(data, dict):
             # Use data from SceneInterActionPlayStatusReq
             notice.status = TEST_DATA["status"]  # Still using hardcoded status
             notice.push_type = data["push_type"]
             notice.player_id = TEST_DATA["player_id"]  # Still using hardcoded player_id
-            
+
             # Set action_status from request data
             action_status = ScenePlayerActionStatus_pb2.ScenePlayerActionStatus()
             action_status.id = data["action_status"]["id"]
@@ -38,7 +38,7 @@ class Handler(PacketHandler):
             notice.status = TEST_DATA["status"]
             notice.push_type = TEST_DATA["push_type"]
             notice.player_id = TEST_DATA["player_id"]
-            
+
             # Set action_status
             action_status = ScenePlayerActionStatus_pb2.ScenePlayerActionStatus()
             action_status.id = TEST_DATA["action_status"]["id"]
@@ -61,8 +61,8 @@ TEST_DATA = {
         "value_2": 403002,
         "value_3": 0,
         "value_4": 0,
-        "value_5": 0
+        "value_5": 0,
     },
     "push_type": 1,
-    "player_id": 9253086
+    "player_id": 9253086,
 }

@@ -19,7 +19,7 @@ class Handler(PacketHandler):
         up_recorder(
             session.scene_id,
             session.channel_id,
-            session.user_id,
+            session.player_id,
             req.data.SerializeToString(),
         )
 

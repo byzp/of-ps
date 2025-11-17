@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class GameSession:
     HEADER_LENGTH = 2
-    user_id = None
+    player_id = None
     player_name = None
     scene_id = 1
     channel_id = 1
@@ -21,13 +21,13 @@ class GameSession:
     seq_id = 1
     avatar_id = 41101  # head
     badge_id = 0
+    running = True
+    logged_in = False
 
     def __init__(self, client_socket: socket.socket, address: str):
         self.socket = client_socket
         self.address = address
         self.buffer = BytesIO()
-        self.running = True
-        self.logged_in = False
 
     def run(self):
         """Main session loop"""

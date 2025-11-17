@@ -22,7 +22,7 @@ class Handler(PacketHandler):
 
         # Set fields from hardcoded test data, but use player_id from request
         rsp.status = TEST_DATA["status"]
-        
+
         # Set other_info
         other_info = PlayerBriefInfo_pb2.PlayerBriefInfo()
         # Use player_id from the request
@@ -46,7 +46,7 @@ class Handler(PacketHandler):
         other_info.hide_value = TEST_DATA["other_info"]["hide_value"]
         other_info.avatar_frame = TEST_DATA["other_info"]["avatar_frame"]
         rsp.other_info.CopyFrom(other_info)
-        
+
         # Set other fields
         rsp.friend_status = TEST_DATA["friend_status"]
         rsp.alias = TEST_DATA["alias"]
@@ -79,11 +79,11 @@ TEST_DATA = {
         "account_type": 28814,
         "birthday": "1992-11-11",
         "hide_value": 0,
-        "avatar_frame": 7235
+        "avatar_frame": 7235,
     },
     "friend_status": 2,
     "alias": "",
     "friend_tag": 0,
     "friend_intimacy": 0,
-    "friend_background": 0
+    "friend_background": 0,
 }

@@ -20,7 +20,8 @@ class Handler(PacketHandler):
             session.send(CmdId.VerifyLoginTokenRsp, rsp, True, packet_id)
             return
 
-        session.user_id = user_id
+        session.player_id = db.get_player_id(user_id)
+        session.player_name = db.get_player_name(session.player_id)
         rsp.user_id = user_id
         rsp.account_type = req.account_type
         rsp.sdk_uid = req.sdk_uid

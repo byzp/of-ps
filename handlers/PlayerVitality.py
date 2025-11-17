@@ -24,10 +24,4 @@ class Handler(PacketHandler):
 
 
 # Hardcoded test data
-TEST_DATA = {
-    "parsed_result": {
-        "status": 1,
-        "vitality_buy_num": 0,
-        "items": []
-    }
-}
+TEST_DATA = {"parsed_result": {"status": 1, "vitality_buy_num": 0, "items": []}}

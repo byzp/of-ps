@@ -235,8 +235,13 @@ def get_sdk_user_info(username, password):
         }
 
 
+iii = 9253195
+
+
 def get_user_id(sdk_uid):
-    return 9253086
+    global iii
+    iii += 1
+    return iii
     cur = db.execute("SELECT user_id FROM id_maps WHERE sdk_uid=?;", (sdk_uid,))
     row = cur.fetchone()
 
@@ -552,7 +557,7 @@ def get_team(user_id):
     row = cur.fetchone()
     if row and row[0]:
         return pickle.loads(row[0])
-    return (101001, 202002, 202004)
+    return [101001, 202002, 202004]
 
 
 def set_team(user_id, *character_ids):
