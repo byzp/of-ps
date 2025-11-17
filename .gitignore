@@ -9,3 +9,4 @@ __pycache__/
 /player.db
 /.vscode
 /player.db-journal
+venv

@@ -12,8 +12,15 @@ class OAuthHandler:
 
     @staticmethod
     def oauth_page() -> t.Union[FileResponse, Response]:
-        """Serve OAuth HTML page"""
         file_path = OAuthHandler._static_file_path("oauth.html")
         if file_path.exists():
-            return FileResponse(path=str(file_path), media_type="text/html")
+            return FileResponse(
+                path=str(file_path),
+                media_type="text/html",
+                headers={
+                    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                    "Pragma": "no-cache",
+                    "Expires": "0",
+                },
+            )
         return Response(content="OAuth page not found", status_code=404)
