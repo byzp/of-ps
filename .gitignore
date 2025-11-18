@@ -10,3 +10,4 @@ __pycache__/
 /player.db-journal
 /.vscode
 /venv
+/star.bat
