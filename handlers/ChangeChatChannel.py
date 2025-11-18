@@ -15,6 +15,7 @@ class Handler(PacketHandler):
 
         rsp = ChangeChatChannelRsp_pb2.ChangeChatChannelRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
+        session.chat_channel_id = req.channel_id
         rsp.chat_channel_id = req.channel_id
 
         session.send(CmdId.ChangeChatChannelRsp, rsp, False, packet_id)  # 1930,1931

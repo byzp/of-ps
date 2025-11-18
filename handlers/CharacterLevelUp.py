@@ -21,7 +21,7 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = CharacterLevelUpRsp_pb2.CharacterLevelUpRsp()
-        
+
         # Set data from test data
         rsp.status = TEST_DATA["status"]
         rsp.char_id = req.char_id  # 从请求获取

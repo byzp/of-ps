@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 获取已解锁头像列表 1529 1530
 """
 
+
 @packet_handler(CmdId.UnlockHeadListReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
@@ -20,10 +21,10 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = UnlockHeadListRsp_pb2.UnlockHeadListRsp()
-        
+
         # Set status from test data
         rsp.status = TEST_DATA["status"]
-        
+
         # Add heads from test data
         rsp.heads.extend(TEST_DATA["heads"])
 
@@ -101,5 +102,5 @@ TEST_DATA = {
         9340,
         9358,
         9360,
-    ]
+    ],
 }

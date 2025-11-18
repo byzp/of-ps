@@ -20,11 +20,11 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = GenericGameARsp_pb2.GenericGameARsp()
-        
+
         # Set data from test data
         rsp.status = TEST_DATA["status"]
         rsp.generic_msg_id = TEST_DATA["generic_msg_id"]
-        
+
         # Add params from test data
         for param_data in TEST_DATA["params"]:
             param = rsp.params.add()
@@ -49,7 +49,7 @@ TEST_DATA = {
             "float_value": 0.0,
             "double_value": 0.0,
             "bool_value": False,
-            "string_value": ""
+            "string_value": "",
         }
-    ]
+    ],
 }

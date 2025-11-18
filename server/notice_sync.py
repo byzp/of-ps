@@ -43,7 +43,7 @@ def notice_sync_loop():
     while True:
         start_t = time.time()
         with lock_session:
-            session_list[:] = [s for s in session_list if getattr(s, 'running', False)]
+            session_list[:] = [s for s in session_list if getattr(s, "running", False)]
             now = time.time()
             elapsed_real = now - _rel_time
             if elapsed_real > 0:
@@ -89,20 +89,22 @@ def notice_sync_loop():
                     # 聊天信息同步
                     if session.running == False or session.logged_in == False:
                         continue
-                    for msg in chat_msg["default"][session.scene_id][session.channel_id]:
-                        if msg[1]==session.player_id:
+                    for msg in chat_msg["default"][session.scene_id][
+                        session.channel_id
+                    ]:
+                        if msg[1] == session.player_id:
                             continue
-                        rsp=pb.ChatMsgNotice()
+                        rsp = pb.ChatMsgNotice()
                         rsp.status = StatusCode_pb2.StatusCode_OK
-                        rsp.msg.player_id=msg[1]
-                        rsp.msg.head=41101
-                        rsp.msg.badge=5000
-                        rsp.msg.name=session.player_name
+                        rsp.msg.player_id = msg[1]
+                        rsp.msg.head = session.avatar_id
+                        rsp.msg.badge = session.badge_id
+                        rsp.msg.name = session.player_name
                         if msg[0]:
-                            rsp.msg.text=msg[2]
+                            rsp.msg.text = msg[2]
                         else:
-                            rsp.msg.expression=msg[2]
-                        rsp.msg.send_time=int(time.time()*1000)
+                            rsp.msg.expression = msg[2]
+                        rsp.msg.send_time = int(time.time() * 1000)
                         session.send(CmdId.ChatMsgNotice, rsp, False, 0)
                 chat_msg.clear()
 
@@ -112,4 +114,3 @@ def notice_sync_loop():
             time.sleep(wait_time)
         if use_time > 0.001:
             logger.debug(f"notice sync time: {use_time}")
-

@@ -6,12 +6,9 @@ import proto.OverField_pb2 as ChangeSignReq_pb2
 import proto.OverField_pb2 as ChangeSignRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 
+import utils.db as db
+
 logger = logging.getLogger(__name__)
-
-
-"""
-# 修改签名 1526 1527
-"""
 
 
 @packet_handler(CmdId.ChangeSignReq)
@@ -23,14 +20,7 @@ class Handler(PacketHandler):
         rsp = ChangeSignRsp_pb2.ChangeSignRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
-        # Set status from test data
-        rsp.status = TEST_DATA["status"]
-        
-        # Set sign from request
         rsp.sign = req.sign
+        db.set_sign(session.player_id, req.sign)
 
-        session.send(CmdId.ChangeSignRsp, rsp, False, packet_id)
-
-
-# Hardcoded test data
-TEST_DATA = {"status": 1}
+        session.send(CmdId.ChangeSignRsp, rsp, False, packet_id)  # 修改签名 1526 1527

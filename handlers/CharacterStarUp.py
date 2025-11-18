@@ -21,12 +21,12 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = CharacterStarUpRsp_pb2.CharacterStarUpRsp()
-        
+
         # Set data from test data
         rsp.status = TEST_DATA["status"]
         rsp.char_id = req.char_id  # 从请求获取
         rsp.star = TEST_DATA["star"]
-        
+
         # 添加空的items数组
         # items字段已经在proto中定义为repeated ItemDetail，初始为空数组
 
@@ -34,4 +34,8 @@ class Handler(PacketHandler):
 
 
 # Hardcoded test data
-TEST_DATA = {"status": 1, "star": 5, "items": [],}
+TEST_DATA = {
+    "status": 1,
+    "star": 5,
+    "items": [],
+}

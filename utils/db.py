@@ -7,6 +7,9 @@ import json
 from config import Config
 import secrets
 
+from utils.res_loader import res
+from proto import OverField_pb2
+
 logger = logging.getLogger(__name__)
 
 # 初始化数据库连接
@@ -346,15 +349,58 @@ def set_exp(user_id, exp):
     db.commit()
 
 
-def get_head(user_id):
+def get_avatar(user_id):  # head 头像
     cur = db.execute("SELECT head FROM users WHERE user_id=?", (user_id,))
     row = cur.fetchone()
     return row[0] if row else 41101
 
 
-def set_head(user_id, head):
+def set_avatar(user_id, head):
     db.execute("UPDATE users SET head=? WHERE user_id=?", (head, user_id))
     db.commit()
+
+
+"""
+message ChangeHideTypeReq {
+    HideType hide_type = 1;
+}
+
+message ChangeHideTypeRsp {
+    StatusCode status = 1;
+    uint32 hide_value = 2;
+}
+
+enum HideType {
+    TYPE_NONE_none = 0;
+    TYPE_NONE_account_type = 1;
+    TYPE_NONE_sign_type = 2;
+    TYPE_NONE_abyss_rank_type = 4;
+}
+"""
+
+
+def get_hide_type(player_id, hide_type) -> bool:
+    pass
+
+
+def set_hide_type(player_id, hide_type) -> bool:
+    pass
+
+
+def get_is_hide_birthday(player_id):
+    return False
+
+
+def set_is_hide_birthday(player_id) -> None:
+    pass
+
+
+def set_sign(player_id, sign: str):
+    pass
+
+
+def get_sign(player_id):
+    return ""
 
 
 def get_phone_background(user_id):
@@ -434,11 +480,10 @@ def get_characters(user_id):
 
     # return characters
     a = []
-    from utils.res_loader import res
 
     for i in res["Character"]["character"]["datas"]:
         if i["i_d"] in [101001, 102001, 102002, 103002, 201001, 302002, 401001, 403002]:
-            continue
+            pass
         if i.get("ex_spell_i_ds") is None:
             continue
         # if i["i_d"] in [101003,101004,102003,102004,103001,103002,201002,201003,202001,202002,202003,202004,301002,301003,301004,302001,302002,302003,302004,401001,401002,401003,401004,402001,402002,402003,403001,403003,403004]:
@@ -451,15 +496,12 @@ def get_characters(user_id):
                     "exp": 200,
                     "star": 2,
                     "equipment_presets": [
-                        {"weapon": 16},
+                        # {"weapon": 16},
                         {"preset_index": 1},
                         {"preset_index": 2},
                     ],
                     "outfit_presets": [
-                        {
-                            "hair": i.get("hair_i_d"),
-                            "clothes": i.get("cloth_i_d"),
-                        },  # ? "10": ""
+                        {},  # ? "10": ""
                         {
                             "preset_index": 1,
                             "hair": i.get("hair_i_d"),
@@ -552,7 +594,7 @@ def get_account_type(user_id):
     return row[0] if row else 9999
 
 
-def get_team(user_id):
+def get_team_char_id(user_id):
     cur = db.execute("SELECT team FROM users WHERE user_id=?", (user_id,))
     row = cur.fetchone()
     if row and row[0]:
@@ -560,7 +602,7 @@ def get_team(user_id):
     return [101001, 202002, 202004]
 
 
-def set_team(user_id, *character_ids):
+def set_team_char_id(user_id, *character_ids):
     db.execute(
         "UPDATE users SET team=? WHERE user_id=?",
         (pickle.dumps(character_ids), user_id),
@@ -576,32 +618,34 @@ def get_items(user_id):
         return row[0]
 
     # 如果没有数据，生成默认物品
-    from utils.res_loader import res
-    from proto import OverField_pb2
 
     rsp = OverField_pb2.PackNotice()
-    rsp.status = 1
+    rsp.status = 1  # ok
     for i in res["Item"]["item"]["datas"]:
         tmp = rsp.items.add().main_item
         tmp.item_id = i["i_d"]
         tmp.item_tag = i["new_bag_item_tag"]
         tmp.base_item.item_id = i["i_d"]
-        if i["i_d"] == 102:
-            tmp.base_item.num = 2147483647
-        else:
-            tmp.base_item.num = 10
-    rsp.temp_pack_max_size = 30
+        tmp.base_item.num = 100
+    rsp.temp_pack_max_size = 300
 
     return rsp.SerializeToString()
 
 
-def set_items(user_id, item_data):
-    """item_data应该是序列化后的二进制数据"""
-    db.execute(
-        "INSERT OR REPLACE INTO items (user_id, item_data) VALUES (?, ?)",
-        (user_id, item_data),
-    )
-    db.commit()
+def set_item(user_id, item_id, num):  # num是数值变化
+    rsp = OverField_pb2.PackNotice()
+    rsp.status = 1
+    for i in res["Item"]["item"]["datas"]:
+        if item_id == i["i_d"]:
+            tmp = rsp.items.add().main_item
+            tmp.item_id = i["i_d"]
+            tmp.item_tag = i["new_bag_item_tag"]
+            tmp.base_item.item_id = i["i_d"]
+            tmp.base_item.num = 100
+            break
+    rsp.temp_pack_max_size = 300
+
+    return tmp.SerializeToString()
 
 
 def get_chat_history(user_id):

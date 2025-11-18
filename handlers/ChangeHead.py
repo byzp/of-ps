@@ -6,12 +6,9 @@ import proto.OverField_pb2 as ChangeHeadReq_pb2
 import proto.OverField_pb2 as ChangeHeadRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 
+import utils.db as db
+
 logger = logging.getLogger(__name__)
-
-
-"""
-# 更换头像 1528 1529
-"""
 
 
 @packet_handler(CmdId.ChangeHeadReq)
@@ -22,15 +19,9 @@ class Handler(PacketHandler):
 
         rsp = ChangeHeadRsp_pb2.ChangeHeadRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
-
-        # Set status from test data
-        rsp.status = TEST_DATA["status"]
-        
-        # Set head from request
         rsp.head = req.head
 
-        session.send(CmdId.ChangeHeadRsp, rsp, False, packet_id)
+        session.avatar_id = req.head
+        db.set_avatar(session.player_id, req.session.avatar_id)
 
-
-# Hardcoded test data
-TEST_DATA = {"status": 1}
+        session.send(CmdId.ChangeHeadRsp, rsp, False, packet_id)  # 更换头像 1528 1529

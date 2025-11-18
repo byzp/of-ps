@@ -37,7 +37,7 @@ class Handler(PacketHandler):
                 json_data = json.load(f)
 
             parsed_result = json_data.get("parsed_result", {})
-            
+
             # Set status
             rsp.status = parsed_result.get("status", 1)
 

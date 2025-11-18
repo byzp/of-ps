@@ -2952,15 +2952,38 @@ message PosterInfo {
 }
 
 message OutfitPreset {
-    uint32 preset_index = 1;
-    uint32 hat = 2;
-    uint32 hair = 3;
-    uint32 clothes = 4;
-    uint32 ornament = 5;
-    uint32 hat_dye_scheme_index = 6;
-    uint32 hair_dye_scheme_index = 7;
-    uint32 clothes_dye_scheme_index = 8;
-    uint32 ornament_dye_scheme_index = 9;
+  uint32 preset_index = 1;
+  uint32 hat = 2;
+  uint32 hair = 3;
+  uint32 clothes = 4;
+  uint32 ornament = 5;
+
+  uint32 hat_dye_scheme_index = 6;
+  uint32 hair_dye_scheme_index = 7;
+  uint32 clothes_dye_scheme_index = 8;
+  uint32 ornament_dye_scheme_index = 9;
+
+  OutfitHideInfo outfit_hide_info = 10;
+
+  uint32 pend_top = 11;
+  uint32 pend_chest = 12;
+  uint32 pend_pelvis = 13;
+  uint32 pend_up_face = 14;
+  uint32 pend_down_face = 15;
+  uint32 pend_left_hand = 16;
+  uint32 pend_right_hand = 17;
+  uint32 pend_left_foot = 18;
+  uint32 pend_right_foot = 19;
+
+  uint32 pend_top_dye_scheme_index = 20;
+  uint32 pend_chest_dye_scheme_index = 21;
+  uint32 pend_pelvis_dye_scheme_index = 22;
+  uint32 pend_up_face_dye_scheme_index = 23;
+  uint32 pend_down_face_dye_scheme_index = 24;
+  uint32 pend_left_hand_dye_scheme_index = 25;
+  uint32 pend_right_hand_dye_scheme_index = 26;
+  uint32 pend_left_foot_dye_scheme_index = 27;
+  uint32 pend_right_foot_dye_scheme_index = 28;
 }
 
 message GachaInfo {
