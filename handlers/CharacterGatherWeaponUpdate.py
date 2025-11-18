@@ -14,12 +14,11 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = CharacterGatherWeaponUpdateReq_pb2.CharacterGatherWeaponUpdateReq()
         req.ParseFromString(data)
+        # TODO
 
         rsp = CharacterGatherWeaponUpdateRsp_pb2.CharacterGatherWeaponUpdateRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
-        session.send(CmdId.CharacterGatherWeaponUpdateRsp, rsp, False, packet_id)
-
-
-# Hardcoded test data
-TEST_DATA = {"status": 1}
+        session.send(
+            CmdId.CharacterGatherWeaponUpdateRsp, rsp, False, packet_id
+        )  # 1955,1956

@@ -23,6 +23,13 @@ class Handler(PacketHandler):
             req.data.SerializeToString(),
         )
 
+        # 更新动作和角度
+        pos = req.data.char_recorder_data_lst[0].pos
+        rot = req.data.char_recorder_data_lst[0].rot
+        if pos.x != 0:
+            session.scene_player.team.char_1.pos.CopyFrom(pos)
+            session.scene_player.team.char_1.rot.CopyFrom(rot)
+
         rsp = OverField_pb2.PlayerSceneSyncDataNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
@@ -34,5 +41,3 @@ class Handler(PacketHandler):
         session.send(
             CmdId.PlayerSceneSyncDataNotice, rsp, False, packet_id
         )  # 1203,1206
-        #
-        # session.sbin(1206, bin["1206-2"], False, packet_id)

@@ -59,7 +59,7 @@ class Handler(PacketHandler):
         # char_1.pos.CopyFrom(pb.Vector3())
         # char_1.rot.CopyFrom(pb.Vector3())
         char_1.pos.x = 2394
-        char_1.pos.x = 908
+        char_1.pos.y = 908
         char_1.rot.CopyFrom(pb.Vector3())
 
         session.send(CmdId.PlayerLoginRsp, rsp, True, packet_id)  # 1003,1004

@@ -17,6 +17,7 @@ from server.scene_data import (
     lock_scene_action,
     _session_list as session_list,
     lock_session,
+    up_scene_action,
 )
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,19 @@ def notice_sync_loop():
     while True:
         start_t = time.time()
         with lock_session:
+            # 检查并清除掉线玩家
+            for session in session_list:
+                if session.running == False and session.logged_in == True:
+                    # 向其他玩家广播离开事件
+                    notice = ServerSceneSyncDataNotice_pb2.ServerSceneSyncDataNotice()
+                    notice.status = StatusCode_pb2.StatusCode_OK
+                    d = notice.data.add()
+                    d.player_id = session.player_id
+                    sd = d.server_data.add()
+                    sd.action_type = pb.SceneActionType_LEAVE
+                    up_scene_action(
+                        session.scene_id, session.channel_id, notice.SerializeToString()
+                    )
             session_list[:] = [s for s in session_list if getattr(s, "running", False)]
             now = time.time()
             elapsed_real = now - _rel_time

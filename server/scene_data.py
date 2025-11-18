@@ -103,8 +103,8 @@ def get_and_up_players(scene_id, channel_id, player_id):
                 sd.action_type = pb.SceneActionType_ENTER
 
                 sd.player.CopyFrom(session.scene_player)
-
                 res = notice.SerializeToString()
+
                 if session.player_id == player_id:
                     # 如果是自己，向其他玩家广播
                     up_scene_action(session.scene_id, session.channel_id, res)

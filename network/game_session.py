@@ -21,7 +21,6 @@ class GameSession:
     seq_id = 1
     avatar_id = 41101  # head
     badge_id = 0
-    scene_player = OverField_pb2.ScenePlayer()  # 玩家实体，在PlayerLogin初始化
 
     running = True
     logged_in = False
@@ -30,6 +29,7 @@ class GameSession:
         self.socket = client_socket
         self.address = address
         self.buffer = BytesIO()
+        self.scene_player = OverField_pb2.ScenePlayer()  # 玩家实体，在PlayerLogin初始化
 
     def run(self):
         """Main session loop"""
@@ -43,7 +43,7 @@ class GameSession:
                 self.process_buffer()
 
         except Exception as e:
-            logger.error(f"Connection error: {e}")
+            logger.debug(f"Connection error: {e}")
         finally:
             self.close()
             self.running = False

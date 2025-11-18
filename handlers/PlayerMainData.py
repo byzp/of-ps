@@ -172,9 +172,9 @@ class Handler(PacketHandler):
         for i in scene_data.get_and_up_players(
             session.scene_id, session.channel_id, session.player_id
         ):
-
             tmp.ParseFromString(i)
             data.players.add().CopyFrom(tmp.data[0].server_data[0].player)
+
         data.channel_id = session.channel_id
         data.tod_time = 0
         data.channel_label = session.channel_id
@@ -199,4 +199,3 @@ class Handler(PacketHandler):
         # session.sbin(1938, bin["1938-2"], False, packet_id)
 
         # session.sbin(2016, "tmp\\bin\\packet_25_2016_servertoclient_body.bin")
-        session.logged_in = True

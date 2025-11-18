@@ -6,11 +6,6 @@ import proto.OverField_pb2 as OutfitPresetUpdateReq_pb2
 import proto.OverField_pb2 as OutfitPresetUpdateRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 
-# Import ServerSceneSyncDataNotice handler
-from handlers.ServerSceneSyncDataNotice import (
-    Handler as ServerSceneSyncDataNoticeHandler,
-)
-
 logger = logging.getLogger(__name__)
 
 
