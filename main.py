@@ -5,7 +5,7 @@ import signal
 import http_server.server as http_server
 from network.game_server import GameServer
 import utils.res_loader as res_loader
-import utils.cmd as cmd
+import utils.command_handler as command_handler
 
 res_loader.init()
 
