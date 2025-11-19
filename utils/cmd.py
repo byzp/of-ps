@@ -7,6 +7,7 @@ from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.shortcuts import print_formatted_text
 import utils.log as log_module
+import utils.command_handler as cmd_h
 
 _stop_event = threading.Event()
 _prompt_thread = None
@@ -36,7 +37,7 @@ def _handle_sigint():
         _sigint_deadline = now + _SIGINT_WINDOW
         if _sigint_count == 1:
             logging.getLogger(__name__).warning(
-                "Press Ctrl+C again within "+str(_SIGINT_WINDOW)+" seconds to exit"
+                "Press Ctrl+C again within " + str(_SIGINT_WINDOW) + " seconds to exit"
             )
         else:
             _stop_event.set()
@@ -48,14 +49,21 @@ def _prompt_loop():
         while not _stop_event.is_set():
             try:
                 text = session.prompt("> ")
+            except EOFError:
+                _stop_event.set()
+                return
             except KeyboardInterrupt:
                 _handle_sigint()
                 continue
-            cmd=text.strip()
+            cmd = text.strip()
             if cmd:
-                if cmd=="stop":
+                if cmd == "stop":
                     _stop_event.set()
-                pass
+                    return
+                if cmd == "help":
+                    print(",".join(cmd_h.COMMANDS.keys()))
+                if cmd in cmd_h.COMMANDS:
+                    cmd_h.COMMANDS[cmd]()
 
 
 def start():
@@ -72,5 +80,3 @@ def start():
 
 def wait(timeout=None):
     return _stop_event.wait(timeout)
-
-

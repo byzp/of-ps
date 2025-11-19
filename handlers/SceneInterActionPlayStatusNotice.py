@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 # 场景互动播放状态通知 1333
 """
 
+
 @packet_handler(CmdId.SceneInterActionPlayStatusNotice)
 class Handler(PacketHandler):
     def handle(self, session, data, packet_id: int):

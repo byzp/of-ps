@@ -47,7 +47,7 @@ if not os.path.exists(Config.DB_PATH):
             player_id INTEGER PRIMARY KEY,
             over_due_time INTEGER DEFAULT 0,
             reward_days INTEGER DEFAULT 0,
-            FOREIGN KEY(player_id) REFERENCES users(player_id)
+            FOREIGN KEY(player_id) REFERENCES players(player_id)
         );
         
         
@@ -58,7 +58,7 @@ if not os.path.exists(Config.DB_PATH):
             furniture_num INTEGER DEFAULT 0,
             furniture_limit_num INTEGER DEFAULT 500000,
             is_open INTEGER DEFAULT 1,
-            FOREIGN KEY(player_id) REFERENCES users(player_id)
+            FOREIGN KEY(player_id) REFERENCES players(player_id)
         );
         
         CREATE TABLE IF NOT EXISTS characters (
@@ -70,34 +70,26 @@ if not os.path.exists(Config.DB_PATH):
             exp INTEGER DEFAULT 200,
             star INTEGER DEFAULT 2,
             equipment_presets BLOB,
-            FOREIGN KEY(player_id) REFERENCES users(player_id)
+            FOREIGN KEY(player_id) REFERENCES players(player_id)
         );
         
         CREATE TABLE IF NOT EXISTS items (
             player_id INTEGER,
             item_data BLOB,
             PRIMARY KEY(player_id),
-            FOREIGN KEY(player_id) REFERENCES users(player_id)
-        );
-        
-        CREATE TABLE IF NOT EXISTS chat_history (
-            player_id INTEGER,
-            history_data BLOB,
-            PRIMARY KEY(player_id),
-            FOREIGN KEY(player_id) REFERENCES users(player_id)
-        );
+            FOREIGN KEY(player_id) REFERENCES players(player_id)
+        ); 
         
         CREATE TABLE IF NOT EXISTS character_equip (
             player_id INTEGER,
             character_id INTEGER,
             equipment_preset BLOB,
             PRIMARY KEY(player_id, character_id),
-            FOREIGN KEY(player_id) REFERENCES users(player_id)
+            FOREIGN KEY(player_id) REFERENCES players(player_id)
         );
 
-        
-        
-        INSERT INTO id_maps (user_id, player_id) VALUES (123, 10000000);
+        INSERT INTO users (id, username, password, user_token) VALUES (1000000, "", "", "");
+
         """
     )
     db.commit()
@@ -105,35 +97,33 @@ else:
     db = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
 
 
-def init_user(player_id):
+def init_player(player_id):
     """初始化新用户数据"""
     cur_time = int(time.time())
-    player_name = str(player_id)
+    player_name = ""
     # 初始化用户基本信息
+    unlock_funcs = []
+    for i in range(100000000, 100000049):
+        unlock_funcs.append(i)
     unlock_funcs = pickle.dumps(
-        [100000009, 100000003, 100000021, 100000006, 100000044, 100000031]
+        unlock_funcs  # [100000009, 100000003, 100000021, 100000006, 100000044, 100000031]
     )
-    team = pickle.dumps((101001, 202002, 202004))
+
+    team = pickle.dumps((101001, 101002, 101003))
 
     db.execute(
-        """INSERT OR IGNORE INTO users 
+        """INSERT OR IGNORE INTO players 
         (player_id, player_name, register_time, create_time, unlock_functions, team) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        VALUES (?, ?, ?, ?, ?, ?)""",
         (player_id, player_name, cur_time, cur_time, unlock_funcs, team),
     )
-
+    """
     # 初始化月卡
     db.execute(
         "INSERT OR IGNORE INTO month_card (player_id, over_due_time, reward_days) VALUES (?, ?, ?)",
         (player_id, 1744664399, 3),
     )
-
-    # 初始化补给箱
-    db.execute(
-        "INSERT OR IGNORE INTO supply_box (player_id, next_reward_time) VALUES (?, ?)",
-        (player_id, int(time.time() + 3600)),
-    )
-
+    """
     # 初始化花园
     db.execute("INSERT OR IGNORE INTO garden_info (player_id) VALUES (?)", (player_id,))
 
@@ -154,7 +144,6 @@ def init_user(player_id):
             )
 
     # 初始化物品
-    from proto import OverField_pb2
 
     rsp = OverField_pb2.PackNotice()
     rsp.status = 1
@@ -163,27 +152,12 @@ def init_user(player_id):
         tmp.item_id = i["i_d"]
         tmp.item_tag = i["new_bag_item_tag"]
         tmp.base_item.item_id = i["i_d"]
-        if i["i_d"] == 102:
-            tmp.base_item.num = 2147483647
-        else:
-            tmp.base_item.num = 10
+        tmp.base_item.num = 1000
     rsp.temp_pack_max_size = 30
 
     db.execute(
         "INSERT OR IGNORE INTO items (player_id, item_data) VALUES (?, ?)",
         (player_id, rsp.SerializeToString()),
-    )
-
-    # 初始化聊天记录
-    chat_data = [
-        {"type": 0, "msg": []},
-        {"type": 1, "msg": []},
-        {"type": 2, "msg": []},
-        {"type": 3, "msg": []},
-    ]
-    db.execute(
-        "INSERT OR IGNORE INTO chat_history (player_id, history_data) VALUES (?, ?)",
-        (player_id, pickle.dumps(chat_data)),
     )
 
     db.commit()
@@ -207,13 +181,13 @@ def verify_sdk_user_info(user_id, login_token):
 def get_sdk_user_info(username, password):
 
     cur = db.execute(
-        "SELECT id, username, user_token FROM users WHERE username = ?",
+        "SELECT id, password, user_token FROM users WHERE username = ?",
         (username,),
     )
     row = cur.fetchone()
     if row:
         if row[1] == password:
-            return {"id": row[0], "username": row[1], "user_token": row[2]}
+            return {"id": row[0], "username": username, "user_token": row[2]}
         else:
             return None
     else:
@@ -229,39 +203,31 @@ def get_sdk_user_info(username, password):
             "user_token": auth_token,
         }
 
-def get_user_id(sdk_uid):
-    return sdk_uid
 
-def get_player_id(player_id):
-    cur = db.execute("SELECT player_id FROM id_maps WHERE user_id=?;", (user_id,))
+def get_user_id(sdk_id):
+    return sdk_id
+
+
+def get_player_id(user_id):
+    cur = db.execute("SELECT player_id FROM players WHERE player_id=?;", (user_id,))
     row = cur.fetchone()
 
-    if row is not None:
-        return int(row[0])
+    if row is None:
+        init_player(user_id)
 
-    cur = db.execute("SELECT MAX(player_id) FROM id_maps;")
-    max_id = cur.fetchone()[0]
-    player_id = int(max_id) + 1 if max_id else 10000000
-
-    db.execute(
-        "INSERT INTO id_maps (user_id, player_id) VALUES (?, ?);", (user_id, player_id)
-    )
-    db.commit()
-
-    # 初始化新用户
-    init_user(player_id)
-
-    return player_id
+    return user_id
 
 
 def get_register_time(player_id):
-    cur = db.execute("SELECT register_time FROM users WHERE player_id=?", (player_id,))
+    cur = db.execute(
+        "SELECT register_time FROM players WHERE player_id=?", (player_id,)
+    )
     row = cur.fetchone()
     return int(row[0] if row else int(time.time()))
 
 
 def get_region_name(player_id):
-    cur = db.execute("SELECT region_name FROM users WHERE player_id=?", (player_id,))
+    cur = db.execute("SELECT region_name FROM players WHERE player_id=?", (player_id,))
     row = cur.fetchone()
     return row[0] if row else "cn_prod_main"
 
@@ -271,76 +237,78 @@ def get_analysis_account_id(player_id):
 
 
 def get_player_name(player_id):
-    cur = db.execute("SELECT player_name FROM users WHERE player_id=?", (player_id,))
+    cur = db.execute("SELECT player_name FROM players WHERE player_id=?", (player_id,))
     row = cur.fetchone()
     return row[0] if row else "Vexuro."
 
 
 def set_player_name(player_id, name):
-    db.execute("UPDATE users SET player_name=? WHERE player_id=?", (name, player_id))
+    db.execute("UPDATE players SET player_name=? WHERE player_id=?", (name, player_id))
     db.commit()
 
 
 def get_client_log_server_token(player_id):
     cur = db.execute(
-        "SELECT client_log_server_token FROM users WHERE player_id=?", (player_id,)
+        "SELECT client_log_server_token FROM players WHERE player_id=?", (player_id,)
     )
     row = cur.fetchone()
     return row[0] if row else "dG9rZW4="
 
 
 def get_server_time_zone(player_id):
-    cur = db.execute("SELECT server_time_zone FROM users WHERE player_id=?", (player_id,))
+    cur = db.execute(
+        "SELECT server_time_zone FROM players WHERE player_id=?", (player_id,)
+    )
     row = cur.fetchone()
     return row[0] if row else 8 * 3600
 
 
 def get_unlock_functions(player_id):
-    cur = db.execute("SELECT unlock_functions FROM users WHERE player_id=?", (player_id,))
-    row = cur.fetchone()
-    if row and row[0]:
-        return pickle.loads(row[0])
+    # cur = db.execute("SELECT unlock_functions FROM players WHERE player_id=?", (player_id,))
+    # row = cur.fetchone()
+    # if row and row[0]:
+    #     return pickle.loads(row[0])
     return [100000009, 100000003, 100000021, 100000006, 100000044, 100000031]
 
 
 def set_unlock_functions(player_id, functions):
     db.execute(
-        "UPDATE users SET unlock_functions=? WHERE player_id=?",
+        "UPDATE players SET unlock_functions=? WHERE player_id=?",
         (pickle.dumps(functions), player_id),
     )
     db.commit()
 
 
 def get_level(player_id):
-    cur = db.execute("SELECT level FROM users WHERE player_id=?", (player_id,))
+    cur = db.execute("SELECT level FROM players WHERE player_id=?", (player_id,))
     row = cur.fetchone()
     return row[0] if row else 6
 
 
 def set_level(player_id, level):
-    db.execute("UPDATE users SET level=? WHERE player_id=?", (level, player_id))
+    db.execute("UPDATE players SET level=? WHERE player_id=?", (level, player_id))
     db.commit()
 
 
 def get_exp(player_id):
-    cur = db.execute("SELECT exp FROM users WHERE player_id=?", (player_id,))
+    cur = db.execute("SELECT exp FROM players WHERE player_id=?", (player_id,))
     row = cur.fetchone()
     return row[0] if row else 200
 
 
 def set_exp(player_id, exp):
-    db.execute("UPDATE users SET exp=? WHERE player_id=?", (exp, player_id))
+    db.execute("UPDATE players SET exp=? WHERE player_id=?", (exp, player_id))
     db.commit()
 
 
 def get_avatar(player_id):  # head 头像
-    cur = db.execute("SELECT head FROM users WHERE player_id=?", (player_id,))
+    cur = db.execute("SELECT head FROM players WHERE player_id=?", (player_id,))
     row = cur.fetchone()
     return row[0] if row else 41101
 
 
 def set_avatar(player_id, head):
-    db.execute("UPDATE users SET head=? WHERE player_id=?", (head, player_id))
+    db.execute("UPDATE players SET head=? WHERE player_id=?", (head, player_id))
     db.commit()
 
 
@@ -388,20 +356,23 @@ def get_sign(player_id):
 
 
 def get_phone_background(player_id):
-    cur = db.execute("SELECT phone_background FROM users WHERE player_id=?", (player_id,))
+    cur = db.execute(
+        "SELECT phone_background FROM players WHERE player_id=?", (player_id,)
+    )
     row = cur.fetchone()
     return row[0] if row else 8000
 
 
 def set_phone_background(player_id, background):
     db.execute(
-        "UPDATE users SET phone_background=? WHERE player_id=?", (background, player_id)
+        "UPDATE players SET phone_background=? WHERE player_id=?",
+        (background, player_id),
     )
     db.commit()
 
 
 def get_create_time(player_id):
-    cur = db.execute("SELECT create_time FROM users WHERE player_id=?", (player_id,))
+    cur = db.execute("SELECT create_time FROM players WHERE player_id=?", (player_id,))
     row = cur.fetchone()
     return row[0] if row else int(time.time())
 
@@ -424,13 +395,13 @@ def set_SupplyBox_next_reward_time(player_id, next_time):
 
 def get_garden_info(player_id):
     cur = db.execute(
-        "SELECT field1, field2, field3, field4, field5 FROM garden_info WHERE player_id=?",
+        "SELECT like_num, access_num, furniture_num, furniture_limit_num, is_open FROM garden_info WHERE player_id=?",
         (player_id,),
     )
     row = cur.fetchone()
     if row:
         return row[0], row[1], row[2], row[3], bool(row[4])
-    return 0, 0, 0, 50000, True
+    return 0, 0, 0, 500000, True
 
 
 def set_garden_info(player_id, field1, field2, field3, field4, field5):
@@ -535,7 +506,9 @@ def update_character(player_id, character_id, **kwargs):
 
 
 def get_month_card_over_due_time(player_id):
-    cur = db.execute("SELECT over_due_time FROM month_card WHERE player_id=?", (player_id,))
+    cur = db.execute(
+        "SELECT over_due_time FROM month_card WHERE player_id=?", (player_id,)
+    )
     row = cur.fetchone()
     return row[0] if row else 0
 
@@ -549,37 +522,40 @@ def set_month_card_over_due_time(player_id, over_due_time):
 
 
 def get_month_card_reward_days(player_id):
-    cur = db.execute("SELECT reward_days FROM month_card WHERE player_id=?", (player_id,))
+    cur = db.execute(
+        "SELECT reward_days FROM month_card WHERE player_id=?", (player_id,)
+    )
     row = cur.fetchone()
     return row[0] if row else 0
 
 
 def set_month_card_reward_days(player_id, reward_days):
     db.execute(
-        "UPDATE month_card SET reward_days=? WHERE player_id=?", (reward_days, player_id)
+        "UPDATE month_card SET reward_days=? WHERE player_id=?",
+        (reward_days, player_id),
     )
     db.commit()
 
 
 def get_birthday(player_id):
-    cur = db.execute("SELECT birthday FROM users WHERE player_id=?", (player_id,))
+    cur = db.execute("SELECT birthday FROM players WHERE player_id=?", (player_id,))
     row = cur.fetchone()
     return row[0] if row else "1992-02-25"
 
 
 def set_birthday(player_id, birthday):
-    db.execute("UPDATE users SET birthday=? WHERE player_id=?", (birthday, player_id))
+    db.execute("UPDATE players SET birthday=? WHERE player_id=?", (birthday, player_id))
     db.commit()
 
 
 def get_account_type(player_id):
-    cur = db.execute("SELECT account_type FROM users WHERE player_id=?", (player_id,))
+    cur = db.execute("SELECT account_type FROM players WHERE player_id=?", (player_id,))
     row = cur.fetchone()
     return row[0] if row else 9999
 
 
 def get_team_char_id(player_id):
-    cur = db.execute("SELECT team FROM users WHERE player_id=?", (player_id,))
+    cur = db.execute("SELECT team FROM players WHERE player_id=?", (player_id,))
     row = cur.fetchone()
     if row and row[0]:
         return pickle.loads(row[0])
@@ -588,7 +564,7 @@ def get_team_char_id(player_id):
 
 def set_team_char_id(player_id, *character_ids):
     db.execute(
-        "UPDATE users SET team=? WHERE player_id=?",
+        "UPDATE players SET team=? WHERE player_id=?",
         (pickle.dumps(character_ids), player_id),
     )
     db.commit()
@@ -633,14 +609,7 @@ def set_item(player_id, item_id, num):  # num是数值变化
 
 
 def get_chat_history(player_id):
-    cur = db.execute(
-        "SELECT history_data FROM chat_history WHERE player_id=?", (player_id,)
-    )
-    row = cur.fetchone()
-
-    if row and row[0]:
-        return pickle.loads(row[0])
-
+    # TODO
     return [
         {"type": 0, "msg": []},
         {"type": 1, "msg": []},

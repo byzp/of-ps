@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 # 战斗遭遇信息 1329 1330
 """
 
+
 @packet_handler(CmdId.BattleEncounterInfoReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
@@ -29,7 +30,9 @@ class Handler(PacketHandler):
             encounter.battle_id = encounter_id  # 使用请求中的ID
             encounter.state = TEST_DATA["state"]  # 设置为Close状态
             # 第一个encounter的box_id为300000，其余为0
-            encounter.box_id = TEST_DATA["box_id_first"] if i == 0 else TEST_DATA["box_id_other"]
+            encounter.box_id = (
+                TEST_DATA["box_id_first"] if i == 0 else TEST_DATA["box_id_other"]
+            )
 
         session.send(CmdId.BattleEncounterInfoRsp, rsp, False, packet_id)
 
@@ -39,5 +42,5 @@ TEST_DATA = {
     "status": 1,  # StatusCode.OK
     "state": 4,  # BattleState.Close
     "box_id_first": 300000,
-    "box_id_other": 0
+    "box_id_other": 0,
 }

@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 # 战斗遭遇状态更新 1327 1328
 """
 
+
 @packet_handler(CmdId.BattleEncounterStateUpdateReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
@@ -30,9 +31,15 @@ class Handler(PacketHandler):
         rsp.encounter.box_id = TEST_DATA["encounter"]["box_id"]
 
         # 设置dynamic_treasure_box_base_info数据
-        rsp.dynamic_treasure_box_base_info.box_id = TEST_DATA["dynamic_treasure_box_base_info"]["box_id"]
-        rsp.dynamic_treasure_box_base_info.index = TEST_DATA["dynamic_treasure_box_base_info"]["index"]
-        rsp.dynamic_treasure_box_base_info.max_quality = TEST_DATA["dynamic_treasure_box_base_info"]["max_quality"]
+        rsp.dynamic_treasure_box_base_info.box_id = TEST_DATA[
+            "dynamic_treasure_box_base_info"
+        ]["box_id"]
+        rsp.dynamic_treasure_box_base_info.index = TEST_DATA[
+            "dynamic_treasure_box_base_info"
+        ]["index"]
+        rsp.dynamic_treasure_box_base_info.max_quality = TEST_DATA[
+            "dynamic_treasure_box_base_info"
+        ]["max_quality"]
 
         session.send(CmdId.BattleEncounterStateUpdateRsp, rsp, False, packet_id)
 
@@ -40,12 +47,10 @@ class Handler(PacketHandler):
 # 硬编码测试数据
 TEST_DATA = {
     "status": 1,
-    "encounter": {
-        "box_id": 0
-    },
+    "encounter": {"box_id": 0},
     "dynamic_treasure_box_base_info": {
         "box_id": 300000,
         "index": 779,
-        "max_quality": 2
-    }
+        "max_quality": 2,
+    },
 }

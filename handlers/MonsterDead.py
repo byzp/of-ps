@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 # 怪物死亡 1851 1852
 """
 
+
 @packet_handler(CmdId.MonsterDeadReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
@@ -27,21 +28,23 @@ class Handler(PacketHandler):
 
         # 设置drop_item数据
         rsp.drop_item.index = TEST_DATA["drop_item"]["index"]
-        
+
         # 添加items到drop_item
         for item_data in TEST_DATA["drop_item"]["items"]:
             item = rsp.drop_item.items.add()
-            
+
             # 设置main_item
             item.main_item.item_id = item_data["main_item"]["item_id"]
             item.main_item.item_tag = item_data["main_item"]["item_tag"]
             item.main_item.is_new = item_data["main_item"]["is_new"]
             item.main_item.temp_pack_index = item_data["main_item"]["temp_pack_index"]
-            
+
             # 设置base_item
-            item.main_item.base_item.item_id = item_data["main_item"]["base_item"]["item_id"]
+            item.main_item.base_item.item_id = item_data["main_item"]["base_item"][
+                "item_id"
+            ]
             item.main_item.base_item.num = item_data["main_item"]["base_item"]["num"]
-            
+
             # 设置weapon
             weapon = item.main_item.weapon
             weapon.weapon_id = item_data["main_item"]["weapon"]["weapon_id"]
@@ -59,12 +62,12 @@ class Handler(PacketHandler):
             weapon.durability = item_data["main_item"]["weapon"]["durability"]
             weapon.property_index = item_data["main_item"]["weapon"]["property_index"]
             weapon.is_lock = item_data["main_item"]["weapon"]["is_lock"]
-            
+
             # armor、poster、character、outfit、inscription字段使用默认值（0或空）
-            
+
             # 设置transformed_item为空数组
             # 设置extras为空数组
-            
+
             # 设置pack_type和extra_quality
             item.pack_type = item_data["pack_type"]
             item.extra_quality = item_data["extra_quality"]
@@ -85,10 +88,7 @@ TEST_DATA = {
                     "item_tag": 2,
                     "is_new": False,
                     "temp_pack_index": 0,
-                    "base_item": {
-                        "item_id": 0,
-                        "num": 0
-                    },
+                    "base_item": {"item_id": 0, "num": 0},
                     "weapon": {
                         "weapon_id": 1401108,
                         "instance_id": 14807,
@@ -104,7 +104,7 @@ TEST_DATA = {
                         "inscription_1": 0,
                         "durability": 0,
                         "property_index": 11,
-                        "is_lock": False
+                        "is_lock": False,
                     },
                     "armor": {
                         "armor_id": 0,
@@ -117,13 +117,13 @@ TEST_DATA = {
                         "strength_level": 0,
                         "strength_exp": 0,
                         "property_index": 0,
-                        "is_lock": False
+                        "is_lock": False,
                     },
                     "poster": {
                         "poster_id": 0,
                         "instance_id": 0,
                         "wearer_id": 0,
-                        "star": 0
+                        "star": 0,
                     },
                     "character": {
                         "character_id": 0,
@@ -144,28 +144,25 @@ TEST_DATA = {
                             "water_bottle_instance_id": 0,
                             "mining_hammer_instance_id": 0,
                             "collection_gloves_instance_id": 0,
-                            "fishing_rod_instance_id": 0
+                            "fishing_rod_instance_id": 0,
                         },
                         "character_skill_list": [],
                         "rewarded_achievement_id_lst": [],
                         "is_unlock_payment": False,
-                        "reward_index_lst": []
+                        "reward_index_lst": [],
                     },
-                    "outfit": {
-                        "outfit_id": 0,
-                        "dye_schemes": []
-                    },
+                    "outfit": {"outfit_id": 0, "dye_schemes": []},
                     "inscription": {
                         "inscription_id": 0,
                         "level": 0,
-                        "weapon_instance_id": 0
-                    }
+                        "weapon_instance_id": 0,
+                    },
                 },
                 "transformed_item": [],
                 "extras": [],
                 "pack_type": 2,
-                "extra_quality": 0
+                "extra_quality": 0,
             }
-        ]
-    }
+        ],
+    },
 }

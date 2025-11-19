@@ -23,9 +23,9 @@ class Handler(PacketHandler):
         rsp = AreaAchieveListRsp_pb2.AreaAchieveListRsp()
 
         rsp.status = TEST_DATA["status"]
-        
-        rsp.area_id = req.area_id # 从请求获取area_id
-        
+
+        rsp.area_id = req.area_id  # 从请求获取area_id
+
         # 空的成就列表
         # rsp.achieves
 

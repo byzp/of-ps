@@ -23,7 +23,7 @@ class Handler(PacketHandler):
         rsp = AreaUnlockRsp_pb2.AreaUnlockRsp()
 
         rsp.status = TEST_DATA["status"]
-        
+
         # 创建区域数据
         area_data = rsp.area
         area_data.area_id = req.area_id  # 从请求获取area_id

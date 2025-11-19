@@ -20,7 +20,7 @@ class Handler(PacketHandler):
 
         # Set data from test data
         rsp.status = TEST_DATA["status"]
-        
+
         # Set fireworks info
         fireworks_info = rsp.fireworks_info
         fireworks_info.fireworks_id = TEST_DATA["fireworks_id"]

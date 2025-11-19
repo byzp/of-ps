@@ -25,24 +25,38 @@ class Handler(PacketHandler):
             item_detail.main_item.item_id = item_data["main_item"]["item_id"]
             item_detail.main_item.item_tag = item_data["main_item"]["item_tag"]
             item_detail.main_item.is_new = item_data["main_item"]["is_new"]
-            item_detail.main_item.temp_pack_index = item_data["main_item"]["temp_pack_index"]
-            
+            item_detail.main_item.temp_pack_index = item_data["main_item"][
+                "temp_pack_index"
+            ]
+
             # Set base item for main item
-            item_detail.main_item.base_item.item_id = item_data["main_item"]["base_item"]["item_id"]
-            item_detail.main_item.base_item.num = item_data["main_item"]["base_item"]["num"]
-            
+            item_detail.main_item.base_item.item_id = item_data["main_item"][
+                "base_item"
+            ]["item_id"]
+            item_detail.main_item.base_item.num = item_data["main_item"]["base_item"][
+                "num"
+            ]
+
             # Set armor if available
             if "armor" in item_data["main_item"]:
                 armor_data = item_data["main_item"]["armor"]
                 item_detail.main_item.armor.armor_id = armor_data["armor_id"]
                 item_detail.main_item.armor.instance_id = armor_data["instance_id"]
-                item_detail.main_item.armor.main_property_type = armor_data["main_property_type"]
-                item_detail.main_item.armor.main_property_val = armor_data["main_property_val"]
+                item_detail.main_item.armor.main_property_type = armor_data[
+                    "main_property_type"
+                ]
+                item_detail.main_item.armor.main_property_val = armor_data[
+                    "main_property_val"
+                ]
                 item_detail.main_item.armor.wearer_id = armor_data["wearer_id"]
                 item_detail.main_item.armor.level = armor_data["level"]
-                item_detail.main_item.armor.strength_level = armor_data["strength_level"]
+                item_detail.main_item.armor.strength_level = armor_data[
+                    "strength_level"
+                ]
                 item_detail.main_item.armor.strength_exp = armor_data["strength_exp"]
-                item_detail.main_item.armor.property_index = armor_data["property_index"]
+                item_detail.main_item.armor.property_index = armor_data[
+                    "property_index"
+                ]
                 item_detail.main_item.armor.is_lock = armor_data["is_lock"]
 
             item_detail.pack_type = item_data["pack_type"]
@@ -62,7 +76,7 @@ TEST_DATA = {
                 "is_new": False,
                 "temp_pack_index": 0,
                 "base_item": {"item_id": 101, "num": 90},
-            },# 没用到的字段没有添加
+            },  # 没用到的字段没有添加
             "transformed_item": [],
             "extras": [],
             "pack_type": 2,

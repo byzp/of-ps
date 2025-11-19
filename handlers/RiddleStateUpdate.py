@@ -24,7 +24,7 @@ class Handler(PacketHandler):
 
         # Set data from test data
         rsp.status = TEST_DATA["status"]
-        
+
         # 从请求中获取riddle_id和state
         riddle_data = rsp.riddle_data
         riddle_data.riddle_id = req.riddle_id

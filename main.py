@@ -5,7 +5,7 @@ import signal
 import http_server.server as http_server
 from network.game_server import GameServer
 import utils.res_loader as res_loader
-import utils.command_handler as command_handler
+import utils.cmd as cmd
 
 res_loader.init()
 
@@ -22,13 +22,6 @@ logger = logging.getLogger(__name__)
 def main():
     logger.info("OverFieldPS Start")
     stop_event = cmd.start()
-
-    def _sig_handler(signum, frame):
-        logging.info("Signal %s received, shutdown...")
-        stop_event.set()
-
-    signal.signal(signal.SIGINT, _sig_handler)
-    signal.signal(signal.SIGTERM, _sig_handler)
 
     http_thread = threading.Thread(target=http_server.start, daemon=True)
     http_thread.start()

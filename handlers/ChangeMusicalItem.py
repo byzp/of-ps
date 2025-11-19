@@ -33,10 +33,10 @@ class Handler(PacketHandler):
 
         # 视为完成登录，同步场景玩家并广播加入事件
         if session.logged_in == False:
-          session.logged_in = True
-          for i in get_and_up_players(
-            session.scene_id, session.channel_id, session.player_id
-        ):
-            rsp = pb.ServerSceneSyncDataNotice()
-            rsp.ParseFromString(i)
-            session.send(CmdId.ServerSceneSyncDataNotice, rsp, False, 0)
+            session.logged_in = True
+            for i in get_and_up_players(
+                session.scene_id, session.channel_id, session.player_id
+            ):
+                rsp = pb.ServerSceneSyncDataNotice()
+                rsp.ParseFromString(i)
+                session.send(CmdId.ServerSceneSyncDataNotice, rsp, False, 0)

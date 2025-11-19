@@ -19,12 +19,12 @@ class Handler(PacketHandler):
 
         # Set data from test data
         rsp.status = TEST_DATA["status"]
-        
+
         # Add player buffs
         for buff_data in TEST_DATA["player_buffs"]:
             player_buff = rsp.player_buffs.add()
             player_buff.system_type = buff_data["system_type"]
-            
+
             # Add buff list
             for buff_item in buff_data["buff_lst"]:
                 buff = player_buff.buff_lst.add()
@@ -41,27 +41,12 @@ TEST_DATA = {
         {
             "system_type": 1,
             "buff_lst": [
-                {
-                    "buff_id": 1001,
-                    "end_time": 1763353061
-                },
-                {
-                    "buff_id": 1001,
-                    "end_time": 1763353061
-                },
-                {
-                    "buff_id": 1001,
-                    "end_time": 1763353061
-                },
-                {
-                    "buff_id": 1001,
-                    "end_time": 1763353061
-                },
-                {
-                    "buff_id": 1001,
-                    "end_time": 1763353061
-                }
-            ]
+                {"buff_id": 1001, "end_time": 1763353061},
+                {"buff_id": 1001, "end_time": 1763353061},
+                {"buff_id": 1001, "end_time": 1763353061},
+                {"buff_id": 1001, "end_time": 1763353061},
+                {"buff_id": 1001, "end_time": 1763353061},
+            ],
         }
-    ]
+    ],
 }

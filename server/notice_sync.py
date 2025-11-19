@@ -37,7 +37,7 @@ sync_stop = False
 def init():
     global _rel_time
     _rel_time = time.time()
-    threading.Thread(target=notice_sync_loop,daemon=False).start()
+    threading.Thread(target=notice_sync_loop, daemon=False).start()
 
 
 def notice_sync_loop():
@@ -59,7 +59,7 @@ def notice_sync_loop():
                 for session in session_list:
                     if session.logged_in == True:
                         pass
-                return     
+                return
             # 检查并清除掉线玩家
             for session in session_list:
                 if session.running == False and session.logged_in == True:
@@ -73,7 +73,6 @@ def notice_sync_loop():
                     up_scene_action(
                         session.scene_id, session.channel_id, notice.SerializeToString()
                     )
-            
 
             session_list[:] = [s for s in session_list if getattr(s, "running", False)]
             now = time.time()

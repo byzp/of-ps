@@ -19,13 +19,13 @@ class Handler(PacketHandler):
 
         # Set data from test data
         rsp.status = TEST_DATA["status"]
-        
+
         # Set notice data
         notice = rsp.notice
         notice.notice_id = TEST_DATA["notice"]["notice_id"]
         notice.scene_id = TEST_DATA["notice"]["scene_id"]
         notice.channel_id = TEST_DATA["notice"]["channel_id"]
-        
+
         # Add params
         for param in TEST_DATA["notice"]["param"]:
             notice.param.append(param)
@@ -38,11 +38,8 @@ TEST_DATA = {
     "status": 1,
     "notice": {
         "notice_id": 1,
-        "param": [
-            "测试玩家", #玩家名称
-            "301002" #角色ID
-        ],
-        "scene_id": 9999, # 抽卡通知场景ID
-        "channel_id": 1 # 抽卡通知频道
-    }
+        "param": ["测试玩家", "301002"],  # 玩家名称  # 角色ID
+        "scene_id": 9999,  # 抽卡通知场景ID
+        "channel_id": 1,  # 抽卡通知频道
+    },
 }

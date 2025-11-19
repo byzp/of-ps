@@ -23,7 +23,7 @@ class Handler(PacketHandler):
         rsp = HandingFurnitureRsp_pb2.HandingFurnitureRsp()
 
         rsp.status = TEST_DATA["status"]
-        
+
         # 设置家具ID
         rsp.furniture_id = TEST_DATA["furniture_id"]
 
@@ -31,7 +31,4 @@ class Handler(PacketHandler):
 
 
 # Hardcoded test data
-TEST_DATA = {
-    "status": 1,
-    "furniture_id": 6274502690341576
-}
+TEST_DATA = {"status": 1, "furniture_id": 6274502690341576}

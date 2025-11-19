@@ -23,6 +23,7 @@ class Handler(PacketHandler):
         rsp.nick_name = req.nick_name
 
         session.player_name = req.nick_name
+        db.set_player_name(session.player_id, req.nick_name)
 
         rs = db.set_item(session.player_id, 102, -10)  # 星石-10
         rsp.items.add().ParseFromString(rs)
