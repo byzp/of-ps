@@ -2,21 +2,21 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.cmd_id import CmdId
 import logging
 
-import proto.OverField_pb2 as TreasureBoxOpenReq_pb2
-import proto.OverField_pb2 as TreasureBoxOpenRsp_pb2
+import proto.OverField_pb2 as TreasureBoxPickupReq_pb2
+import proto.OverField_pb2 as TreasureBoxPickupRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 
 
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.TreasureBoxOpenReq)
+@packet_handler(CmdId.TreasureBoxPickupReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = TreasureBoxOpenReq_pb2.TreasureBoxOpenReq()
+        req = TreasureBoxPickupReq_pb2.TreasureBoxPickupReq()
         req.ParseFromString(data)
 
-        rsp = TreasureBoxOpenRsp_pb2.TreasureBoxOpenRsp()
+        rsp = TreasureBoxPickupRsp_pb2.TreasureBoxPickupRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
         # Set fields from hardcoded test data
@@ -48,19 +48,17 @@ class Handler(PacketHandler):
             item_detail.pack_type = item_data["pack_type"]
             item_detail.extra_quality = item_data["extra_quality"]
 
-        rsp.next_refresh_time = TEST_DATA["next_refresh_time"]
-
-        session.send(CmdId.TreasureBoxOpenRsp, rsp, False, packet_id)
+        session.send(CmdId.TreasureBoxPickupRsp, rsp, False, packet_id)
 
 
-# Hardcoded test data from TreasureBoxOpenRsp.json
+# Hardcoded test data from TreasureBoxPickupRsp.json
 TEST_DATA = {
     "status": 1,
     "items": [
         {
             "main_item": {
-                "item_id": 101, #物品id
-                "item_tag": 9, #标签
+                "item_id": 101,
+                "item_tag": 9,
                 "is_new": False,
                 "temp_pack_index": 0,
                 "base_item": {"item_id": 101, "num": 90},
@@ -110,5 +108,4 @@ TEST_DATA = {
             "extra_quality": 0,
         },
     ],
-    "next_refresh_time": 1763365177078,
 }

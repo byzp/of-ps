@@ -2,18 +2,10 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.cmd_id import CmdId
 import logging
 
-import proto.net_pb2 as CollectMoonReq_pb2
-import proto.net_pb2 as CollectMoonRsp_pb2
-import proto.net_pb2 as StatusCode_pb2
-import proto.net_pb2 as ItemDetail_pb2
-import proto.net_pb2 as ItemInfo_pb2
-import proto.net_pb2 as BaseItem_pb2
-import proto.net_pb2 as WeaponInstance_pb2
-import proto.net_pb2 as ArmorInstance_pb2
-import proto.net_pb2 as PosterInstance_pb2
-import proto.net_pb2 as Character_pb2
-import proto.net_pb2 as Outfit_pb2
-import proto.net_pb2 as Inscription_pb2
+import proto.OverField_pb2 as CollectMoonReq_pb2
+import proto.OverField_pb2 as CollectMoonRsp_pb2
+import proto.OverField_pb2 as StatusCode_pb2
+
 
 logger = logging.getLogger(__name__)
 

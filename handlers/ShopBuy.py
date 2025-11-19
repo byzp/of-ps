@@ -2,9 +2,9 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.cmd_id import CmdId
 import logging
 
-import proto.net_pb2 as ShopBuyReq_pb2
-import proto.net_pb2 as ShopBuyRsp_pb2
-import proto.net_pb2 as StatusCode_pb2
+import proto.OverField_pb2 as ShopBuyReq_pb2
+import proto.OverField_pb2 as ShopBuyRsp_pb2
+import proto.OverField_pb2 as StatusCode_pb2
 
 logger = logging.getLogger(__name__)
 
