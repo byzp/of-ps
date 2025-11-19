@@ -15,7 +15,7 @@ class Handler(PacketHandler):
         rsp = VerifyLoginTokenRsp_pb2.VerifyLoginTokenRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
         user_id = int(db.get_user_id(req.sdk_uid))
-        if db.verify_sdk_user_info(user_id, req.login_token) == False:
+        if not db.verify_sdk_user_info(user_id, req.login_token):
             rsp.status = StatusCode_pb2.StatusCode_FAIL
             session.send(CmdId.VerifyLoginTokenRsp, rsp, True, packet_id)
             return

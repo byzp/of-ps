@@ -2,3 +2,5 @@ fastapi
 uvicorn
 protobuf
 python-snappy
+prompt-toolkit
+colorama

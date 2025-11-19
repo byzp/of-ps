@@ -102,11 +102,8 @@ def init_player(player_id):
     cur_time = int(time.time())
     player_name = ""
     # 初始化用户基本信息
-    unlock_funcs = []
-    for i in range(100000000, 100000049):
-        unlock_funcs.append(i)
     unlock_funcs = pickle.dumps(
-        unlock_funcs  # [100000009, 100000003, 100000021, 100000006, 100000044, 100000031]
+        [100000009, 100000003, 100000021, 100000006, 100000044, 100000031]
     )
 
     team = pickle.dumps((101001, 101002, 101003))
@@ -164,7 +161,6 @@ def init_player(player_id):
 
 
 def verify_sdk_user_info(user_id, login_token):
-    return True
     cur = db.execute(
         "SELECT id, username, user_token FROM users WHERE id = ? AND user_token = ?",
         (
@@ -198,7 +194,7 @@ def get_sdk_user_info(username, password):
             (username, password, auth_token),
         )
         return {
-            "id": get_player_id(0),
+            "id": get_sdk_user_info(username, password)["id"],
             "username": username,
             "user_token": auth_token,
         }
@@ -239,7 +235,7 @@ def get_analysis_account_id(player_id):
 def get_player_name(player_id):
     cur = db.execute("SELECT player_name FROM players WHERE player_id=?", (player_id,))
     row = cur.fetchone()
-    return row[0] if row else "Vexuro."
+    return row[0] if row else ""
 
 
 def set_player_name(player_id, name):
@@ -264,11 +260,12 @@ def get_server_time_zone(player_id):
 
 
 def get_unlock_functions(player_id):
-    # cur = db.execute("SELECT unlock_functions FROM players WHERE player_id=?", (player_id,))
-    # row = cur.fetchone()
-    # if row and row[0]:
-    #     return pickle.loads(row[0])
-    return [100000009, 100000003, 100000021, 100000006, 100000044, 100000031]
+    cur = db.execute(
+        "SELECT unlock_functions FROM players WHERE player_id=?", (player_id,)
+    )
+    row = cur.fetchone()
+    if row and row[0]:
+        return pickle.loads(row[0])
 
 
 def set_unlock_functions(player_id, functions):
@@ -437,49 +434,45 @@ def get_characters(player_id):
     a = []
 
     for i in res["Character"]["character"]["datas"]:
-        if i["i_d"] in [101001, 102001, 102002, 103002, 201001, 302002, 401001, 403002]:
-            pass
         if i.get("ex_spell_i_ds") is None:
             continue
-        # if i["i_d"] in [101003,101004,102003,102004,103001,103002,201002,201003,202001,202002,202003,202004,301002,301003,301004,302001,302002,302003,302004,401001,401002,401003,401004,402001,402002,402003,403001,403003,403004]:
-        if True:
-            a.append(
-                {
-                    "character_id": i["i_d"],
-                    "level": 1,
-                    "max_level": 20,
-                    "exp": 200,
-                    "star": 2,
-                    "equipment_presets": [
-                        # {"weapon": 16},
-                        {"preset_index": 1},
-                        {"preset_index": 2},
-                    ],
-                    "outfit_presets": [
-                        {},  # ? "10": ""
-                        {
-                            "preset_index": 1,
-                            "hair": i.get("hair_i_d"),
-                            "clothes": i.get("cloth_i_d"),
-                        },
-                        {
-                            "preset_index": 2,
-                            "hair": i.get("hair_i_d"),
-                            "clothes": i.get("cloth_i_d"),
-                        },
-                    ],
-                    "character_appearance": {
-                        "badge": 5000,
-                        "umbrella_id": 4050,
-                        "logging_axe_instance_id": 33,
+        a.append(
+            {
+                "character_id": i["i_d"],
+                "level": 1,
+                "max_level": 20,
+                "exp": 200,
+                "star": 2,
+                "equipment_presets": [
+                    # {"weapon": 16},
+                    {"preset_index": 1},
+                    {"preset_index": 2},
+                ],
+                "outfit_presets": [
+                    {},  # ? "10": ""
+                    {
+                        "preset_index": 1,
+                        "hair": i.get("hair_i_d"),
+                        "clothes": i.get("cloth_i_d"),
                     },
-                    "character_skill_list": [
-                        {"skill_id": i.get("spell_i_ds")[0], "skill_level": 1},
-                        {"skill_id": i.get("spell_i_ds")[1], "skill_level": 1},
-                        {"skill_id": i.get("ex_spell_i_ds")[0], "skill_level": 1},
-                    ],
-                }
-            )
+                    {
+                        "preset_index": 2,
+                        "hair": i.get("hair_i_d"),
+                        "clothes": i.get("cloth_i_d"),
+                    },
+                ],
+                "character_appearance": {
+                    "badge": 5000,
+                    "umbrella_id": 4050,
+                    "logging_axe_instance_id": 33,
+                },
+                "character_skill_list": [
+                    {"skill_id": i.get("spell_i_ds")[0], "skill_level": 1},
+                    {"skill_id": i.get("spell_i_ds")[1], "skill_level": 1},
+                    {"skill_id": i.get("ex_spell_i_ds")[0], "skill_level": 1},
+                ],
+            }
+        )
     return a
 
 
