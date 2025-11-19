@@ -3,7 +3,7 @@ from network.cmd_id import CmdId
 import logging
 import time
 
-import proto.net_pb2 as FireworksStartNotice_pb2
+import proto.OverField_pb2 as FireworksStartNotice_pb2
 
 logger = logging.getLogger(__name__)
 
