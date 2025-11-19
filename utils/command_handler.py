@@ -52,13 +52,20 @@ def send_fireworks_start_notice():
     from handlers.FireworksStartNotice import Handler
     send_to_all_clients(Handler) #有问题
 
+def send_scene_inter_action_play_status_notice():
+    """向所有已连接的客户端发送场景互动播放状态通知"""
+    from handlers.SceneInterActionPlayStatusNotice import Handler
+    send_to_all_clients(Handler) #没测试
+
+
+
 # 注册命令
 register_command("1918", send_weather_change)
 register_command("2016", send_system_notice)
 register_command("1880", send_player_buff_notice)
 register_command("2160", send_fireworks_start_notice)
 register_command("2630", send_gm_recommend_channel_notice)
-
+register_command("2631", send_scene_inter_action_play_status_notice)
 
 
 
