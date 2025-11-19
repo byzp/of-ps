@@ -24,19 +24,20 @@ logger = logging.getLogger(__name__)
 
 max_tps = 120
 
-
-tod_time = 43200.0
+tod_time = 21600.0
 _rel_time = 0.0
 _last_send_time = 0.0
 
 SPEED_MULTIPLIER = 50.0
 SEND_INTERVAL_REAL = 60.0
 
+sync_stop = False
+
 
 def init():
     global _rel_time
     _rel_time = time.time()
-    threading.Thread(target=notice_sync_loop, daemon=True).start()
+    threading.Thread(target=notice_sync_loop,daemon=False).start()
 
 
 def notice_sync_loop():
@@ -44,6 +45,21 @@ def notice_sync_loop():
     while True:
         start_t = time.time()
         with lock_session:
+            # 服务器停止
+            if sync_stop:
+                logger.info(f"Save player data...")
+                # 向所有玩家发送离线通知
+                rsp = pb.PlayerOfflineRsp()
+                rsp.status = StatusCode_pb2.StatusCode_OK
+                rsp.reason = pb.PlayerOfflineReason_SERVER_SHUTDOWN
+                for session in session_list:
+                    if session.running == True and session.logged_in == True:
+                        session.send(CmdId.PlayerOfflineRsp, rsp, True, 0)
+                # 保存玩家数据
+                for session in session_list:
+                    if session.logged_in == True:
+                        pass
+                return     
             # 检查并清除掉线玩家
             for session in session_list:
                 if session.running == False and session.logged_in == True:
@@ -57,6 +73,8 @@ def notice_sync_loop():
                     up_scene_action(
                         session.scene_id, session.channel_id, notice.SerializeToString()
                     )
+            
+
             session_list[:] = [s for s in session_list if getattr(s, "running", False)]
             now = time.time()
             elapsed_real = now - _rel_time

@@ -24,11 +24,12 @@ class Handler(PacketHandler):
         )
 
         # 更新动作和角度
-        pos = req.data.char_recorder_data_lst[0].pos
-        rot = req.data.char_recorder_data_lst[0].rot
-        if pos.x != 0:
-            session.scene_player.team.char_1.pos.CopyFrom(pos)
-            session.scene_player.team.char_1.rot.CopyFrom(rot)
+        rec = req.data.char_recorder_data_lst
+        if rec:
+          rec = rec[0]
+          if rec.pos.x != 0:
+            session.scene_player.team.char_1.pos.CopyFrom(rec.pos)
+            session.scene_player.team.char_1.rot.CopyFrom(rec.rot)
 
         rsp = OverField_pb2.PlayerSceneSyncDataNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK

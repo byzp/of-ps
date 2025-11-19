@@ -42,3 +42,6 @@ class GameServer:
 
         except Exception as e:
             logger.error(f"Failed to start server: {e}")
+
+    def stop(self):
+        notice_sync.sync_stop=True
