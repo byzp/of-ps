@@ -4,6 +4,7 @@ import threading
 import http_server.server as http_server
 from network.game_server import GameServer
 import utils.res_loader as res_loader
+import utils.command_handler as command_handler
 
 res_loader.init()
 
@@ -25,6 +26,10 @@ def main():
     http_thread.start()
 
     game_server = GameServer()
+    
+    # Start a thread to handle command line input
+    command_handler.start_command_handler()
+    
     game_server.start()
 
 
