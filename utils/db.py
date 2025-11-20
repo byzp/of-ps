@@ -209,12 +209,19 @@ def init_player(player_id):
         item = pb.ItemDetail()
         tmp = item.main_item
         tmp.item_id = i["i_d"]
-        tmp.item_tag = i["new_bag_item_tag"]
-        tmp.base_item.item_id = i["i_d"]
-        tmp.base_item.num = 1000
+        if i["new_bag_item_tag"] == pb.EBagItemTag_Fashion:
+            tmp.item_tag = i["new_bag_item_tag"]
+            outfit = tmp.outfit
+            outfit.outfit_id = i["i_d"]
+            tmp = outfit.dye_schemes.add()
+            tmp.is_un_lock = True
+        else:
+            tmp.item_tag = i["new_bag_item_tag"]
+            tmp.base_item.item_id = i["i_d"]
+            tmp.base_item.num = 100000
         db.execute(
             "INSERT OR REPLACE INTO items (player_id, item_id, item_detail_blob) VALUES (?, ?, ?)",
-            (player_id, i["i_d"], item.SerializeToString()),
+            (player_id, i["i_d"], pickle.dumps([item.SerializeToString()])),
         )
 
     db.commit()
@@ -470,7 +477,7 @@ def set_garden_info(player_id, field1, field2, field3, field4, field5):
     db.commit()
 
 
-def get_characters(player_id, character_id=None):
+def get_characters(player_id, character_id=None) -> list:
     chrs = []
     if character_id:
         cur = db.execute(
@@ -502,7 +509,7 @@ def up_character(player_id, character_id, character_blob):
     db.commit()
 
 
-def get_item_detail(player_id, item_id=None):
+def get_item_detail(player_id, item_id=None) -> list:
     items = []
     if item_id:
         cur = db.execute(
@@ -510,7 +517,7 @@ def get_item_detail(player_id, item_id=None):
             (player_id, item_id),
         )
         row = cur.fetchone()
-        items.append(row[0])
+        items += pickle.loads(row[0])
         return items
 
     else:
@@ -520,14 +527,14 @@ def get_item_detail(player_id, item_id=None):
         )
         rows = cur.fetchall()
         for row in rows:
-            items.append(row[0])
+            items += pickle.loads(row[0])
         return items
 
 
-def up_item_detail(player_id, item_id, item_detail_blob):  # num是数值变化
+def up_item_detail(player_id, item_id, item_detail_blob: list):  # num是数值变化
     db.execute(
         "INSERT OR REPLACE INTO items (player_id, item_id, item_detail_blob) VALUES (?, ?, ?)",
-        (player_id, item_id, item_detail_blob),
+        (player_id, item_id, pickle.dumps(item_detail_blob)),
     )
     db.commit()
 
@@ -586,10 +593,10 @@ def get_team_char_id(player_id):
     row = cur.fetchone()
     if row and row[0]:
         return pickle.loads(row[0])
-    return [101001, 202002, 202004]
+    return (101001, 202002, 202004)
 
 
-def set_team_char_id(player_id, *character_ids):
+def up_team_char_id(player_id, character_ids):
     db.execute(
         "UPDATE players SET team=? WHERE player_id=?",
         (pickle.dumps(character_ids), player_id),

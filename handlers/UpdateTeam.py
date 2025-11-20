@@ -6,6 +6,8 @@ import proto.OverField_pb2 as UpdateTeamReq_pb2
 import proto.OverField_pb2 as UpdateTeamRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 
+import utils.db as db
+
 logger = logging.getLogger(__name__)
 
 
@@ -18,11 +20,7 @@ class Handler(PacketHandler):
         rsp = UpdateTeamRsp_pb2.UpdateTeamRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
-        # Hardcoded test data for status field
-        rsp.status = TEST_DATA["status"]
-
+        db.up_team_char_id(session.player_id, (req.char_1, req.char_2, req.char_3))
         session.send(CmdId.UpdateTeamRsp, rsp, False, packet_id)
 
-
-# Hardcoded test data
-TEST_DATA = {"status": 1}
+        # TODO 广播场景数据
