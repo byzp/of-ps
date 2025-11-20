@@ -49,13 +49,14 @@ class Handler(PacketHandler):
         char_1.char_id = char_ids[0]
         char_1.outfit_preset.hide_info.CopyFrom(pb.OutfitHideInfo())
 
-        for chr in db.get_characters(player_id):
-            if chr["character_id"] == char_1.char_id:
-                for k, v in chr["character_appearance"].items():
-                    setattr(char_1.character_appearance, k, v)
-                char_1.char_lv = chr["level"]
-                char_1.char_star = chr["star"]
-                char_1.char_break_lv = chr["max_level"]
+        chr = pb.Character()
+        chr.ParseFromString(db.get_characters(player_id, char_ids[0])[0])
+
+        char_1.character_appearance.CopyFrom(chr.character_appearance)
+        char_1.char_lv = chr.level
+        char_1.char_star = chr.star
+        char_1.char_break_lv = chr.max_level
+
         # char_1.pos.CopyFrom(pb.Vector3())
         # char_1.rot.CopyFrom(pb.Vector3())
         char_1.pos.x = 2394

@@ -150,14 +150,6 @@ class GameSession:
         else:
             packet_head.flag = 0
         packet_head.body_len = len(body_data)
-        """
-        global msg,stop,m2202
-        if cmd_id==2202:
-            head_data = packet_head.SerializeToString()
-            head_len = struct.pack('>H', len(head_data))
-            m2202=[cmd_id,[self, head_len + head_data + body_data]]
-            return
-        """
 
         if sync:
             packet_head.seq_id = 0
@@ -169,25 +161,6 @@ class GameSession:
         head_data = packet_head.SerializeToString()
         head_len = struct.pack(">H", len(head_data))
 
-        """
-        if cmd_id==1612:
-            stop=1
-        if stop==1 and cmd_id!=1862:
-            msg.append([cmd_id,[self, head_len + head_data + body_data]])
-            return
-        
-        if cmd_id==1862:
-            print(">>>>>>>")
-            for i in msg:
-                i[1][0].socket.sendall(i[1][1])
-                logger.info(f"Sending message: {i[0]}")
-            self.socket.sendall(head_len + head_data + body_data)
-            logger.info(f"Sending message: 1862")
-            m2202[1][0].socket.sendall(m2202[1][1])
-            logger.info(f"Sending message: 2202")
-            stop=0
-            return
-        """
         try:
             self.socket.sendall(head_len + head_data + body_data)
         except Exception as e:

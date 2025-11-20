@@ -37,41 +37,13 @@ class Handler(PacketHandler):
         rsp.head = session.avatar_id
         rsp.phone_background = db.get_phone_background(player_id)
         rsp.create_time = db.get_create_time(player_id)
-        rsp.ClearField("characters")
-        for chr in db.get_characters(player_id):
-            tmp = rsp.characters.add()
-            tmp.character_id = chr["character_id"]
-            tmp.level = chr["level"]
-            tmp.max_level = chr["max_level"]
-            tmp.exp = chr["exp"]
-            tmp.star = chr["star"]
-            tmp.ClearField("equipment_presets")
-            t1 = tmp.equipment_presets.add()
-            t1.armors.add()
-            t1.armors.add().equip_type = PlayerMainDataRsp_pb2.EEquipType_Chest
-            t1.armors.add().equip_type = PlayerMainDataRsp_pb2.EEquipType_Hand
-            t1.armors.add().equip_type = PlayerMainDataRsp_pb2.EEquipType_Shoes
-            t1.posters.add()
-            t1.posters.add().poster_index = 1
-            t1.posters.add().poster_index = 2
 
-            for i in chr["equipment_presets"]:
-                tmp1 = tmp.equipment_presets.add()
-                for k, v in i.items():
-                    setattr(tmp1, k, v)
-            for i in chr["outfit_presets"]:
-                tmp1 = tmp.outfit_presets.add()
-                for k, v in i.items():
-                    if v is None:
-                        continue
-                    setattr(tmp1, k, v)
-                tmp1.outfit_hide_info.CopyFrom(pb.OutfitHideInfo())
-            for k, v in chr["character_appearance"].items():
-                setattr(tmp.character_appearance, k, v)
-            for i in chr["character_skill_list"]:
-                tmp1 = tmp.character_skill_list.add()
-                for k, v in i.items():
-                    setattr(tmp1, k, v)
+        rsp.ClearField("characters")
+        chrp = pb.Character()
+        for chr in db.get_characters(player_id):
+            chrp.ParseFromString(chr)
+            tmp = rsp.characters.add()
+            tmp.CopyFrom(chrp)
 
         rsp.team.char_1, rsp.team.char_2, rsp.team.char_3 = db.get_team_char_id(
             player_id
@@ -93,7 +65,10 @@ class Handler(PacketHandler):
         session.send(CmdId.PlayerMainDataRsp, rsp, True, packet_id)  # 1005,1006
 
         rsp = PackNotice_pb2.PackNotice()
-        rsp.ParseFromString(db.get_items(player_id))
+        rsp.status = StatusCode_pb2.StatusCode_OK
+        for item in db.get_item_detail(player_id):
+            rsp.items.add().ParseFromString(item)
+        rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, True, packet_id)
         # session.sbin(CmdId.PackNotice, bin["1400"], False, packet_id)
 

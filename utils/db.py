@@ -8,13 +8,19 @@ from config import Config
 import secrets
 
 from utils.res_loader import res
-from proto import OverField_pb2
+import proto.OverField_pb2 as Character_pb2
+import proto.OverField_pb2 as pb
 
 logger = logging.getLogger(__name__)
 
-# 初始化数据库连接
-if not os.path.exists(Config.DB_PATH):
-    logger.warning("database not exists!")
+db = None
+
+
+def init():
+    # 初始化数据库连接
+    if not os.path.exists(Config.DB_PATH):
+        logger.warning("database not exists!")
+    global db
     db = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
     db.executescript(
         """
@@ -41,6 +47,22 @@ if not os.path.exists(Config.DB_PATH):
             account_type INTEGER DEFAULT 9999,
             unlock_functions BLOB,
             team BLOB
+        );
+
+        CREATE TABLE IF NOT EXISTS characters (
+            player_id INTEGER NOT NULL,
+            character_id INTEGER NOT NULL,
+            character_blob BLOB NOT NULL,
+            PRIMARY KEY (player_id, character_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS items (
+            player_id INTEGER NOT NULL,
+            item_id INTEGER NOT NULL,
+            item_detail_blob BLOB NOT NULL,
+            PRIMARY KEY (player_id, item_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
         
         CREATE TABLE IF NOT EXISTS month_card (
@@ -73,13 +95,6 @@ if not os.path.exists(Config.DB_PATH):
             FOREIGN KEY(player_id) REFERENCES players(player_id)
         );
         
-        CREATE TABLE IF NOT EXISTS items (
-            player_id INTEGER,
-            item_data BLOB,
-            PRIMARY KEY(player_id),
-            FOREIGN KEY(player_id) REFERENCES players(player_id)
-        ); 
-        
         CREATE TABLE IF NOT EXISTS character_equip (
             player_id INTEGER,
             character_id INTEGER,
@@ -88,13 +103,11 @@ if not os.path.exists(Config.DB_PATH):
             FOREIGN KEY(player_id) REFERENCES players(player_id)
         );
 
-        INSERT INTO users (id, username, password, user_token) VALUES (1000000, "", "", "");
+        INSERT OR IGNORE INTO users (id, username, password, user_token) VALUES (1000000, "", "", "");
 
-        """
+    """
     )
     db.commit()
-else:
-    db = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
 
 
 def init_player(player_id):
@@ -125,37 +138,84 @@ def init_player(player_id):
     db.execute("INSERT OR IGNORE INTO garden_info (player_id) VALUES (?)", (player_id,))
 
     # 初始化角色
-    from utils.res_loader import res
+    datas = res.get("Character", {}).get("character", {}).get("datas", [])
+    for i in datas:
+        if not i.get("ex_spell_i_ds"):
+            continue
+        c = Character_pb2.Character()
 
-    for i in res["Character"]["character"]["datas"]:
-        if i["i_d"] in [102002, 102001, 401001, 401002, 103002, 302002, 201001, 101001]:
-            continue
-        if i.get("ex_spell_i_ds") is None:
-            continue
-        if i["i_d"] in [202004, 202003, 202002, 101002]:
-            equipment_presets = pickle.dumps([{"preset_index": 1}, {"preset_index": 2}])
-            db.execute(
-                """INSERT OR IGNORE INTO characters 
-                (player_id, character_id, equipment_presets) VALUES (?, ?, ?)""",
-                (player_id, i["i_d"], equipment_presets),
-            )
+        c.character_id = i["i_d"]
+        c.level = 1
+        c.max_level = 20
+        c.exp = 200
+        c.star = 2
+
+        t1 = c.equipment_presets.add()
+
+        t1.armors.add()
+        t1.armors.add().equip_type = pb.EEquipType_Chest
+        t1.armors.add().equip_type = pb.EEquipType_Hand
+        t1.armors.add().equip_type = pb.EEquipType_Shoes
+        t1.posters.add()
+        t1.posters.add().poster_index = 1
+        t1.posters.add().poster_index = 2
+
+        p = c.equipment_presets.add()
+        p.preset_index = 1
+        p2 = c.equipment_presets.add()
+        p2.preset_index = 2
+
+        o0 = c.outfit_presets.add()
+        o0.outfit_hide_info.CopyFrom(pb.OutfitHideInfo())
+
+        o1 = c.outfit_presets.add()
+        o1.preset_index = 1
+        o1.hair = i.get("hair_i_d")
+        o1.clothes = i.get("cloth_i_d")
+        o1.outfit_hide_info.CopyFrom(pb.OutfitHideInfo())
+
+        o2 = c.outfit_presets.add()
+        o2.preset_index = 2
+        o2.hair = i.get("hair_i_d")
+        o2.clothes = i.get("cloth_i_d")
+        o2.outfit_hide_info.CopyFrom(pb.OutfitHideInfo())
+
+        c.character_appearance.badge = 5000
+        c.character_appearance.umbrella_id = 4050
+        c.character_appearance.logging_axe_instance_id = 33
+
+        spells = i.get("spell_i_ds", [])
+        ex_spells = i.get("ex_spell_i_ds", [])
+
+        s = c.character_skill_list.add()
+        s.skill_id = spells[0]
+        s.skill_level = 1
+
+        s = c.character_skill_list.add()
+        s.skill_id = spells[1]
+        s.skill_level = 1
+
+        s = c.character_skill_list.add()
+        s.skill_id = ex_spells[0]
+        s.skill_level = 1
+
+        db.execute(
+            "INSERT INTO characters (player_id, character_id, character_blob) VALUES (?, ?, ?)",
+            (player_id, i["i_d"], c.SerializeToString()),
+        )
 
     # 初始化物品
-
-    rsp = OverField_pb2.PackNotice()
-    rsp.status = 1
     for i in res["Item"]["item"]["datas"]:
-        tmp = rsp.items.add().main_item
+        item = pb.ItemDetail()
+        tmp = item.main_item
         tmp.item_id = i["i_d"]
         tmp.item_tag = i["new_bag_item_tag"]
         tmp.base_item.item_id = i["i_d"]
         tmp.base_item.num = 1000
-    rsp.temp_pack_max_size = 30
-
-    db.execute(
-        "INSERT OR IGNORE INTO items (player_id, item_data) VALUES (?, ?)",
-        (player_id, rsp.SerializeToString()),
-    )
+        db.execute(
+            "INSERT OR REPLACE INTO items (player_id, item_id, item_detail_blob) VALUES (?, ?, ?)",
+            (player_id, i["i_d"], item.SerializeToString()),
+        )
 
     db.commit()
 
@@ -248,7 +308,7 @@ def get_client_log_server_token(player_id):
         "SELECT client_log_server_token FROM players WHERE player_id=?", (player_id,)
     )
     row = cur.fetchone()
-    return row[0] if row else "dG9rZW4="
+    return row[0] if row else ""
 
 
 def get_server_time_zone(player_id):
@@ -410,92 +470,66 @@ def set_garden_info(player_id, field1, field2, field3, field4, field5):
     db.commit()
 
 
-def get_characters(player_id):
-    # cur = db.execute(
-    #     """SELECT character_id, level, max_level, exp, star, equipment_presets
-    #     FROM characters WHERE player_id=?""",
-    #     (player_id,),
-    # )
-    # rows = cur.fetchall()
-
-    # characters = []
-    # for row in rows:
-    #     char_data = {
-    #         "character_id": row[0],
-    #         "level": row[1],
-    #         "max_level": row[2],
-    #         "exp": row[3],
-    #         "star": row[4],
-    #         "equipment_presets": pickle.loads(row[5]) if row[5] else [],
-    #     }
-    #     characters.append(char_data)
-
-    # return characters
-    a = []
-
-    for i in res["Character"]["character"]["datas"]:
-        if i.get("ex_spell_i_ds") is None:
-            continue
-        a.append(
-            {
-                "character_id": i["i_d"],
-                "level": 1,
-                "max_level": 20,
-                "exp": 200,
-                "star": 2,
-                "equipment_presets": [
-                    # {"weapon": 16},
-                    {"preset_index": 1},
-                    {"preset_index": 2},
-                ],
-                "outfit_presets": [
-                    {},  # ? "10": ""
-                    {
-                        "preset_index": 1,
-                        "hair": i.get("hair_i_d"),
-                        "clothes": i.get("cloth_i_d"),
-                    },
-                    {
-                        "preset_index": 2,
-                        "hair": i.get("hair_i_d"),
-                        "clothes": i.get("cloth_i_d"),
-                    },
-                ],
-                "character_appearance": {
-                    "badge": 5000,
-                    "umbrella_id": 4050,
-                    "logging_axe_instance_id": 33,
-                },
-                "character_skill_list": [
-                    {"skill_id": i.get("spell_i_ds")[0], "skill_level": 1},
-                    {"skill_id": i.get("spell_i_ds")[1], "skill_level": 1},
-                    {"skill_id": i.get("ex_spell_i_ds")[0], "skill_level": 1},
-                ],
-            }
+def get_characters(player_id, character_id=None):
+    chrs = []
+    if character_id:
+        cur = db.execute(
+            "SELECT character_blob FROM characters WHERE player_id=? AND character_id=?",
+            (player_id, character_id),
         )
-    return a
+        row = cur.fetchone()
+        chrs.append(row[0])
+        return chrs
+
+    else:
+        cur = db.execute(
+            "SELECT character_blob FROM characters WHERE player_id=?",
+            (player_id,),
+        )
+        rows = cur.fetchall()
+        for row in rows:
+            chrs.append(row[0])
+        return chrs
 
 
-def update_character(player_id, character_id, **kwargs):
+def up_character(player_id, character_id, character_blob):
     """更新角色信息"""
-    fields = []
-    values = []
 
-    for key, value in kwargs.items():
-        if key == "equipment_presets":
-            fields.append(f"{key}=?")
-            values.append(pickle.dumps(value))
-        else:
-            fields.append(f"{key}=?")
-            values.append(value)
+    db.execute(
+        "INSERT OR REPLACE INTO characters (player_id, character_id, character_blob) VALUES (?, ?, ?)",
+        (player_id, character_id, character_blob),
+    )
+    db.commit()
 
-    if fields:
-        values.extend([player_id, character_id])
-        db.execute(
-            f"UPDATE characters SET {', '.join(fields)} WHERE player_id=? AND character_id=?",
-            values,
+
+def get_item_detail(player_id, item_id=None):
+    items = []
+    if item_id:
+        cur = db.execute(
+            "SELECT item_detail_blob FROM items WHERE player_id=? AND item_id=?",
+            (player_id, item_id),
         )
-        db.commit()
+        row = cur.fetchone()
+        items.append(row[0])
+        return items
+
+    else:
+        cur = db.execute(
+            "SELECT item_detail_blob FROM items WHERE player_id=?",
+            (player_id,),
+        )
+        rows = cur.fetchall()
+        for row in rows:
+            items.append(row[0])
+        return items
+
+
+def up_item_detail(player_id, item_id, item_detail_blob):  # num是数值变化
+    db.execute(
+        "INSERT OR REPLACE INTO items (player_id, item_id, item_detail_blob) VALUES (?, ?, ?)",
+        (player_id, item_id, item_detail_blob),
+    )
+    db.commit()
 
 
 def get_month_card_over_due_time(player_id):
@@ -561,44 +595,6 @@ def set_team_char_id(player_id, *character_ids):
         (pickle.dumps(character_ids), player_id),
     )
     db.commit()
-
-
-def get_items(player_id):
-    cur = db.execute("SELECT item_data FROM items WHERE player_id=?", (player_id,))
-    row = cur.fetchone()
-
-    if row and row[0]:
-        return row[0]
-
-    # 如果没有数据，生成默认物品
-
-    rsp = OverField_pb2.PackNotice()
-    rsp.status = 1  # ok
-    for i in res["Item"]["item"]["datas"]:
-        tmp = rsp.items.add().main_item
-        tmp.item_id = i["i_d"]
-        tmp.item_tag = i["new_bag_item_tag"]
-        tmp.base_item.item_id = i["i_d"]
-        tmp.base_item.num = 100
-    rsp.temp_pack_max_size = 300
-
-    return rsp.SerializeToString()
-
-
-def set_item(player_id, item_id, num):  # num是数值变化
-    rsp = OverField_pb2.PackNotice()
-    rsp.status = 1
-    for i in res["Item"]["item"]["datas"]:
-        if item_id == i["i_d"]:
-            tmp = rsp.items.add().main_item
-            tmp.item_id = i["i_d"]
-            tmp.item_tag = i["new_bag_item_tag"]
-            tmp.base_item.item_id = i["i_d"]
-            tmp.base_item.num = 100
-            break
-    rsp.temp_pack_max_size = 300
-
-    return tmp.SerializeToString()
 
 
 def get_chat_history(player_id):

@@ -19,6 +19,7 @@ from server.scene_data import (
     lock_session,
     up_scene_action,
 )
+import utils.db as db
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,7 @@ def notice_sync_loop():
                 for session in session_list:
                     if session.logged_in == True:
                         pass
+                db.db.commit()
                 return
             # 检查并清除掉线玩家
             for session in session_list:

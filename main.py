@@ -1,13 +1,11 @@
 import logging
 import threading
-import signal
 
 import http_server.server as http_server
 from network.game_server import GameServer
 import utils.res_loader as res_loader
 import utils.cmd as cmd
-
-res_loader.init()
+import utils.db as db
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,6 +20,8 @@ logger = logging.getLogger(__name__)
 def main():
     logger.info("OverFieldPS Start")
     stop_event = cmd.start()
+    res_loader.init()
+    db.init()
 
     http_thread = threading.Thread(target=http_server.start, daemon=True)
     http_thread.start()
