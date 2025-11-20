@@ -205,20 +205,51 @@ def init_player(player_id):
         )
 
     # 初始化物品
+    instance_id = 1
     for i in res["Item"]["item"]["datas"]:
         item = pb.ItemDetail()
         tmp = item.main_item
         tmp.item_id = i["i_d"]
-        if i["new_bag_item_tag"] == pb.EBagItemTag_Fashion:
-            tmp.item_tag = i["new_bag_item_tag"]
-            outfit = tmp.outfit
-            outfit.outfit_id = i["i_d"]
-            tmp = outfit.dye_schemes.add()
-            tmp.is_un_lock = True
-        else:
-            tmp.item_tag = i["new_bag_item_tag"]
-            tmp.base_item.item_id = i["i_d"]
-            tmp.base_item.num = 100000
+        tmp.item_tag = i["new_bag_item_tag"]
+        match i["new_bag_item_tag"]:
+            case pb.EBagItemTag_Fashion:  # 时装
+                outfit = tmp.outfit
+                outfit.outfit_id = i["i_d"]
+                tmp = outfit.dye_schemes.add()
+                tmp.is_un_lock = True
+            case pb.EBagItemTag_Weapon:
+                weapon = tmp.weapon
+                weapon.weapon_id = i["i_d"]
+                weapon.instance_id = instance_id
+                instance_id += 1
+                weapon.attack = 35
+                weapon.damage_balance = 71  # 平衡
+                weapon.critical_ratio = 83  # 暴击
+                # weapon.wearer_id = #已装备的角色id
+                weapon.level = 1
+                # weapon.strength_level=5
+                weapon.star = 1
+                weapon.property_index = 1
+            case pb.EBagItemTag_Armor:
+                armor = tmp.armor
+                armor.armor_id = i["i_d"]
+                armor.instance_id = instance_id
+                instance_id += 1
+                armor.main_property_type = pb.EPropertyType_MaxHP
+                armor.main_property_val = 100
+                armor.property_index = 1
+            case pb.EBagItemTag_Poster:
+                poster = tmp.poster
+                poster.poster_id = i["i_d"]
+                poster.instance_id = instance_id
+                instance_id += 1
+                poster.star = 5
+            case _:
+
+                tmp.item_tag = i["new_bag_item_tag"]
+                tmp.base_item.item_id = i["i_d"]
+                tmp.base_item.num = 100000
+
         db.execute(
             "INSERT OR REPLACE INTO items (player_id, item_id, item_detail_blob) VALUES (?, ?, ?)",
             (player_id, i["i_d"], pickle.dumps([item.SerializeToString()])),
