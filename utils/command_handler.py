@@ -69,6 +69,11 @@ def send_scene_inter_action_play_status_notice():
 
     send_to_all_clients(Handler)  # 没测试
 
+def send_pack_notice():
+    """向所有已连接的客户端发送包裹通知"""
+    from handlers.PackNotice import Handler
+
+    send_to_all_clients(Handler)
 
 # 注册命令
 register_command("1918", send_weather_change)
@@ -77,6 +82,7 @@ register_command("1880", send_player_buff_notice)
 register_command("2160", send_fireworks_start_notice)
 register_command("2630", send_gm_recommend_channel_notice)
 register_command("2631", send_scene_inter_action_play_status_notice)
+register_command("1400", send_pack_notice)
 
 
 def start_command_handler():
