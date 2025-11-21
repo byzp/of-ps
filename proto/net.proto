@@ -158,6 +158,16 @@ enum EBagItemTag {
     EBagItemTag_WallPaper = 39;
     EBagItemTag_Expression = 40;
     EBagItemTag_MoonCard = 41;
+    EBagItemTag_PhoneCase = 42;
+    EBagItemTag_Pendant = 43;
+    EBagItemTag_AvatarFrame = 44;
+    EBagItemTag_IntimacyGift = 45;
+    EBagItemTag_MusicNote = 46;
+    EBagItemTag_MonthlyCard = 47;
+    EBagItemTag_BattlePassCard = 48;
+    EBagItemTag_MonthlyGiftCard = 49;
+    EBagItemTag_BattlePassGiftCard = 50;
+    EBagItemTag_SeasonalMiniGamesItem = 51;
 }
 
 enum EBagItemWayType {
