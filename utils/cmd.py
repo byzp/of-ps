@@ -8,6 +8,7 @@ from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.shortcuts import print_formatted_text
 import utils.log as log_module
 import utils.command_handler as cmd_h
+import utils.cmd_exec as cmd_exec
 
 _stop_event = threading.Event()
 _prompt_thread = None
@@ -62,8 +63,11 @@ def _prompt_loop():
                     return
                 if cmd == "help":
                     print(",".join(cmd_h.COMMANDS.keys()))
+                    continue
                 if cmd in cmd_h.COMMANDS:
                     cmd_h.COMMANDS[cmd]()
+                    continue
+                cmd_exec.cmd_exec(cmd)
 
 
 def start():

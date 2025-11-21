@@ -28,9 +28,7 @@ class Handler(PacketHandler):
             tmp = pb.ItemDetail()
             tmp.ParseFromString(item)
             if tmp.main_item.item_tag == pb.EBagItemTag_Weapon:
-                if (
-                    tmp.main_item.weapon.weapon_id > 1019000
-                ):  # 鱼竿之类的物品会导致加载异常
+                if tmp.main_item.weapon.weapon_id > 1019000:  # 跳过鱼竿等物品
                     if max_num == total_num:
                         break
                     total_num += 1

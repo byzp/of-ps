@@ -69,7 +69,7 @@ def init():
             player_id INTEGER PRIMARY KEY,
             over_due_time INTEGER DEFAULT 0,
             reward_days INTEGER DEFAULT 0,
-            FOREIGN KEY(player_id) REFERENCES players(player_id)
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
         
         
@@ -80,7 +80,7 @@ def init():
             furniture_num INTEGER DEFAULT 0,
             furniture_limit_num INTEGER DEFAULT 500000,
             is_open INTEGER DEFAULT 1,
-            FOREIGN KEY(player_id) REFERENCES players(player_id)
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
         
         CREATE TABLE IF NOT EXISTS characters (
@@ -92,15 +92,13 @@ def init():
             exp INTEGER DEFAULT 200,
             star INTEGER DEFAULT 2,
             equipment_presets BLOB,
-            FOREIGN KEY(player_id) REFERENCES players(player_id)
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
         
-        CREATE TABLE IF NOT EXISTS character_equip (
-            player_id INTEGER,
-            character_id INTEGER,
-            equipment_preset BLOB,
-            PRIMARY KEY(player_id, character_id),
-            FOREIGN KEY(player_id) REFERENCES players(player_id)
+        CREATE TABLE IF NOT EXISTS item_instance_id (
+            player_id INTEGER PRIMARY KEY,
+            instance_id INTEGER NOT NULL DEFAULT 1,
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
 
         INSERT OR IGNORE INTO users (id, username, password, user_token) VALUES (1000000, "", "", "");
@@ -205,56 +203,23 @@ def init_player(player_id):
             (player_id, i["i_d"], c.SerializeToString()),
         )
 
-    # 初始化物品
-    instance_id = 1
-    for i in res["Item"]["item"]["datas"]:
-        item = pb.ItemDetail()
-        tmp = item.main_item
-        tmp.item_id = i["i_d"]
-        tmp.item_tag = i["new_bag_item_tag"]
-        match i["new_bag_item_tag"]:
-            case pb.EBagItemTag_Fashion:  # 时装
-                outfit = tmp.outfit
-                outfit.outfit_id = i["i_d"]
-                tmp = outfit.dye_schemes.add()
-                tmp.is_un_lock = True
-            case pb.EBagItemTag_Weapon:
-                weapon = tmp.weapon
-                weapon.weapon_id = i["i_d"]
-                weapon.instance_id = instance_id
-                instance_id += 1
-                weapon.attack = 35
-                weapon.damage_balance = 71  # 平衡
-                weapon.critical_ratio = 83  # 暴击
-                # weapon.wearer_id = #已装备的角色id
-                weapon.level = 1
-                # weapon.strength_level=5
-                weapon.star = 1
-                weapon.property_index = 1
-            case pb.EBagItemTag_Armor:
-                armor = tmp.armor
-                armor.armor_id = i["i_d"]
-                armor.instance_id = instance_id
-                instance_id += 1
-                armor.main_property_type = pb.EPropertyType_MaxHP
-                armor.main_property_val = 100
-                armor.property_index = 1
-            case pb.EBagItemTag_Poster:
-                poster = tmp.poster
-                poster.poster_id = i["i_d"]
-                poster.instance_id = instance_id
-                instance_id += 1
-                poster.star = 5
-            case _:
+    # 初始化物品(星石+10, 用于第一次改名)
+    item = pb.ItemDetail()
+    tmp = item.main_item
+    tmp.item_id = 102
+    tmp.item_tag = pb.EBagItemTag_Currency
+    tmp.base_item.item_id = 102
+    tmp.base_item.num = 10
 
-                tmp.item_tag = i["new_bag_item_tag"]
-                tmp.base_item.item_id = i["i_d"]
-                tmp.base_item.num = 100000
+    db.execute(
+        "INSERT OR REPLACE INTO items (player_id, item_id, item_detail_blob) VALUES (?, ?, ?)",
+        (player_id, 102, pickle.dumps([item.SerializeToString()])),
+    )
 
-        db.execute(
-            "INSERT OR REPLACE INTO items (player_id, item_id, item_detail_blob) VALUES (?, ?, ?)",
-            (player_id, i["i_d"], pickle.dumps([item.SerializeToString()])),
-        )
+    db.execute(
+        "INSERT OR REPLACE INTO item_instance_id (player_id, instance_id) VALUES (?, ?)",
+        (player_id, 1),
+    )
 
     db.commit()
 
@@ -549,7 +514,8 @@ def get_item_detail(player_id, item_id=None) -> list:
             (player_id, item_id),
         )
         row = cur.fetchone()
-        items += pickle.loads(row[0])
+        if row:
+            items += pickle.loads(row[0])
         return items
 
     else:
@@ -558,15 +524,32 @@ def get_item_detail(player_id, item_id=None) -> list:
             (player_id,),
         )
         rows = cur.fetchall()
-        for row in rows:
-            items += pickle.loads(row[0])
+        if rows:
+            for row in rows:
+                items += pickle.loads(row[0])
         return items
 
 
-def up_item_detail(player_id, item_id, item_detail_blob: list):  # num是数值变化
+def up_item_detail(player_id, item_id, item_detail_blob: list):
     db.execute(
         "INSERT OR REPLACE INTO items (player_id, item_id, item_detail_blob) VALUES (?, ?, ?)",
         (player_id, item_id, pickle.dumps(item_detail_blob)),
+    )
+    db.commit()
+
+
+def get_instance_id(player_id):
+    cur = db.execute(
+        "SELECT instance_id FROM item_instance_id WHERE player_id=?", (player_id,)
+    )
+    row = cur.fetchone()
+    return row[0]
+
+
+def up_instance_id(player_id, instance_id):
+    db.execute(
+        "INSERT OR REPLACE INTO item_instance_id (player_id, instance_id) VALUES (?, ?)",
+        (player_id, instance_id),
     )
     db.commit()
 

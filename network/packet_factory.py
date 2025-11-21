@@ -4,8 +4,16 @@ import traceback
 
 from network.packet_handler import PacketHandler
 from utils.scanner import scan_handlers
+from network.cmd_id import CmdId
+from proto import OverField_pb2
 
 logger = logging.getLogger(__name__)
+
+id_to_name = {
+    v: k
+    for k, v in vars(CmdId).items()
+    if not k.startswith("__") and isinstance(v, int)
+}
 
 
 class PacketFactory:
@@ -37,16 +45,13 @@ class PacketFactory:
         if handler:
             try:
                 handler.handle(session, data, packet_id)
-                return
             except Exception as e:
-                from proto import OverField_pb2
-
-                tmp = OverField_pb2.ShopInfoRsp()
-                tmp.status = OverField_pb2.StatusCode_OK
-                session.send(cmd_id + 1, tmp, False, packet_id)
                 exception_traceback = traceback.format_exc()
                 logger.error(
                     f"Error processing {cmd_id} packet: \n{exception_traceback}"
                 )
         else:
             logger.warning(f"No handler found for cmd_id: {cmd_id}")
+            sy = getattr(OverField_pb2, id_to_name.get(cmd_id), None)()
+            sy.ParseFromString(data)
+            print(sy)
