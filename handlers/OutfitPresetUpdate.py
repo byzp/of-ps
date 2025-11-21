@@ -8,6 +8,8 @@ import proto.OverField_pb2 as StatusCode_pb2
 import proto.OverField_pb2 as pb
 
 import utils.db as db
+import utils.pb_create as pb_create
+from server.scene_data import up_scene_action
 
 logger = logging.getLogger(__name__)
 
@@ -35,4 +37,16 @@ class Handler(PacketHandler):
         tmp.CopyFrom(chr)
         session.send(CmdId.OutfitPresetUpdateNotice, rsp, False, packet_id)
 
-        # TODO 广播场景数据
+        # 广播场景数据
+        if req.char_id in db.get_team_char_id(session.player_id):
+            pb_create.make_ScenePlayer(session)
+            sy = pb.ServerSceneSyncDataNotice()
+            sy.status = StatusCode_pb2.StatusCode_OK
+            data = sy.data.add()
+            data.player_id = session.player_id
+            tmp = data.server_data.add()
+            tmp.action_type = pb.SceneActionType_UPDATE_FASHION
+            tmp.player.CopyFrom(session.scene_player)
+            up_scene_action(
+                session.scene_id, session.channel_id, sy.SerializeToString()
+            )

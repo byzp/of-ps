@@ -7,9 +7,9 @@ from network.cmd_id import CmdId
 import proto.OverField_pb2 as PlayerLoginReq_pb2
 import proto.OverField_pb2 as PlayerLoginRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as pb
 import utils.db as db
 import server.scene_data as scene_data
+import utils.pb_create as pb_create
 
 
 @packet_handler(CmdId.PlayerLoginReq)
@@ -40,27 +40,6 @@ class Handler(PacketHandler):
         rsp.scene_id = session.scene_id
         rsp.channel_id = session.channel_id
 
-        # 构造ScenePlayer
-        player = session.scene_player
-        player.player_id = session.player_id
-        player.player_name = session.player_name
-        char_ids = db.get_team_char_id(player_id)
-        char_1 = player.team.char_1
-        char_1.char_id = char_ids[0]
-        char_1.outfit_preset.hide_info.CopyFrom(pb.OutfitHideInfo())
-
-        chr = pb.Character()
-        chr.ParseFromString(db.get_characters(player_id, char_ids[0])[0])
-
-        char_1.character_appearance.CopyFrom(chr.character_appearance)
-        char_1.char_lv = chr.level
-        char_1.char_star = chr.star
-        char_1.char_break_lv = chr.max_level
-
-        # char_1.pos.CopyFrom(pb.Vector3())
-        # char_1.rot.CopyFrom(pb.Vector3())
-        char_1.pos.x = 2394
-        char_1.pos.y = 908
-        char_1.rot.CopyFrom(pb.Vector3())
+        pb_create.make_ScenePlayer(session)
 
         session.send(CmdId.PlayerLoginRsp, rsp, True, packet_id)  # 1003,1004
