@@ -114,10 +114,11 @@ def init_player(player_id):
     """初始化新用户数据"""
     cur_time = int(time.time())
     player_name = ""
-    # 初始化用户基本信息
-    unlock_funcs = pickle.dumps(
-        [100000009, 100000003, 100000021, 100000006, 100000044, 100000031]
+    player_unlock_data = (
+        res.get("PlayerUnlock", {}).get("player_unlock", {}).get("datas", [])
     )
+    unlock_func_ids = [item["i_d"] for item in player_unlock_data]
+    unlock_funcs = pickle.dumps(unlock_func_ids)
 
     team = pickle.dumps((101001, 101002, 101003))
 
