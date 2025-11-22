@@ -5,15 +5,9 @@ import logging
 import proto.OverField_pb2 as UpdatePlayerAppearanceReq_pb2
 import proto.OverField_pb2 as UpdatePlayerAppearanceRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
+import utils.db as db
 
 logger = logging.getLogger(__name__)
-
-
-"""
-# 更新玩家外观 2631 2632
-# 头像框 挂件
-# 只实现了更换 还没处理数据库
-"""
 
 
 @packet_handler(CmdId.UpdatePlayerAppearanceReq)
@@ -28,4 +22,11 @@ class Handler(PacketHandler):
         rsp.appearance.avatar_frame = req.appearance.avatar_frame
         rsp.appearance.pendant = req.appearance.pendant
 
-        session.send(CmdId.UpdatePlayerAppearanceRsp, rsp, False, packet_id)
+        db.set_players_info(
+            session.player_id, "avatar_frame", req.appearance.avatar_frame
+        )
+        db.set_players_info(session.player_id, "pendant", req.appearance.pendant)
+
+        session.send(
+            CmdId.UpdatePlayerAppearanceRsp, rsp, False, packet_id
+        )  # 更换头像框 挂件 2631 2632

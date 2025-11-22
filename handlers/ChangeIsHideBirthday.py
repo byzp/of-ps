@@ -16,10 +16,15 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = ChangeIsHideBirthdayReq_pb2.ChangeIsHideBirthdayReq()
         req.ParseFromString(data)
-
         rsp = ChangeIsHideBirthdayRsp_pb2.ChangeIsHideBirthdayRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        db.set_players_info(session.player_id, "is_hide_birthday", req.is_hide_birthday)
+
+        current_status = db.get_players_info(
+            session.player_id, "is_hide_birthday"
+        )  # 获取当前状态
+        new_status = 0 if current_status else 1
+
+        db.set_players_info(session.player_id, "is_hide_birthday", new_status)
 
         session.send(
             CmdId.ChangeIsHideBirthdayRsp, rsp, False, packet_id
