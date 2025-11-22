@@ -65,6 +65,9 @@ def notice_sync_loop():
             # 检查并清除掉线玩家
             for session in session_list:
                 if session.running == False and session.logged_in == True:
+                    logger.info(
+                        f"Player logout: {session.player_name}({session.player_id})"
+                    )
                     # 向其他玩家广播离开事件
                     notice = ServerSceneSyncDataNotice_pb2.ServerSceneSyncDataNotice()
                     notice.status = StatusCode_pb2.StatusCode_OK

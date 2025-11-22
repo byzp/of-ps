@@ -64,6 +64,14 @@ def init():
             PRIMARY KEY (player_id, item_id),
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS items_s (
+            player_id INTEGER NOT NULL,
+            instance_id INTEGER NOT NULL,
+            item_detail_blob BLOB NOT NULL,
+            PRIMARY KEY (player_id, instance_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
         
         CREATE TABLE IF NOT EXISTS month_card (
             player_id INTEGER PRIMARY KEY,
@@ -95,11 +103,7 @@ def init():
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
         
-        CREATE TABLE IF NOT EXISTS item_instance_id (
-            player_id INTEGER PRIMARY KEY,
-            instance_id INTEGER NOT NULL DEFAULT 1,
-            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
-        );
+        
 
         INSERT OR IGNORE INTO users (id, username, password, user_token) VALUES (1000000, "", "", "");
 
@@ -188,7 +192,6 @@ def init_player(player_id):
         c.character_appearance.collection_gloves_instance_id = 0
         c.character_appearance.fishing_rod_instance_id = 0
 
-
         spells = i.get("spell_i_ds", [])
         ex_spells = i.get("ex_spell_i_ds", [])
 
@@ -219,12 +222,7 @@ def init_player(player_id):
 
     db.execute(
         "INSERT OR REPLACE INTO items (player_id, item_id, item_detail_blob) VALUES (?, ?, ?)",
-        (player_id, 102, pickle.dumps([item.SerializeToString()])),
-    )
-
-    db.execute(
-        "INSERT OR REPLACE INTO item_instance_id (player_id, instance_id) VALUES (?, ?)",
-        (player_id, 1),
+        (player_id, 102, item.SerializeToString()),
     )
 
     db.commit()
@@ -512,8 +510,7 @@ def up_character(player_id, character_id, character_blob):
     db.commit()
 
 
-def get_item_detail(player_id, item_id=None) -> list:
-    items = []
+def get_item_detail(player_id, item_id=None, instance_id=None) -> list:
     if item_id:
         cur = db.execute(
             "SELECT item_detail_blob FROM items WHERE player_id=? AND item_id=?",
@@ -521,10 +518,18 @@ def get_item_detail(player_id, item_id=None) -> list:
         )
         row = cur.fetchone()
         if row:
-            items += pickle.loads(row[0])
-        return items
+            return row[0]
 
-    else:
+    if instance_id:
+        cur = db.execute(
+            "SELECT item_detail_blob FROM items_s WHERE player_id=? AND instance_id=?",
+            (player_id, instance_id),
+        )
+        row = cur.fetchone()
+        if row:
+            return row[0]
+    if not item_id and not instance_id:
+        items = []
         cur = db.execute(
             "SELECT item_detail_blob FROM items WHERE player_id=?",
             (player_id,),
@@ -532,32 +537,40 @@ def get_item_detail(player_id, item_id=None) -> list:
         rows = cur.fetchall()
         if rows:
             for row in rows:
-                items += pickle.loads(row[0])
+                items.append(row[0])
+
+        cur = db.execute(
+            "SELECT item_detail_blob FROM items_s WHERE player_id=?",
+            (player_id,),
+        )
+        rows = cur.fetchall()
+        if rows:
+            for row in rows:
+                items.append(row[0])
         return items
 
 
-def up_item_detail(player_id, item_id, item_detail_blob: list):
-    db.execute(
-        "INSERT OR REPLACE INTO items (player_id, item_id, item_detail_blob) VALUES (?, ?, ?)",
-        (player_id, item_id, pickle.dumps(item_detail_blob)),
-    )
+def up_item_detail(player_id, item_detail_blob: list, item_id=None, instance_id=None):
+    if item_id:
+        db.execute(
+            "INSERT OR REPLACE INTO items (player_id, item_id, item_detail_blob) VALUES (?, ?, ?)",
+            (player_id, item_id, item_detail_blob),
+        )
+    if instance_id:
+        db.execute(
+            "INSERT OR REPLACE INTO items_s (player_id, instance_id, item_detail_blob) VALUES (?, ?, ?)",
+            (player_id, instance_id, item_detail_blob),
+        )
     db.commit()
 
 
 def get_instance_id(player_id):
     cur = db.execute(
-        "SELECT instance_id FROM item_instance_id WHERE player_id=?", (player_id,)
+        "SELECT MAX(instance_id) AS max_instance_id FROM items_s WHERE player_id=?",
+        (player_id,),
     )
     row = cur.fetchone()
-    return row[0]
-
-
-def up_instance_id(player_id, instance_id):
-    db.execute(
-        "INSERT OR REPLACE INTO item_instance_id (player_id, instance_id) VALUES (?, ?)",
-        (player_id, instance_id),
-    )
-    db.commit()
+    return row[0] if row else 1
 
 
 def get_month_card_over_due_time(player_id):

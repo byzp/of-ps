@@ -47,7 +47,7 @@ class GameSession:
         finally:
             self.close()
             self.running = False
-            logger.info(f"Socket closed: {self.address}")
+            logger.debug(f"Socket closed: {self.address}")
 
     def process_buffer(self):
         """Process buffered data"""

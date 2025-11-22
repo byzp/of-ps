@@ -1,9 +1,12 @@
+import logging
 from network.packet_handler import PacketHandler, packet_handler
 from network.cmd_id import CmdId
 import proto.OverField_pb2 as VerifyLoginTokenReq_pb2
 import proto.OverField_pb2 as VerifyLoginTokenRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 import utils.db as db
+
+logger = logging.getLogger(__name__)
 
 
 @packet_handler(CmdId.VerifyLoginTokenReq)
@@ -22,6 +25,7 @@ class Handler(PacketHandler):
 
         session.player_id = db.get_player_id(user_id)
         session.player_name = db.get_player_name(session.player_id)
+        logger.info(f"Player login: {session.player_name}({session.player_id})")
         rsp.user_id = user_id
         rsp.account_type = req.account_type
         rsp.sdk_uid = req.sdk_uid

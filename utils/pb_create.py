@@ -35,7 +35,7 @@ def make_ScenePlayer(session):
         char_2.char_id = char_ids[1]
 
         chr = pb.Character()
-        chr.ParseFromString(db.get_characters(session.player_id, char_ids[0])[0])
+        chr.ParseFromString(db.get_characters(session.player_id, char_ids[1])[0])
         char_2.outfit_preset.ParseFromString(
             make_SceneCharacterOutfitPreset(
                 session, chr.outfit_presets[chr.in_use_outfit_preset_index]
@@ -55,7 +55,7 @@ def make_ScenePlayer(session):
         char_3.char_id = char_ids[2]
 
         chr = pb.Character()
-        chr.ParseFromString(db.get_characters(session.player_id, char_ids[0])[0])
+        chr.ParseFromString(db.get_characters(session.player_id, char_ids[2])[0])
         char_3.outfit_preset.ParseFromString(
             make_SceneCharacterOutfitPreset(
                 session, chr.outfit_presets[chr.in_use_outfit_preset_index]
@@ -76,25 +76,25 @@ def make_SceneCharacterOutfitPreset(session, outfit):
     sc = pb.SceneCharacterOutfitPreset()
     item = pb.ItemDetail()
     if outfit.hat > 0:
-        item.ParseFromString(db.get_item_detail(session.player_id, outfit.hat)[0])
+        item.ParseFromString(db.get_item_detail(session.player_id, outfit.hat))
         sc.hat = outfit.hat
         sc.hat_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.hat_dye_scheme_index]
         )
     if outfit.hair > 0:
-        item.ParseFromString(db.get_item_detail(session.player_id, outfit.hair)[0])
+        item.ParseFromString(db.get_item_detail(session.player_id, outfit.hair))
         sc.hair = outfit.hair
         sc.hair_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.hair_dye_scheme_index]
         )
     if outfit.clothes > 0:
-        item.ParseFromString(db.get_item_detail(session.player_id, outfit.clothes)[0])
+        item.ParseFromString(db.get_item_detail(session.player_id, outfit.clothes))
         sc.clothes = outfit.clothes
         sc.cloth_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.clothes_dye_scheme_index]
         )
     if outfit.ornament > 0:
-        item.ParseFromString(db.get_item_detail(session.player_id, outfit.ornament)[0])
+        item.ParseFromString(db.get_item_detail(session.player_id, outfit.ornament))
         sc.ornament = outfit.ornament
         sc.orn_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.ornament_dye_scheme_index]
@@ -103,38 +103,32 @@ def make_SceneCharacterOutfitPreset(session, outfit):
     sc.hide_info.CopyFrom(outfit.outfit_hide_info)
 
     if outfit.pend_top > 0:
-        item.ParseFromString(db.get_item_detail(session.player_id, outfit.pend_top)[0])
+        item.ParseFromString(db.get_item_detail(session.player_id, outfit.pend_top))
         sc.pend_top = outfit.pend_top
         sc.pend_top_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.pend_top_dye_scheme_index]
         )
     if outfit.pend_chest > 0:
-        item.ParseFromString(
-            db.get_item_detail(session.player_id, outfit.pend_chest)[0]
-        )
+        item.ParseFromString(db.get_item_detail(session.player_id, outfit.pend_chest))
         sc.pend_chest = outfit.pend_chest
         sc.pend_chest_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.pend_chest_dye_scheme_index]
         )
     if outfit.pend_pelvis > 0:
-        item.ParseFromString(
-            db.get_item_detail(session.player_id, outfit.pend_pelvis)[0]
-        )
+        item.ParseFromString(db.get_item_detail(session.player_id, outfit.pend_pelvis))
         sc.pend_pelvis = outfit.pend_pelvis
         sc.pend_pelvis_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.pend_pelvis_dye_scheme_index]
         )
     if outfit.pend_up_face > 0:
-        item.ParseFromString(
-            db.get_item_detail(session.player_id, outfit.pend_up_face)[0]
-        )
+        item.ParseFromString(db.get_item_detail(session.player_id, outfit.pend_up_face))
         sc.pend_up_face = outfit.pend_up_face
         sc.pend_up_face_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.pend_up_face_dye_scheme_index]
         )
     if outfit.pend_down_face > 0:
         item.ParseFromString(
-            db.get_item_detail(session.player_id, outfit.pend_down_face)[0]
+            db.get_item_detail(session.player_id, outfit.pend_down_face)
         )
         sc.pend_down_face = outfit.pend_down_face
         sc.pend_down_face_dye_scheme.CopyFrom(
@@ -142,7 +136,7 @@ def make_SceneCharacterOutfitPreset(session, outfit):
         )
     if outfit.pend_left_hand > 0:
         item.ParseFromString(
-            db.get_item_detail(session.player_id, outfit.pend_left_hand)[0]
+            db.get_item_detail(session.player_id, outfit.pend_left_hand)
         )
         sc.pend_left_hand = outfit.pend_left_hand
         sc.pend_left_hand_dye_scheme.CopyFrom(
@@ -150,7 +144,7 @@ def make_SceneCharacterOutfitPreset(session, outfit):
         )
     if outfit.pend_right_hand > 0:
         item.ParseFromString(
-            db.get_item_detail(session.player_id, outfit.pend_right_hand)[0]
+            db.get_item_detail(session.player_id, outfit.pend_right_hand)
         )
         sc.pend_right_hand = outfit.pend_right_hand
         sc.pend_right_hand_dye_scheme.CopyFrom(
@@ -158,7 +152,7 @@ def make_SceneCharacterOutfitPreset(session, outfit):
         )
     if outfit.pend_left_foot > 0:
         item.ParseFromString(
-            db.get_item_detail(session.player_id, outfit.pend_left_foot)[0]
+            db.get_item_detail(session.player_id, outfit.pend_left_foot)
         )
         sc.pend_left_foot = outfit.pend_left_foot
         sc.pend_left_foot_dye_scheme.CopyFrom(
@@ -166,7 +160,7 @@ def make_SceneCharacterOutfitPreset(session, outfit):
         )
     if outfit.pend_right_foot > 0:
         item.ParseFromString(
-            db.get_item_detail(session.player_id, outfit.pend_right_foot)[0]
+            db.get_item_detail(session.player_id, outfit.pend_right_foot)
         )
         sc.pend_right_foot = outfit.pend_right_foot
         sc.pend_right_foot_dye_scheme.CopyFrom(

@@ -32,7 +32,7 @@ class GameServer:
             notice_sync.init()
             while True:
                 client_socket, address = self.server_socket.accept()
-                logger.info(f"New connection from {address}")
+                logger.debug(f"New connection from {address}")
                 session = GameSession(client_socket, address)
                 with lock_session:
                     session_list.append(session)

@@ -41,7 +41,7 @@ async def log_requests(request: Request, call_next):
     start = time.time()
     response = await call_next(request)
     duration = (time.time() - start) * 1000.0
-    logger.info(
+    logger.debug(
         "<< %s %s - %s (%.2f ms)",
         request.method,
         request.url.path,

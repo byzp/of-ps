@@ -23,6 +23,7 @@ def cmd_exec(cmd: str):
 
 
 def give(cmds: list):
+    return
     match = False
     target_session = []
     if len(cmds) < 3:
@@ -44,9 +45,9 @@ def give(cmds: list):
     if not match:
         logger.warning("No matching players found.")
         return
-    for i in res["Item"]["item"]["datas"]:
-        if i["i_d"] == cmds[2]:
-            for session in target_session:
+    for session in target_session:
+        for i in res["Item"]["item"]["datas"]:
+            if i["i_d"] == cmds[2] or cmds[2] in ["all", "character", "gift "]:
                 instance_id = db.get_instance_id(session.player_id)
                 items = db.get_item_detail(session.player_id, cmds[2])
                 if len(items) == 1:
@@ -82,6 +83,7 @@ def give(cmds: list):
                         instance_id += 1
                         armor.main_property_type = pb.EPropertyType_MaxHP
                         armor.main_property_val = 100
+                        armor.level = 100
                         armor.property_index = 1
                         items.append(item.SerializeToString())
                     case pb.EBagItemTag_Poster:
@@ -96,7 +98,7 @@ def give(cmds: list):
                         outfit.outfit_id = i["i_d"]
                         tmp = outfit.dye_schemes.add()
                         tmp.is_un_lock = True
-                        items = [item.SerializeToString()]
+                        items = item.SerializeToString()
                     case pb.EBagItemTag_Card:
                         pass
                     case pb.EBagItemTag_SpellCard:
@@ -105,20 +107,20 @@ def give(cmds: list):
                         pass
                     case pb.EBagItemTag_Recipe:
                         pass
-                    case _:  # Fragment, Collection, Material, Currency, Food, Item,
+                    case (
+                        _
+                    ):  # Fragment, Collection, Material, Currency, Food, Item, Head,
                         tmp.base_item.item_id = i["i_d"]
                         if len(cmds) >= 4:
                             tmp.base_item.num += cmds[3]
                         else:
                             tmp.base_item.num += 1
-                        items = [item.SerializeToString()]
-                db.up_instance_id(session.player_id, instance_id)
-                db.up_item_detail(session.player_id, i["i_d"], items)
+                        items = item.SerializeToString()
+                db.up_item_detail(session.player_id, items, i["i_d"])
 
-                rsp = pb.PackNotice()
-                rsp.status = StatusCode_pb2.StatusCode_OK
-                for item in db.get_item_detail(session.player_id):
-                    rsp.items.add().ParseFromString(item)
-                rsp.temp_pack_max_size = 30
-                session.send(CmdId.PackNotice, rsp, True, 0)
-            return
+        rsp = pb.PackNotice()
+        rsp.status = StatusCode_pb2.StatusCode_OK
+        for item in db.get_item_detail(session.player_id):
+            rsp.items.add().ParseFromString(item)
+        rsp.temp_pack_max_size = 30
+        session.send(CmdId.PackNotice, rsp, True, 0)
