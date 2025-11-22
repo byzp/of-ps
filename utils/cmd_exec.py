@@ -116,7 +116,7 @@ def give(cmds: list):
                         else:
                             tmp.base_item.num += 1
                         items = item.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp = pb.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK

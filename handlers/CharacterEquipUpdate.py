@@ -36,7 +36,7 @@ class Handler(PacketHandler):
 
                 # 更新装备
                 item_id = item.main_item.item_id
-                db.up_item_detail(
+                db.set_item_detail(
                     self.session.player_id, item.SerializeToString(), item_id, None
                 )
                 return item
@@ -119,7 +119,7 @@ class Handler(PacketHandler):
             new_preset.CopyFrom(req.equipment_preset)
 
         # 保存更新后的角色数据
-        db.up_character(session.player_id, char_id, character.SerializeToString())
+        db.set_character(session.player_id, char_id, character.SerializeToString())
         logger.info(f"Updated character {char_id} equipment preset {preset_index}")
 
         # 获取所有物品数据

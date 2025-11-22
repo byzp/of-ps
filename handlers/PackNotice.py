@@ -31,7 +31,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -57,7 +57,7 @@ class Handler(PacketHandler):
 
                 # 将武器数据序列化并更新到 items_s 数据库
                 items_s = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items_s, None, i["i_d"])
+                db.set_item_detail(session.player_id, items_s, None, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -102,7 +102,7 @@ class Handler(PacketHandler):
 
                 # 将护甲数据序列化并更新到 items_s 数据库
                 items_s = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items_s, None, i["i_d"])
+                db.set_item_detail(session.player_id, items_s, None, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -120,7 +120,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -141,7 +141,7 @@ class Handler(PacketHandler):
 
                 # 将海报数据序列化并更新到 items_s 数据库
                 items_s = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items_s, None, i["i_d"])
+                db.set_item_detail(session.player_id, items_s, None, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -159,7 +159,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -177,7 +177,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -195,7 +195,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -213,7 +213,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -231,7 +231,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -249,7 +249,7 @@ class Handler(PacketHandler):
         #         rsp.items.add().CopyFrom(item_detail)
 
         # items = item_detail.SerializeToString()
-        # db.up_item_detail(session.player_id, items, i["i_d"])
+        # db.set_item_detail(session.player_id, items, i["i_d"])
 
         # rsp.temp_pack_max_size = 30
         # session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -267,7 +267,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -285,7 +285,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -303,7 +303,7 @@ class Handler(PacketHandler):
         #         rsp.items.add().CopyFrom(item_detail)
 
         # items = item_detail.SerializeToString()
-        # db.up_item_detail(session.player_id, items, i["i_d"])
+        # db.set_item_detail(session.player_id, items, i["i_d"])
 
         # rsp.temp_pack_max_size = 30
         # session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -321,7 +321,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -339,7 +339,7 @@ class Handler(PacketHandler):
         #         rsp.items.add().CopyFrom(item_detail)
 
         # items = item_detail.SerializeToString()
-        # db.up_item_detail(session.player_id, items, i["i_d"])
+        # db.set_item_detail(session.player_id, items, i["i_d"])
 
         # rsp.temp_pack_max_size = 30
         # session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -357,7 +357,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -375,7 +375,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -395,7 +395,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -413,7 +413,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -434,7 +434,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -452,7 +452,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -470,7 +470,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -490,7 +490,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -510,7 +510,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -528,7 +528,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -546,7 +546,7 @@ class Handler(PacketHandler):
         #         rsp.items.add().CopyFrom(item_detail)
 
         # items = item_detail.SerializeToString()
-        # db.up_item_detail(session.player_id, items, i["i_d"])
+        # db.set_item_detail(session.player_id, items, i["i_d"])
 
         # rsp.temp_pack_max_size = 30
         # session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -564,7 +564,7 @@ class Handler(PacketHandler):
         #         rsp.items.add().CopyFrom(item_detail)
 
         # items = item_detail.SerializeToString()
-        # db.up_item_detail(session.player_id, items, i["i_d"])
+        # db.set_item_detail(session.player_id, items, i["i_d"])
 
         # rsp.temp_pack_max_size = 30
         # session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -584,7 +584,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -604,7 +604,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -622,7 +622,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -640,7 +640,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -658,7 +658,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -676,7 +676,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
 
@@ -693,7 +693,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
 
@@ -710,7 +710,7 @@ class Handler(PacketHandler):
         #         rsp.items.add().CopyFrom(item_detail)
 
         # items = item_detail.SerializeToString()
-        # db.up_item_detail(session.player_id, items, i["i_d"])
+        # db.set_item_detail(session.player_id, items, i["i_d"])
 
         # rsp.temp_pack_max_size = 30
         # session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -728,7 +728,7 @@ class Handler(PacketHandler):
         #         rsp.items.add().CopyFrom(item_detail)
 
         #         items = item_detail.SerializeToString()
-        #         db.up_item_detail(session.player_id, items, i["i_d"])
+        #         db.set_item_detail(session.player_id, items, i["i_d"])
 
         # rsp.temp_pack_max_size = 30
         # session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -748,7 +748,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -766,7 +766,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -784,7 +784,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -805,7 +805,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -823,7 +823,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -841,7 +841,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -859,7 +859,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -879,7 +879,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -897,7 +897,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -917,7 +917,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -937,7 +937,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -957,7 +957,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -977,7 +977,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)
@@ -997,7 +997,7 @@ class Handler(PacketHandler):
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
-                db.up_item_detail(session.player_id, items, i["i_d"])
+                db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, False, packet_id)

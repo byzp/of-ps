@@ -28,24 +28,24 @@ def get_recorder(
         return ch.get(channel_id, {}).get(player_id)
 
 
-def up_recorder(scene_id: int, channel_id: int, player_id: int, rec_data: Any) -> None:
+def set_recorder(scene_id: int, channel_id: int, player_id: int, rec_data: Any) -> None:
     with lock_scene:
         _scene[scene_id][channel_id][player_id] = rec_data
 
 
-def up_action(
+def set_action(
     player_id: int, player_name: str, scene_id: int, channel_id: int, action_id: int
 ) -> None:
     with lock_action:
         _action[player_id] = [scene_id, channel_id, action_id, player_name]
 
 
-def up_scene_action(scene_id: int, channel_id: int, action: Any) -> None:
+def set_scene_action(scene_id: int, channel_id: int, action: Any) -> None:
     with lock_scene_action:
         _scene_action[scene_id][channel_id].append(action)
 
 
-def up_chat_msg(
+def set_chat_msg(
     type_: int,
     player_id: int,
     text: str,
@@ -107,7 +107,7 @@ def get_and_up_players(scene_id, channel_id, player_id):
 
                 if session.player_id == player_id:
                     # 如果是自己，向其他玩家广播
-                    up_scene_action(session.scene_id, session.channel_id, res)
+                    set_scene_action(session.scene_id, session.channel_id, res)
                 else:
                     players.append(res)
         return players

@@ -410,7 +410,7 @@ def get_characters(player_id, character_id=None) -> list:
         return chrs
 
 
-def up_character(player_id, character_id, character_blob):
+def set_character(player_id, character_id, character_blob):
     """更新角色信息"""
 
     db.execute(
@@ -460,7 +460,7 @@ def get_item_detail(player_id, item_id=None, instance_id=None) -> list:
         return items
 
 
-def up_item_detail(player_id, item_detail_blob: list, item_id=None, instance_id=None):
+def set_item_detail(player_id, item_detail_blob: list, item_id=None, instance_id=None):
     if item_id:
         db.execute(
             "INSERT OR REPLACE INTO items (player_id, item_id, item_detail_blob) VALUES (?, ?, ?)",
@@ -551,7 +551,7 @@ def get_character_achievement_lst(player_id, chr_id):
     return None
 
 
-def up_character_equip(player_id, chr_id, equipment_preset):
+def set_character_equip(player_id, chr_id, equipment_preset):
     """更新角色装备"""
     db.execute(
         """INSERT OR REPLACE INTO character_equip 

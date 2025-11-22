@@ -9,7 +9,7 @@ import proto.OverField_pb2 as pb
 
 import utils.db as db
 import utils.pb_create as pb_create
-from server.scene_data import up_scene_action
+from server.scene_data import set_scene_action
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class Handler(PacketHandler):
         chr = pb.Character()
         chr.ParseFromString(db.get_characters(session.player_id, req.char_id)[0])
         chr.outfit_presets[req.preset.preset_index].CopyFrom(req.preset)
-        db.up_character(session.player_id, req.char_id, chr.SerializeToString())
+        db.set_character(session.player_id, req.char_id, chr.SerializeToString())
 
         rsp = pb.OutfitPresetUpdateNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -47,6 +47,6 @@ class Handler(PacketHandler):
             tmp = data.server_data.add()
             tmp.action_type = pb.SceneActionType_UPDATE_FASHION
             tmp.player.CopyFrom(session.scene_player)
-            up_scene_action(
+            set_scene_action(
                 session.scene_id, session.channel_id, sy.SerializeToString()
             )

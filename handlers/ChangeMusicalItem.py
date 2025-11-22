@@ -8,7 +8,7 @@ import proto.OverField_pb2 as StatusCode_pb2
 import proto.OverField_pb2 as pb
 
 from utils.bin import bin
-from server.scene_data import up_scene_action, get_and_up_players
+from server.scene_data import set_scene_action, get_and_up_players
 import utils.db as db
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ class Handler(PacketHandler):
         data_entry.player_id = session.player_id
         server_data_entry = data_entry.server_data.add()
         server_data_entry.action_type = pb.SceneActionType_UPDATE_MUSICAL_ITEM
-        up_scene_action(
+        set_scene_action(
             session.scene_id, session.channel_id, notice.SerializeToString()
         )
 
