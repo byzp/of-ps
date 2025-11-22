@@ -16,12 +16,29 @@ logger = logging.getLogger(__name__)
 db = None
 
 
+def exit():
+    global db
+    db.commit()
+    if Config.IN_MEMORY:
+        disk = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
+        db.backup(disk)
+        disk.commit()
+        disk.close()
+    db.close()
+
+
 def init():
     # 初始化数据库连接
     if not os.path.exists(Config.DB_PATH):
         logger.warning("database not exists!")
     global db
-    db = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
+    if Config.IN_MEMORY:
+        disk = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
+        db = sqlite3.connect(":memory:", check_same_thread=False)
+        disk.backup(db)
+        disk.close()
+    else:
+        db = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
     db.executescript(
         """
         CREATE TABLE IF NOT EXISTS users (
@@ -89,8 +106,7 @@ def init():
             reward_days INTEGER DEFAULT 0,
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
-        
-        
+         
         CREATE TABLE IF NOT EXISTS garden_info (
             player_id INTEGER PRIMARY KEY,
             like_num INTEGER DEFAULT 0,
@@ -100,20 +116,6 @@ def init():
             is_open INTEGER DEFAULT 1,
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
-        
-        CREATE TABLE IF NOT EXISTS characters (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            player_id INTEGER,
-            character_id INTEGER,
-            level INTEGER DEFAULT 1,
-            max_level INTEGER DEFAULT 20,
-            exp INTEGER DEFAULT 200,
-            star INTEGER DEFAULT 2,
-            equipment_presets BLOB,
-            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
-        );
-        
-        
 
         INSERT OR IGNORE INTO users (id, username, password, user_token) VALUES (1000000, "", "", "");
 
@@ -480,7 +482,9 @@ def get_instance_id(player_id):
         (player_id,),
     )
     row = cur.fetchone()
-    return row[0] if row else 1
+    if row[0]:
+        return row[0]
+    return 1
 
 
 def get_month_card_over_due_time(player_id):

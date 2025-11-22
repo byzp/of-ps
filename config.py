@@ -9,8 +9,9 @@ class Config:
     # GAME_SERVER_IP = "192.168.31.149"
     GAME_SERVER_PORT = 11033
 
-    # database path
+    # database
     DB_PATH = "./player.db"
+    IN_MEMORY = True
 
     # Package scanning
     HANDLERS_PACKAGE = "handlers"

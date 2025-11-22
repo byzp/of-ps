@@ -5,7 +5,7 @@ import logging
 import proto.OverField_pb2 as SendActionReq_pb2
 import proto.OverField_pb2 as SendActionRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-from server.scene_data import set_action
+from server.scene_data import up_action
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = SendActionReq_pb2.SendActionReq()
         req.ParseFromString(data)
-        set_action(
+        up_action(
             session.player_id,
             session.player_name,
             session.scene_id,

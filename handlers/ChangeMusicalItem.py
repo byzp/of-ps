@@ -8,7 +8,7 @@ import proto.OverField_pb2 as StatusCode_pb2
 import proto.OverField_pb2 as pb
 
 from utils.bin import bin
-from server.scene_data import set_scene_action, get_and_up_players
+from server.scene_data import up_scene_action, get_and_up_players
 import utils.db as db
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ class Handler(PacketHandler):
         data_entry.player_id = session.player_id
         server_data_entry = data_entry.server_data.add()
         server_data_entry.action_type = pb.SceneActionType_UPDATE_MUSICAL_ITEM
-        set_scene_action(
+        up_scene_action(
             session.scene_id, session.channel_id, notice.SerializeToString()
         )
 
@@ -40,3 +40,17 @@ class Handler(PacketHandler):
                 rsp = pb.ServerSceneSyncDataNotice()
                 rsp.ParseFromString(i)
                 session.send(CmdId.ServerSceneSyncDataNotice, rsp, False, 0)
+            num = 0
+
+            rsp = pb.PackNotice()
+            rsp.status = StatusCode_pb2.StatusCode_OK
+            rsp.temp_pack_max_size = 30
+            for item in db.get_item_detail(session.player_id):
+                rsp.items.add().ParseFromString(item)
+                num += 1
+                if num > 10000:
+                    session.send(CmdId.PackNotice, rsp, True, packet_id)
+                    rsp = pb.PackNotice()
+                    rsp.status = StatusCode_pb2.StatusCode_OK
+                    rsp.temp_pack_max_size = 30
+                    num = 0

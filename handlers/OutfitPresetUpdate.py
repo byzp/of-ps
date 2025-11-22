@@ -9,7 +9,7 @@ import proto.OverField_pb2 as pb
 
 import utils.db as db
 import utils.pb_create as pb_create
-from server.scene_data import set_scene_action
+from server.scene_data import up_scene_action
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +47,6 @@ class Handler(PacketHandler):
             tmp = data.server_data.add()
             tmp.action_type = pb.SceneActionType_UPDATE_FASHION
             tmp.player.CopyFrom(session.scene_player)
-            set_scene_action(
+            up_scene_action(
                 session.scene_id, session.channel_id, sy.SerializeToString()
             )

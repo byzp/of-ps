@@ -17,7 +17,7 @@ from server.scene_data import (
     lock_scene_action,
     _session_list as session_list,
     lock_session,
-    set_scene_action,
+    up_scene_action,
 )
 import utils.db as db
 
@@ -60,7 +60,7 @@ def notice_sync_loop():
                 for session in session_list:
                     if session.logged_in == True:
                         pass
-                db.db.commit()
+                db.exit()
                 return
             # 检查并清除掉线玩家
             for session in session_list:
@@ -75,7 +75,7 @@ def notice_sync_loop():
                     d.player_id = session.player_id
                     sd = d.server_data.add()
                     sd.action_type = pb.SceneActionType_LEAVE
-                    set_scene_action(
+                    up_scene_action(
                         session.scene_id, session.channel_id, notice.SerializeToString()
                     )
 

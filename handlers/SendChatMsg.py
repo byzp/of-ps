@@ -5,7 +5,7 @@ import logging
 import proto.OverField_pb2 as SendChatMsgReq_pb2
 import proto.OverField_pb2 as SendChatMsgRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-from server.scene_data import set_chat_msg
+from server.scene_data import up_chat_msg
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = SendChatMsgReq_pb2.SendChatMsgReq()
         req.ParseFromString(data)
-        set_chat_msg(
+        up_chat_msg(
             req.type,
             session.player_id,
             req.text,

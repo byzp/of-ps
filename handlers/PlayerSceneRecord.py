@@ -6,7 +6,7 @@ import proto.OverField_pb2 as OverField_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 
 from utils.bin import bin
-from server.scene_data import get_recorder, set_recorder
+from server.scene_data import get_recorder, up_recorder
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = OverField_pb2.PlayerSceneRecordReq()
         req.ParseFromString(data)
-        set_recorder(
+        up_recorder(
             session.scene_id,
             session.channel_id,
             session.player_id,
