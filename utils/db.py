@@ -181,7 +181,13 @@ def init_player(player_id):
 
         c.character_appearance.badge = 5000
         c.character_appearance.umbrella_id = 4050
-        c.character_appearance.logging_axe_instance_id = 33
+        c.character_appearance.insect_net_instance_id = 0
+        c.character_appearance.logging_axe_instance_id = 0
+        c.character_appearance.water_bottle_instance_id = 0
+        c.character_appearance.mining_hammer_instance_id = 0
+        c.character_appearance.collection_gloves_instance_id = 0
+        c.character_appearance.fishing_rod_instance_id = 0
+
 
         spells = i.get("spell_i_ds", [])
         ex_spells = i.get("ex_spell_i_ds", [])
