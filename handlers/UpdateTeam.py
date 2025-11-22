@@ -20,7 +20,9 @@ class Handler(PacketHandler):
         rsp = UpdateTeamRsp_pb2.UpdateTeamRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
-        db.up_team_char_id(session.player_id, (req.char_1, req.char_2, req.char_3))
+        db.set_players_info(
+            session.player_id, "team", (req.char_1, req.char_2, req.char_3)
+        )
         session.send(CmdId.UpdateTeamRsp, rsp, False, packet_id)
 
         # TODO 广播场景数据

@@ -34,19 +34,29 @@ def init():
         CREATE TABLE IF NOT EXISTS players (
             player_id INTEGER PRIMARY KEY,
             player_name TEXT,
+            level INTEGER DEFAULT 1,
+            exp INTEGER DEFAULT 200,
+            sex INTEGER DEFAULT 0,
+            head INTEGER DEFAULT 41101,
+            team_leader_badge INTEGER DEFAULT 0,
+            is_online INTEGER DEFAULT 0,
+            sign TEXT DEFAULT 'sign',
+            guild_name TEXT DEFAULT '',
+            character_id INTEGER DEFAULT 0,
+            garden_like_num INTEGER DEFAULT 0,
             register_time INTEGER,
             create_time INTEGER,
             region_name TEXT DEFAULT 'cn_prod_main',
             client_log_server_token TEXT DEFAULT 'dG9rZW4=',
             server_time_zone INTEGER DEFAULT 28800,
-            level INTEGER DEFAULT 1,
-            exp INTEGER DEFAULT 200,
-            head INTEGER DEFAULT 41101,
             phone_background INTEGER DEFAULT 8000,
             birthday TEXT DEFAULT '1992-02-25',
+            is_hide_birthday INTEGER DEFAULT 0,
+            hide_value INTEGER DEFAULT 0,
             account_type INTEGER DEFAULT 9999,
             unlock_functions BLOB,
-            team BLOB
+            team BLOB,
+            avatar_frame INTEGER DEFAULT 0
         );
 
         CREATE TABLE IF NOT EXISTS characters (
@@ -282,6 +292,27 @@ def get_player_id(user_id):
     return user_id
 
 
+def get_players_info(player_id, info_name):
+    cur = db.execute(f"SELECT {info_name} FROM players WHERE player_id=?", (player_id,))
+    row = cur.fetchone()
+    if row:
+        # 如果是BLOB类型字段，需要反序列化
+        if info_name in ["team", "unlock_functions"]:
+            if row[0]:
+                return pickle.loads(row[0])
+        return row[0]
+    return None
+
+
+def set_players_info(player_id, info_name, value):
+    if info_name in ["team", "unlock_functions"]:
+        value = pickle.dumps(value)
+    db.execute(
+        f"UPDATE players SET {info_name}=? WHERE player_id=?", (value, player_id)
+    )
+    db.commit()
+
+
 def get_register_time(player_id):
     cur = db.execute(
         "SELECT register_time FROM players WHERE player_id=?", (player_id,)
@@ -290,91 +321,8 @@ def get_register_time(player_id):
     return int(row[0] if row else int(time.time()))
 
 
-def get_region_name(player_id):
-    cur = db.execute("SELECT region_name FROM players WHERE player_id=?", (player_id,))
-    row = cur.fetchone()
-    return row[0] if row else "cn_prod_main"
-
-
 def get_analysis_account_id(player_id):
     return str(player_id)
-
-
-def get_player_name(player_id):
-    cur = db.execute("SELECT player_name FROM players WHERE player_id=?", (player_id,))
-    row = cur.fetchone()
-    return row[0] if row else ""
-
-
-def set_player_name(player_id, name):
-    db.execute("UPDATE players SET player_name=? WHERE player_id=?", (name, player_id))
-    db.commit()
-
-
-def get_client_log_server_token(player_id):
-    cur = db.execute(
-        "SELECT client_log_server_token FROM players WHERE player_id=?", (player_id,)
-    )
-    row = cur.fetchone()
-    return row[0] if row else ""
-
-
-def get_server_time_zone(player_id):
-    cur = db.execute(
-        "SELECT server_time_zone FROM players WHERE player_id=?", (player_id,)
-    )
-    row = cur.fetchone()
-    return row[0] if row else 8 * 3600
-
-
-def get_unlock_functions(player_id):
-    cur = db.execute(
-        "SELECT unlock_functions FROM players WHERE player_id=?", (player_id,)
-    )
-    row = cur.fetchone()
-    if row and row[0]:
-        return pickle.loads(row[0])
-
-
-def set_unlock_functions(player_id, functions):
-    db.execute(
-        "UPDATE players SET unlock_functions=? WHERE player_id=?",
-        (pickle.dumps(functions), player_id),
-    )
-    db.commit()
-
-
-def get_level(player_id):
-    cur = db.execute("SELECT level FROM players WHERE player_id=?", (player_id,))
-    row = cur.fetchone()
-    return row[0] if row else 6
-
-
-def set_level(player_id, level):
-    db.execute("UPDATE players SET level=? WHERE player_id=?", (level, player_id))
-    db.commit()
-
-
-def get_exp(player_id):
-    cur = db.execute("SELECT exp FROM players WHERE player_id=?", (player_id,))
-    row = cur.fetchone()
-    return row[0] if row else 200
-
-
-def set_exp(player_id, exp):
-    db.execute("UPDATE players SET exp=? WHERE player_id=?", (exp, player_id))
-    db.commit()
-
-
-def get_avatar(player_id):  # head 头像
-    cur = db.execute("SELECT head FROM players WHERE player_id=?", (player_id,))
-    row = cur.fetchone()
-    return row[0] if row else 41101
-
-
-def set_avatar(player_id, head):
-    db.execute("UPDATE players SET head=? WHERE player_id=?", (head, player_id))
-    db.commit()
 
 
 """
@@ -402,44 +350,6 @@ def get_hide_type(player_id, hide_type) -> bool:
 
 def set_hide_type(player_id, hide_type) -> bool:
     pass
-
-
-def get_is_hide_birthday(player_id):
-    return False
-
-
-def set_is_hide_birthday(player_id) -> None:
-    pass
-
-
-def set_sign(player_id, sign: str):
-    pass
-
-
-def get_sign(player_id):
-    return ""
-
-
-def get_phone_background(player_id):
-    cur = db.execute(
-        "SELECT phone_background FROM players WHERE player_id=?", (player_id,)
-    )
-    row = cur.fetchone()
-    return row[0] if row else 8000
-
-
-def set_phone_background(player_id, background):
-    db.execute(
-        "UPDATE players SET phone_background=? WHERE player_id=?",
-        (background, player_id),
-    )
-    db.commit()
-
-
-def get_create_time(player_id):
-    cur = db.execute("SELECT create_time FROM players WHERE player_id=?", (player_id,))
-    row = cur.fetchone()
-    return row[0] if row else int(time.time())
 
 
 def get_SupplyBox_next_reward_time(player_id):
@@ -601,39 +511,6 @@ def set_month_card_reward_days(player_id, reward_days):
     db.execute(
         "UPDATE month_card SET reward_days=? WHERE player_id=?",
         (reward_days, player_id),
-    )
-    db.commit()
-
-
-def get_birthday(player_id):
-    cur = db.execute("SELECT birthday FROM players WHERE player_id=?", (player_id,))
-    row = cur.fetchone()
-    return row[0] if row else "1992-02-25"
-
-
-def set_birthday(player_id, birthday):
-    db.execute("UPDATE players SET birthday=? WHERE player_id=?", (birthday, player_id))
-    db.commit()
-
-
-def get_account_type(player_id):
-    cur = db.execute("SELECT account_type FROM players WHERE player_id=?", (player_id,))
-    row = cur.fetchone()
-    return row[0] if row else 9999
-
-
-def get_team_char_id(player_id):
-    cur = db.execute("SELECT team FROM players WHERE player_id=?", (player_id,))
-    row = cur.fetchone()
-    if row and row[0]:
-        return pickle.loads(row[0])
-    return (101001, 202002, 202004)
-
-
-def up_team_char_id(player_id, character_ids):
-    db.execute(
-        "UPDATE players SET team=? WHERE player_id=?",
-        (pickle.dumps(character_ids), player_id),
     )
     db.commit()
 

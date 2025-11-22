@@ -30,13 +30,13 @@ class Handler(PacketHandler):
         rsp.player_id = session.player_id
         rsp.player_name = session.player_name
 
-        rsp.unlock_functions.extend(db.get_unlock_functions(player_id))
-        rsp.level = db.get_level(player_id)
-        rsp.exp = db.get_exp(player_id)
-        session.avatar_id = db.get_avatar(player_id)
+        rsp.unlock_functions.extend(db.get_players_info(player_id, "unlock_functions"))
+        rsp.level = db.get_players_info(player_id, "level")
+        rsp.exp = db.get_players_info(player_id, "exp")
+        session.avatar_id = db.get_players_info(player_id, "head")
         rsp.head = session.avatar_id
-        rsp.phone_background = db.get_phone_background(player_id)
-        rsp.create_time = db.get_create_time(player_id)
+        rsp.phone_background = db.get_players_info(player_id, "phone_background")
+        rsp.create_time = db.get_players_info(player_id, "create_time")
 
         rsp.ClearField("characters")
         chrp = pb.Character()
@@ -45,8 +45,8 @@ class Handler(PacketHandler):
             tmp = rsp.characters.add()
             tmp.CopyFrom(chrp)
 
-        rsp.team.char_1, rsp.team.char_2, rsp.team.char_3 = db.get_team_char_id(
-            player_id
+        rsp.team.char_1, rsp.team.char_2, rsp.team.char_3 = db.get_players_info(
+            player_id, "team"
         )
         rsp.scene_id = session.scene_id
         rsp.channel_id = session.channel_id
@@ -58,9 +58,9 @@ class Handler(PacketHandler):
         rsp.month_card_over_due_time = db.get_month_card_over_due_time(player_id)
         rsp.garden_likes_num, _, _, _, _ = db.get_garden_info(player_id)
         rsp.month_card_reward_days = db.get_month_card_reward_days(player_id)
-        rsp.birthday = db.get_birthday(player_id)
-        rsp.is_hide_birthday = db.get_is_hide_birthday(player_id)
-        rsp.account_type = db.get_account_type(player_id)
+        rsp.birthday = db.get_players_info(player_id, "birthday")
+        rsp.is_hide_birthday = db.get_players_info(player_id, "is_hide_birthday")
+        rsp.account_type = db.get_players_info(player_id, "account_type")
 
         session.send(CmdId.PlayerMainDataRsp, rsp, True, packet_id)  # 1005,1006
 

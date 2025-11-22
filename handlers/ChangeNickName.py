@@ -23,7 +23,7 @@ class Handler(PacketHandler):
         rsp.nick_name = req.nick_name
 
         session.player_name = req.nick_name
-        db.set_player_name(session.player_id, req.nick_name)
+        db.set_players_info(session.player_id, "player_name", req.nick_name)
 
         item = db.get_item_detail(session.player_id, 102)  # 星石-10
         tmp = rsp.items.add()

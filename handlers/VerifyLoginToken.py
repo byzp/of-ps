@@ -24,7 +24,7 @@ class Handler(PacketHandler):
             return
 
         session.player_id = db.get_player_id(user_id)
-        session.player_name = db.get_player_name(session.player_id)
+        session.player_name = db.get_players_info(session.player_id, "player_name")
         logger.info(f"Player login: {session.player_name}({session.player_id})")
         rsp.user_id = user_id
         rsp.account_type = req.account_type
