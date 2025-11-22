@@ -21,7 +21,7 @@ class Handler(PacketHandler):
         rsp.status = StatusCode_pb2.StatusCode_OK
 
         rsp.phone_background = req.phone_background
-        db.set_phone_background(session.player_id, req.phone_background)
+        db.set_players_info(session.player_id, "phone_background", req.phone_background)
 
         session.send(
             CmdId.ChangePhoneBackgroundRsp, rsp, False, packet_id

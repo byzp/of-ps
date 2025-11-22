@@ -38,7 +38,7 @@ class Handler(PacketHandler):
         session.send(CmdId.OutfitPresetUpdateNotice, rsp, False, packet_id)
 
         # 广播场景数据
-        if req.char_id in db.get_team_char_id(session.player_id):
+        if req.char_id in db.get_players_info(session.player_id, "team_char_id"):
             pb_create.make_ScenePlayer(session)
             sy = pb.ServerSceneSyncDataNotice()
             sy.status = StatusCode_pb2.StatusCode_OK

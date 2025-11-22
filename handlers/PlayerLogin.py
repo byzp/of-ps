@@ -27,14 +27,16 @@ class Handler(PacketHandler):
             return
         rsp.status = StatusCode_pb2.StatusCode_OK
         rsp.server_time_ms = int(time.time() * 1000)
-        rsp.region_name = db.get_region_name(player_id)
-        rsp.register_time = db.get_register_time(player_id)
+        rsp.region_name = db.get_players_info(player_id, "region_name")
+        rsp.register_time = db.get_players_info(player_id, "register_time")
         rsp.analysis_account_id = db.get_analysis_account_id(player_id)
-        rsp.server_time_zone = db.get_server_time_zone(
-            player_id
+        rsp.server_time_zone = db.get_players_info(
+            player_id, "server_time_zone"
         )  # int(datetime.now(timezone.utc).astimezone().utcoffset().total_seconds())
-        rsp.player_name = db.get_player_name(player_id)
-        rsp.client_log_server_token = db.get_client_log_server_token(player_id)
+        rsp.player_name = db.get_players_info(player_id, "player_name")
+        rsp.client_log_server_token = db.get_players_info(
+            player_id, "client_log_server_token"
+        )
         session.scene_id = scene_data.get_scene_id(player_id)
         session.channel_id = scene_data.get_channel_id(player_id)
         rsp.scene_id = session.scene_id

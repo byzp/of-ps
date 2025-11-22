@@ -7,7 +7,7 @@ def make_ScenePlayer(session):
     player = session.scene_player
     player.player_id = session.player_id
     player.player_name = session.player_name
-    char_ids = db.get_team_char_id(session.player_id)
+    char_ids = db.get_players_info(session.player_id, "team")
     if char_ids[0]:
         char_1 = player.team.char_1
         char_1.char_id = char_ids[0]

@@ -21,6 +21,6 @@ class Handler(PacketHandler):
         rsp.status = StatusCode_pb2.StatusCode_OK
 
         rsp.sign = req.sign
-        db.set_sign(session.player_id, req.sign)
+        db.set_players_info(session.player_id, "sign", req.sign)
 
         session.send(CmdId.ChangeSignRsp, rsp, False, packet_id)  # 修改签名 1526 1527
