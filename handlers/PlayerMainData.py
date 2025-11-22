@@ -35,6 +35,12 @@ class Handler(PacketHandler):
         rsp.exp = db.get_players_info(player_id, "exp")
         session.avatar_id = db.get_players_info(player_id, "head")
         rsp.head = session.avatar_id
+        rsp.sign = db.get_players_info(player_id, "sign")
+        rsp.sex = db.get_players_info(player_id, "sex")
+        rsp.appearance.avatar_frame = db.get_players_info(player_id, "avatar_frame")
+        rsp.appearance.pendant = db.get_players_info(player_id, "pendant")
+        rsp.world_level = db.get_players_info(player_id, "world_level")
+
         rsp.phone_background = db.get_players_info(player_id, "phone_background")
         rsp.create_time = db.get_players_info(player_id, "create_time")
 

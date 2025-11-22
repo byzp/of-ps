@@ -12,7 +12,7 @@ from server.scene_data import _session_list as session_list
 
 logger = logging.getLogger(__name__)
 
-num = 10000
+num = 1000000  # 物品数量
 
 
 @packet_handler(CmdId.PackNotice)

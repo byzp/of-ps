@@ -54,6 +54,7 @@ def init():
             level INTEGER DEFAULT 1,
             exp INTEGER DEFAULT 200,
             sex INTEGER DEFAULT 0,
+            world_level INTEGER DEFAULT 1,
             head INTEGER DEFAULT 41101,
             team_leader_badge INTEGER DEFAULT 0,
             is_online INTEGER DEFAULT 0,
@@ -73,7 +74,8 @@ def init():
             account_type INTEGER DEFAULT 9999,
             unlock_functions BLOB,
             team BLOB,
-            avatar_frame INTEGER DEFAULT 0
+            avatar_frame INTEGER DEFAULT 0,
+            pendant INTEGER DEFAULT 0
         );
 
         CREATE TABLE IF NOT EXISTS characters (
