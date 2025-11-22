@@ -27,7 +27,7 @@ class Handler(PacketHandler):
         d.player_id = session.player_id
         sd = d.server_data.add()
         sd.action_type = pb.SceneActionType_LEAVE
-        scene_data.up_scene_action(
+        scene_data.set_scene_action(
             session.scene_id, session.channel_id, notice.SerializeToString()
         )
 

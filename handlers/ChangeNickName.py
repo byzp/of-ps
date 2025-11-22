@@ -29,7 +29,7 @@ class Handler(PacketHandler):
         tmp = rsp.items.add()
         tmp.ParseFromString(item)
         tmp.main_item.base_item.num -= 10
-        db.up_item_detail(session.player_id, tmp.SerializeToString(), 102, None)
+        db.set_item_detail(session.player_id, tmp.SerializeToString(), 102, None)
 
         session.send(
             CmdId.ChangeNickNameRsp, rsp, False, packet_id

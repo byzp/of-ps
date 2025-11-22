@@ -61,7 +61,7 @@ class Handler(PacketHandler):
         )
 
         # 保存更新后的角色数据到数据库
-        db.up_character(session.player_id, char_id, character.SerializeToString())
+        db.set_character(session.player_id, char_id, character.SerializeToString())
         logger.info(f"Updated character {char_id} appearance")
 
         # 构建响应
