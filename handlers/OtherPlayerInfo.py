@@ -7,6 +7,8 @@ import proto.net_pb2 as OtherPlayerInfoRsp_pb2
 import proto.net_pb2 as StatusCode_pb2
 import proto.net_pb2 as PlayerBriefInfo_pb2
 import proto.net_pb2 as FriendStatus_pb2
+import utils.db as db
+import proto.OverField_pb2 as pb
 
 logger = logging.getLogger(__name__)
 
@@ -19,71 +21,53 @@ class Handler(PacketHandler):
 
         rsp = OtherPlayerInfoRsp_pb2.OtherPlayerInfoRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
+        player_id = req.player_id
 
-        # Set fields from hardcoded test data, but use player_id from request
-        rsp.status = TEST_DATA["status"]
-
-        # Set other_info
         other_info = PlayerBriefInfo_pb2.PlayerBriefInfo()
-        # Use player_id from the request
-        other_info.player_id = req.player_id
-        other_info.nick_name = TEST_DATA["other_info"]["nick_name"]
-        other_info.level = TEST_DATA["other_info"]["level"]
-        other_info.head = TEST_DATA["other_info"]["head"]
-        other_info.last_login_time = TEST_DATA["other_info"]["last_login_time"]
-        other_info.team_leader_badge = TEST_DATA["other_info"]["team_leader_badge"]
-        other_info.sex = TEST_DATA["other_info"]["sex"]
-        other_info.phone_background = TEST_DATA["other_info"]["phone_background"]
-        other_info.is_online = TEST_DATA["other_info"]["is_online"]
-        other_info.sign = TEST_DATA["other_info"]["sign"]
-        other_info.guild_name = TEST_DATA["other_info"]["guild_name"]
-        other_info.character_id = TEST_DATA["other_info"]["character_id"]
-        other_info.create_time = TEST_DATA["other_info"]["create_time"]
-        other_info.player_label = TEST_DATA["other_info"]["player_label"]
-        other_info.garden_like_num = TEST_DATA["other_info"]["garden_like_num"]
-        other_info.account_type = TEST_DATA["other_info"]["account_type"]
-        other_info.birthday = TEST_DATA["other_info"]["birthday"]
-        other_info.hide_value = TEST_DATA["other_info"]["hide_value"]
-        other_info.avatar_frame = TEST_DATA["other_info"]["avatar_frame"]
+        
+        other_info.player_id = db.get_players_info(player_id, "player_id")
+        other_info.nick_name = db.get_players_info(player_id, "player_name")
+        other_info.level = db.get_players_info(player_id, "level")
+        other_info.head = db.get_players_info(player_id, "head")
+        other_info.last_login_time = 0 
+        other_info.sex = db.get_players_info(player_id, "sex")
+        other_info.phone_background = db.get_players_info(player_id, "phone_background")
+        other_info.is_online = db.get_players_info(player_id, "is_online")
+        other_info.sign = db.get_players_info(player_id, "sign")
+        other_info.guild_name = db.get_players_info(player_id, "guild_name")
+        other_info.character_id = db.get_players_info(player_id, "character_id")
+        other_info.create_time = db.get_players_info(player_id, "create_time")
+        other_info.player_label = db.get_players_info(player_id, "player_id")
+        other_info.garden_like_num = db.get_players_info(player_id, "garden_like_num")
+        other_info.account_type = db.get_players_info(player_id, "account_type")
+        other_info.birthday = db.get_players_info(player_id, "birthday")
+        other_info.hide_value = db.get_players_info(player_id, "hide_value")
+        other_info.avatar_frame = db.get_players_info(player_id, "avatar_frame")
+        
+        # 获取队长角色ID以及徽章
+        team_chars = db.get_players_info(player_id, "team")
+        characters = db.get_characters(player_id, team_chars[0])
+        character = pb.Character()
+        character.ParseFromString(characters[0])
+        other_info.team_leader_badge = character.character_appearance.badge
+        other_info.character_id = team_chars[0]
+
         rsp.other_info.CopyFrom(other_info)
 
-        # Set other fields
-        rsp.friend_status = TEST_DATA["friend_status"]
-        rsp.alias = TEST_DATA["alias"]
-        rsp.friend_tag = TEST_DATA["friend_tag"]
-        rsp.friend_intimacy = TEST_DATA["friend_intimacy"]
-        rsp.friend_background = TEST_DATA["friend_background"]
+        # 获取数据库中的好友状态，如果没有则设置响应为默认值
+        friend_status = db.get_friend_info(session.player_id, player_id, "friend_status")
+        rsp.friend_status = friend_status if friend_status is not None else 0
+        
+        alias = db.get_friend_info(session.player_id, player_id, "alias")
+        rsp.alias = alias if alias is not None else ""
+        
+        friend_tag = db.get_friend_info(session.player_id, player_id, "friend_tag")
+        rsp.friend_tag = friend_tag if friend_tag is not None else 0
+        
+        friend_intimacy = db.get_friend_info(session.player_id, player_id, "friend_intimacy")
+        rsp.friend_intimacy = friend_intimacy if friend_intimacy is not None else 0
+        
+        friend_background = db.get_friend_info(session.player_id, player_id, "friend_background")
+        rsp.friend_background = friend_background if friend_background is not None else 0
 
-        session.send(CmdId.OtherPlayerInfoRsp, rsp, False, packet_id)
-
-
-# Hardcoded test data
-TEST_DATA = {
-    "status": 1,
-    "other_info": {
-        "player_id": 1234567,
-        "nick_name": "测试123",
-        "level": 50,
-        "head": 9330,
-        "last_login_time": 0,
-        "team_leader_badge": 5000,
-        "sex": 0,
-        "phone_background": 8027,
-        "is_online": True,
-        "sign": "测试1234567",
-        "guild_name": "",
-        "character_id": 201002,
-        "create_time": 1743490564,
-        "player_label": 2417364,
-        "garden_like_num": 31460,
-        "account_type": 28814,
-        "birthday": "1992-11-11",
-        "hide_value": 0,
-        "avatar_frame": 7235,
-    },
-    "friend_status": 2,
-    "alias": "",
-    "friend_tag": 0,
-    "friend_intimacy": 0,
-    "friend_background": 0,
-}
+        session.send(CmdId.OtherPlayerInfoRsp, rsp, False, packet_id)  # 1965 1966 获取其他玩家信息

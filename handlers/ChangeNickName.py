@@ -5,6 +5,8 @@ import logging
 import proto.OverField_pb2 as ChangeNickNameReq_pb2
 import proto.OverField_pb2 as ChangeNickNameRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
+import proto.OverField_pb2 as pb
+from server.scene_data import up_scene_action
 
 import utils.db as db
 
@@ -35,3 +37,17 @@ class Handler(PacketHandler):
         session.send(
             CmdId.ChangeNickNameRsp, rsp, False, packet_id
         )  # 修改昵称 1527 1528
+
+        # 发送场景同步通知
+        notice = pb.ServerSceneSyncDataNotice()
+        notice.status = StatusCode_pb2.StatusCode_OK
+        data_entry = notice.data.add()
+        data_entry.player_id = session.player_id
+        server_data_entry = data_entry.server_data.add()
+        server_data_entry.action_type = pb.SceneActionType_UPDATE_NICKNAME
+
+        session.scene_player.player_name = session.player_name
+        server_data_entry.player.CopyFrom(session.scene_player)
+        up_scene_action(
+            session.scene_id, session.channel_id, notice.SerializeToString()
+        )
