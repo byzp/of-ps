@@ -70,12 +70,25 @@ class Handler(PacketHandler):
 
         session.send(CmdId.PlayerMainDataRsp, rsp, True, packet_id)  # 1005,1006
 
-        rsp = PackNotice_pb2.PackNotice()
-        rsp.status = StatusCode_pb2.StatusCode_OK
-        for item in db.get_item_detail(player_id):
-            rsp.items.add().ParseFromString(item)
-        rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, True, packet_id)
+        items_data = db.get_item_detail(session.player_id)
+        if items_data:
+            items_by_tag = {}
+
+            for item_blob in items_data:
+                item = PackNotice_pb2.ItemDetail()
+                item.ParseFromString(item_blob)
+                item_tag = item.main_item.item_tag
+                if item_tag not in items_by_tag:
+                    items_by_tag[item_tag] = []
+                items_by_tag[item_tag].append(item_blob)
+
+            for item_tag, items_in_tag in items_by_tag.items():
+                rsp = PackNotice_pb2.PackNotice()
+                rsp.status = StatusCode_pb2.StatusCode_OK
+                for item_blob in items_in_tag:
+                    item = rsp.items.add()
+                    item.ParseFromString(item_blob)
+                session.send(CmdId.PackNotice, rsp, True, packet_id) # 按物品类型分组发送items物品数据
         # session.sbin(CmdId.PackNotice, bin["1400"], False, packet_id)
 
         rsp = ShopInitNotice_pb2.ShopInitNotice()
