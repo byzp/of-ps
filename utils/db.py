@@ -54,6 +54,7 @@ def init():
             level INTEGER DEFAULT 1,
             exp INTEGER DEFAULT 200,
             sex INTEGER DEFAULT 0,
+            world_level INTEGER DEFAULT 1,
             head INTEGER DEFAULT 41101,
             team_leader_badge INTEGER DEFAULT 0,
             is_online INTEGER DEFAULT 0,
@@ -73,7 +74,8 @@ def init():
             account_type INTEGER DEFAULT 9999,
             unlock_functions BLOB,
             team BLOB,
-            avatar_frame INTEGER DEFAULT 0
+            avatar_frame INTEGER DEFAULT 0,
+            pendant INTEGER DEFAULT 0
         );
 
         CREATE TABLE IF NOT EXISTS characters (
@@ -433,7 +435,15 @@ def set_character(player_id, character_id, character_blob):
     db.commit()
 
 
-def get_item_detail(player_id, item_id=None, instance_id=None) -> list:
+def get_item_detail(player_id, item_id=None, instance_id=None, table=None) -> list:
+    """
+    获取物品详情
+    :param player_id: 玩家ID
+    :param item_id: 物品ID（可选）
+    :param instance_id: 实例ID（可选）
+    :param table: 表名（"items" 或 "items_s"，默认为None表示两个表都查）
+    :return: 物品详情列表或单个物品详情
+    """
     if item_id:
         cur = db.execute(
             "SELECT item_detail_blob FROM items WHERE player_id=? AND item_id=?",
@@ -451,6 +461,31 @@ def get_item_detail(player_id, item_id=None, instance_id=None) -> list:
         row = cur.fetchone()
         if row:
             return row[0]
+
+    if table == "items":
+        items = []
+        cur = db.execute(
+            "SELECT item_detail_blob FROM items WHERE player_id=?",
+            (player_id,),
+        )
+        rows = cur.fetchall()
+        if rows:
+            for row in rows:
+                items.append(row[0])
+        return items
+        
+    if table == "items_s":
+        items = []
+        cur = db.execute(
+            "SELECT item_detail_blob FROM items_s WHERE player_id=?",
+            (player_id,),
+        )
+        rows = cur.fetchall()
+        if rows:
+            for row in rows:
+                items.append(row[0])
+        return items
+
     if not item_id and not instance_id:
         items = []
         cur = db.execute(

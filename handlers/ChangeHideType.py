@@ -16,11 +16,16 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = ChangeHideTypeReq_pb2.ChangeHideTypeReq()
         req.ParseFromString(data)
-
         rsp = ChangeHideTypeRsp_pb2.ChangeHideTypeRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
-        rsp.hide_value = db.set_hide_type(session.player_id, req.hide_type)
+        current_status = db.get_players_info(
+            session.player_id, "hide_value"
+        )  # 获取当前状态
+        new_status = 0 if current_status else 1
+
+        db.set_players_info(session.player_id, "hide_value", new_status)
+        rsp.hide_value = new_status
 
         session.send(
             CmdId.ChangeHideTypeRsp, rsp, False, packet_id

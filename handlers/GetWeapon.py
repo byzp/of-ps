@@ -21,21 +21,22 @@ class Handler(PacketHandler):
         rsp = GetWeaponRsp_pb2.GetWeaponRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
-        max_num = req.end_index - req.start_index
-        total_num = 0
+        item_blobs = db.get_item_detail(session.player_id, table="items_s")
 
-        for item in db.get_item_detail(session.player_id):
-            tmp = pb.ItemDetail()
-            tmp.ParseFromString(item)
-            if tmp.main_item.item_tag == pb.EBagItemTag_Weapon:
-                if tmp.main_item.weapon.weapon_id > 1019000:  # 跳过鱼竿等物品
-                    if max_num == total_num:
-                        break
-                    total_num += 1
-                    rsp.weapons.add().CopyFrom(tmp.main_item.weapon)
+        weapon_count = 0
+        for blob in item_blobs:
+            try:
+                item_detail = pb.ItemDetail()
+                item_detail.ParseFromString(blob)
+                if item_detail.main_item.item_tag == pb.EBagItemTag_Weapon:
+                    rsp.weapons.append(item_detail.main_item.weapon)
+                    weapon_count += 1
+            except Exception as e:
+                logger.error(f"Error parsing item detail: {e}")
+                continue
 
-        rsp.total_num = total_num
-        rsp.end_index = req.start_index + total_num
+        rsp.total_num = weapon_count
+        rsp.end_index = weapon_count
 
         session.send(
             CmdId.GetWeaponRsp, rsp, False, packet_id
