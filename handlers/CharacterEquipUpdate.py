@@ -78,7 +78,7 @@ class Handler(PacketHandler):
                         item.ParseFromString(
                             db.get_item_detail(session.player_id, None, armor1.armor_id)
                         )
-                        item.main_item.armor.wearer_id = req.char_id
+                        item.main_item.armor.wearer_id = 0
                         db.set_item_detail(
                             session.player_id,
                             item.SerializeToString(),
@@ -112,7 +112,7 @@ class Handler(PacketHandler):
                                 session.player_id, None, poster1.poster_id
                             )
                         )
-                        item.main_item.poster.wearer_id = req.char_id
+                        item.main_item.poster.wearer_id = 0
                         db.set_item_detail(
                             session.player_id,
                             item.SerializeToString(),

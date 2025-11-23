@@ -175,25 +175,36 @@ def init_player(player_id):
         t1.posters.add().poster_index = 1
         t1.posters.add().poster_index = 2
 
-        p = c.equipment_presets.add()
-        p.preset_index = 1
-        p2 = c.equipment_presets.add()
-        p2.preset_index = 2
+        c.equipment_presets.add().preset_index = 1
+        c.equipment_presets.add().preset_index = 2
 
-        o0 = c.outfit_presets.add()
-        o0.outfit_hide_info.CopyFrom(pb.OutfitHideInfo())
-
-        o1 = c.outfit_presets.add()
-        o1.preset_index = 1
-        o1.hair = i.get("hair_i_d")
-        o1.clothes = i.get("cloth_i_d")
-        o1.outfit_hide_info.CopyFrom(pb.OutfitHideInfo())
-
-        o2 = c.outfit_presets.add()
-        o2.preset_index = 2
-        o2.hair = i.get("hair_i_d")
-        o2.clothes = i.get("cloth_i_d")
-        o2.outfit_hide_info.CopyFrom(pb.OutfitHideInfo())
+        for iter in range(0, 3):
+            o = c.outfit_presets.add()
+            item = pb.ItemDetail()
+            item.main_item.item_tag = pb.EBagItemTag_Fashion
+            item.main_item.outfit.dye_schemes.add().is_un_lock = True
+            o.hat = i.get("hat_i_d") or 0
+            if o.hat:
+                item.main_item.item_id = o.hat
+                item.main_item.outfit.outfit_id = o.hat
+                set_item_detail(player_id, item.SerializeToString(), o.hat)
+            o.hair = i.get("hair_i_d") or 0
+            if o.hair:
+                item.main_item.item_id = o.hair
+                item.main_item.outfit.outfit_id = o.hair
+                set_item_detail(player_id, item.SerializeToString(), o.hair)
+            o.clothes = i.get("cloth_i_d") or 0
+            if o.clothes:
+                item.main_item.item_id = o.clothes
+                item.main_item.outfit.outfit_id = o.clothes
+                set_item_detail(player_id, item.SerializeToString(), o.clothes)
+            o.ornament = (i.get("orn_i_d") and i.get("orn_i_d")[0]) or 0
+            if o.ornament:
+                item.main_item.item_id = o.ornament
+                item.main_item.outfit.outfit_id = o.ornament
+                set_item_detail(player_id, item.SerializeToString(), o.ornament)
+            o.preset_index = iter
+            o.outfit_hide_info.CopyFrom(pb.OutfitHideInfo())
 
         c.character_appearance.badge = 5000
         c.character_appearance.umbrella_id = 4050

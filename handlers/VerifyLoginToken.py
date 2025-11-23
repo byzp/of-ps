@@ -23,6 +23,7 @@ class Handler(PacketHandler):
             session.send(CmdId.VerifyLoginTokenRsp, rsp, True, packet_id)
             return
 
+        session.verified = True
         session.player_id = db.get_player_id(user_id)
         session.player_name = db.get_players_info(session.player_id, "player_name")
         logger.info(f"Player login: {session.player_name}({session.player_id})")

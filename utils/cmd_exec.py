@@ -43,11 +43,10 @@ def give(cmds: list):
     if not match:
         logger.warning("No matching players found.")
         return
-    all_types = ["all", "character", "gift", "weapon", "armor", "poster"]
     for session in target_session:
         instance_id = db.get_instance_id(session.player_id)
         for i in res["Item"]["item"]["datas"]:
-            if i["i_d"] == cmds[2] or cmds[2] in all_types:
+            if i["i_d"] == cmds[2]:
                 item = pb.ItemDetail()
                 itemb = db.get_item_detail(session.player_id, i["i_d"])
                 if itemb:
@@ -134,7 +133,7 @@ def give(cmds: list):
                             tmp.base_item.num += 1
                         items = item.SerializeToString()
                         db.set_item_detail(session.player_id, items, i["i_d"])
-                if not cmds[2] in all_types:
+                if not cmds[2] == "all":
                     break
 
         rsp = pb.PackNotice()

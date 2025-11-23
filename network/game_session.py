@@ -23,6 +23,7 @@ class GameSession:
     badge_id = 0
 
     running = True
+    verified = False
     logged_in = False
 
     def __init__(self, client_socket: socket.socket, address: str):
@@ -66,6 +67,12 @@ class GameSession:
                 packet_head.ParseFromString(
                     data[self.HEADER_LENGTH : self.HEADER_LENGTH + header_len]
                 )
+
+                # 阻止未授权访问
+                if not self.verified and packet_head.msg_id not in [1001, 2201, 2203]:
+                    logger.warning(f"Unauthorized access: {self.address}")
+                    self.close()
+                    return
 
                 total_length = self.HEADER_LENGTH + header_len + packet_head.body_len
 

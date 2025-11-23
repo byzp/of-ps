@@ -48,7 +48,7 @@ def notice_sync_loop():
         with lock_session:
             # 服务器停止
             if sync_stop:
-                logger.info(f"Save player data...")
+                print("Save player data...")
                 # 向所有玩家发送离线通知
                 rsp = pb.PlayerOfflineRsp()
                 rsp.status = StatusCode_pb2.StatusCode_OK

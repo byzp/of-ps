@@ -35,24 +35,51 @@ def _format_record_to_ansi(record):
 def _log_consumer_loop(q: queue.Queue, stop_event: threading.Event):
     while not stop_event.is_set():
         try:
-            record = q.get(timeout=0.2)
+            # 阻塞等待第一条
+            record = q.get(timeout=0.1)
         except queue.Empty:
             continue
+
+        # 检查积压
+        dropped_count = 0
+        if not q.empty():
+            while True:
+                try:
+                    new_record = q.get_nowait()
+                    record = new_record
+                    dropped_count += 1
+                except queue.Empty:
+                    break
+
+        if dropped_count > 0:
+            try:
+                print_formatted_text(ANSI(f"{Fore.RED}{dropped_count} logs skipped!"))
+            except Exception:
+                pass
         try:
             msg = _format_record_to_ansi(record)
             print_formatted_text(ANSI(msg))
         except Exception:
             pass
-    while True:
-        try:
-            record = q.get_nowait()
-        except queue.Empty:
-            break
-        try:
-            msg = _format_record_to_ansi(record)
-            print_formatted_text(ANSI(msg))
-        except Exception:
-            pass
+
+    if not q.empty():
+        last_record = None
+        count = 0
+        while True:
+            try:
+                last_record = q.get_nowait()
+                count += 1
+            except queue.Empty:
+                break
+
+        if last_record:
+            if count > 1:
+                print(f"Exiting... skipped {count-1} remaining logs.")
+            try:
+                msg = _format_record_to_ansi(last_record)
+                print_formatted_text(ANSI(msg))
+            except Exception:
+                pass
 
 
 def start(stop_event: threading.Event, desired_level=logging.INFO):
