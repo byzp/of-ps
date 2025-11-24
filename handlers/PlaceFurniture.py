@@ -43,7 +43,7 @@ class Handler(PacketHandler):
         # 设置层级
         furniture_details.layer_num = req.layer_num
 
-        session.send(CmdId.PlaceFurnitureRsp, rsp, False, packet_id)
+        session.send(CmdId.PlaceFurnitureRsp, rsp, packet_id)
 
 
 # Hardcoded test data

@@ -52,7 +52,7 @@ class Handler(PacketHandler):
             challenge_info.challenge_id = challenge_info_data["challenge_id"]
             challenge_info.use_time = challenge_info_data["use_time"]
 
-        session.send(CmdId.ChallengeFriendRankRsp, rsp, False, packet_id)
+        session.send(CmdId.ChallengeFriendRankRsp, rsp, packet_id)
 
 
 # Hardcoded test data

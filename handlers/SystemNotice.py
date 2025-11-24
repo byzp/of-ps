@@ -30,7 +30,7 @@ class Handler(PacketHandler):
         for param in TEST_DATA["notice"]["param"]:
             notice.param.append(param)
 
-        session.send(CmdId.SystemNotice, rsp, False, packet_id)
+        session.send(CmdId.SystemNotice, rsp, packet_id)
 
 
 # Hardcoded test data

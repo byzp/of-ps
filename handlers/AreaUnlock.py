@@ -30,7 +30,7 @@ class Handler(PacketHandler):
         area_data.area_state = TEST_DATA["area_state"]
         area_data.level = TEST_DATA["level"]
 
-        session.send(CmdId.AreaUnlockRsp, rsp, False, packet_id)
+        session.send(CmdId.AreaUnlockRsp, rsp, packet_id)
 
 
 # Hardcoded test data

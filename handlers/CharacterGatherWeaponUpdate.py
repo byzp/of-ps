@@ -26,36 +26,35 @@ class Handler(PacketHandler):
         if not character_data:
             rsp = CharacterGatherWeaponUpdateRsp_pb2.CharacterGatherWeaponUpdateRsp()
             rsp.status = StatusCode_pb2.StatusCode_INTERNAL_ERROR
-            session.send(CmdId.CharacterGatherWeaponUpdateRsp, rsp, False, packet_id)
+            session.send(CmdId.CharacterGatherWeaponUpdateRsp, rsp, packet_id)
             return
-            
+
         character = pb.Character()
         character.ParseFromString(character_data[0])
         character.gather_weapon = weapon_id
 
         db.set_character(session.player_id, character_id, character.SerializeToString())
-        
+
         # 场景同步
         if character_id in db.get_players_info(session.player_id, "team"):
             session.scene_player.team.char_1.gather_weapon = weapon_id
 
             sy = pb.ServerSceneSyncDataNotice()
             sy.status = StatusCode_pb2.StatusCode_OK
-            
+
             data = sy.data.add()
             data.player_id = session.player_id
             tmp = data.server_data.add()
             tmp.action_type = pb.SceneActionType_UPDATE_EQUIP  # 使用装备更新枚举
             tmp.player.CopyFrom(session.scene_player)
-            
+
             up_scene_action(
                 session.scene_id, session.channel_id, sy.SerializeToString()
             )
-        
 
         rsp = CharacterGatherWeaponUpdateRsp_pb2.CharacterGatherWeaponUpdateRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
         session.send(
-            CmdId.CharacterGatherWeaponUpdateRsp, rsp, False, packet_id
+            CmdId.CharacterGatherWeaponUpdateRsp, rsp, packet_id
         )  # 1955 1956 采集武器更新

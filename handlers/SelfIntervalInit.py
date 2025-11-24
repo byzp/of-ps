@@ -40,7 +40,7 @@ class Handler(PacketHandler):
         #     member = interval.member.add()
         #     # Add member fields here if needed
 
-        session.send(CmdId.SelfIntervalInitRsp, rsp, False, packet_id)
+        session.send(CmdId.SelfIntervalInitRsp, rsp, packet_id)
 
 
 # Hardcoded test data

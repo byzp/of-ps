@@ -26,7 +26,7 @@ class Handler(PacketHandler):
         rsp.status = TEST_DATA["status"]
         rsp.furniture_id = req.furniture_id  # 从请求获取
 
-        session.send(CmdId.TakeOutHandingFurnitureRsp, rsp, False, packet_id)
+        session.send(CmdId.TakeOutHandingFurnitureRsp, rsp, packet_id)
 
 
 # Hardcoded test data

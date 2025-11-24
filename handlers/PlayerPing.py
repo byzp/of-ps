@@ -19,4 +19,4 @@ class Handler(PacketHandler):
         rsp.client_time_ms = req.client_time_ms
         rsp.server_time_ms = int(time.time() * 1000)
 
-        session.send(CmdId.PlayerPingRsp, rsp, True, packet_id)
+        session.send(CmdId.PlayerPingRsp, rsp, packet_id)

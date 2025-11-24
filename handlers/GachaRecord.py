@@ -41,7 +41,7 @@ class Handler(PacketHandler):
             record.gacha_time = record_data.get("gacha_time", 0)
 
         # Send response
-        session.send(CmdId.GachaRecordRsp, rsp, False, packet_id)
+        session.send(CmdId.GachaRecordRsp, rsp, packet_id)
 
 
 # Hardcoded test data

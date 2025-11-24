@@ -12,4 +12,4 @@ class Handler(PacketHandler):
         rsp = PlayerAbilityListRsp_pb2.PlayerAbilityListRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
-        session.send(CmdId.PlayerAbilityListRsp, rsp, False, packet_id)  # 1611,1612
+        session.send(CmdId.PlayerAbilityListRsp, rsp, packet_id)  # 1611,1612

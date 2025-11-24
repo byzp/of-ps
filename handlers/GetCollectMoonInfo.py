@@ -15,4 +15,4 @@ class Handler(PacketHandler):
         rsp = GetArchiveInfoRsp_pb2.GetArchiveInfoRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
         # session.send(2578, rsp)
-        session.sbin(2578, bin["2578"], False, packet_id)
+        session.sbin(2578, bin["2578"], packet_id)

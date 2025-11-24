@@ -68,7 +68,7 @@ class Handler(PacketHandler):
         rsp.is_hide_birthday = db.get_players_info(player_id, "is_hide_birthday")
         rsp.account_type = db.get_players_info(player_id, "account_type")
 
-        session.send(CmdId.PlayerMainDataRsp, rsp, True, packet_id)  # 1005,1006
+        session.send(CmdId.PlayerMainDataRsp, rsp, packet_id)  # 1005,1006
 
         items_data = db.get_item_detail(session.player_id)
         if items_data:
@@ -88,73 +88,73 @@ class Handler(PacketHandler):
                 for item_blob in items_in_tag:
                     item = rsp.items.add()
                     item.ParseFromString(item_blob)
-                session.send(CmdId.PackNotice, rsp, True, packet_id) # 按物品类型分组发送items物品数据
-        # session.sbin(CmdId.PackNotice, bin["1400"], False, packet_id)
+                session.send(
+                    CmdId.PackNotice, rsp, packet_id
+                )  # 按物品类型分组发送items物品数据
+        # session.sbin(CmdId.PackNotice, bin["1400"],  packet_id)
 
         rsp = ShopInitNotice_pb2.ShopInitNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        session.send(CmdId.ShopInitNotice, rsp, False, packet_id)
-        # session.sbin(1706, bin["1706"], False, packet_id)
+        session.send(CmdId.ShopInitNotice, rsp, packet_id)
+        # session.sbin(1706, bin["1706"],  packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        session.send(CmdId.ChatUnLockExpressionNotice, rsp, False, packet_id)  # 1940
+        session.send(CmdId.ChatUnLockExpressionNotice, rsp, packet_id)  # 1940
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
         # session.send(2010, rsp)
-        session.sbin(2010, bin["2010"], False, packet_id)
+        session.sbin(2010, bin["2010"], packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
         # session.send(1990, rsp)
-        session.sbin(1990, bin["1990"], False, packet_id)  # TODO
+        session.sbin(1990, bin["1990"], packet_id)  # TODO
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
         # session.send(1994, rsp)
-        session.sbin(1994, bin["1994"], False, packet_id)  # TODO
+        session.sbin(1994, bin["1994"], packet_id)  # TODO
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
         # session.send(2138, rsp)
-        session.sbin(2138, bin["2138"], False, packet_id)  # TODO
+        session.sbin(2138, bin["2138"], packet_id)  # TODO
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
         # session.send(2124, rsp)
-        session.sbin(2124, bin["2124"], False, packet_id)  # TODO
+        session.sbin(2124, bin["2124"], packet_id)  # TODO
 
-        session.sbin(2634, bin["2634"], False, packet_id)  # TODO
+        session.sbin(2634, bin["2634"], packet_id)  # TODO
 
         rsp = ActivitySignInDataNotice_pb2.ActivitySignInDataNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
         # session.send(1984, rsp)
-        session.sbin(
-            CmdId.ActivitySignInDataNotice, bin["1984"], False, packet_id
-        )  # TODO
+        session.sbin(CmdId.ActivitySignInDataNotice, bin["1984"], packet_id)  # TODO
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
         # session.send(2584, rsp)
-        session.sbin(2584, bin["2584"], False, packet_id)
+        session.sbin(2584, bin["2584"], packet_id)
 
         rsp = IntimacyGiftDayCountNotice_pb2.IntimacyGiftDayCountNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        session.send(CmdId.IntimacyGiftDayCountNotice, rsp, True, packet_id)
-        # session.sbin(2658, bin["2658"], False, packet_id)
+        session.send(CmdId.IntimacyGiftDayCountNotice, rsp, packet_id)
+        # session.sbin(2658, bin["2658"],  packet_id)
 
         rsp = AbyssServerRankNotice_pb2.AbyssServerRankNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        session.send(CmdId.AbyssServerRankNotice, rsp, True, packet_id)
-        # session.sbin(2648, bin["2648"], False, packet_id)
+        session.send(CmdId.AbyssServerRankNotice, rsp, packet_id)
+        # session.sbin(2648, bin["2648"],  packet_id)
 
-        session.sbin(1454, bin["1454"], False, packet_id)
+        session.sbin(1454, bin["1454"], packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        session.send(2630, rsp, True, packet_id)
-        # session.sbin(2630, bin["2630"], False, packet_id)
+        session.send(2630, rsp, packet_id)
+        # session.sbin(2630, bin["2630"],  packet_id)
 
         rsp = SceneDataNotice_pb2.SceneDataNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -172,13 +172,13 @@ class Handler(PacketHandler):
         data.channel_id = session.channel_id
         data.tod_time = 0
         data.channel_label = session.channel_id
-        session.send(CmdId.SceneDataNotice, rsp, False, packet_id)
+        session.send(CmdId.SceneDataNotice, rsp, packet_id)
 
         rsp = ChangeChatChannelRsp_pb2.ChangeChatChannelRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
         rsp.channel_id = session.channel_id
-        session.send(CmdId.ChangeChatChannelRsp, rsp, True, packet_id)
-        # session.sbin(1931, bin["1931"], False, packet_id)
+        session.send(CmdId.ChangeChatChannelRsp, rsp, packet_id)
+        # session.sbin(1931, bin["1931"],  packet_id)
 
         for i in db.get_chat_history(player_id):
             rsp = ChatMsgRecordInitNotice_pb2.ChatMsgRecordInitNotice()
@@ -188,8 +188,8 @@ class Handler(PacketHandler):
                 tmp = rsp.msg.add()
                 for k, v in m.items():
                     setattr(tmp, k, v)
-            session.send(CmdId.ChatMsgRecordInitNotice, rsp, True, packet_id)
-        # session.sbin(1938, bin["1938-1"], False, packet_id)
-        # session.sbin(1938, bin["1938-2"], False, packet_id)
+            session.send(CmdId.ChatMsgRecordInitNotice, rsp, packet_id)
+        # session.sbin(1938, bin["1938-1"],  packet_id)
+        # session.sbin(1938, bin["1938-2"],  packet_id)
 
         # session.sbin(2016, "tmp\\bin\\packet_25_2016_servertoclient_body.bin")

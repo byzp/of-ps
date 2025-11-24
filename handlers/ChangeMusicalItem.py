@@ -19,7 +19,7 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         rsp = GetArchiveInfoRsp_pb2.GetArchiveInfoRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        session.send(CmdId.ChangeMusicalItemRsp, rsp, False, packet_id)  # 2671,2672
+        session.send(CmdId.ChangeMusicalItemRsp, rsp, packet_id)  # 2671,2672
 
         notice = Scene_pb2.ServerSceneSyncDataNotice()
         notice.status = StatusCode_pb2.StatusCode_OK
@@ -39,7 +39,7 @@ class Handler(PacketHandler):
             ):
                 rsp = pb.ServerSceneSyncDataNotice()
                 rsp.ParseFromString(i)
-                session.send(CmdId.ServerSceneSyncDataNotice, rsp, False, 0)
+                session.send(CmdId.ServerSceneSyncDataNotice, rsp, 0)
             # num = 0
 
             # rsp = pb.PackNotice()
@@ -49,7 +49,7 @@ class Handler(PacketHandler):
             #     rsp.items.add().ParseFromString(item)
             #     num += 1
             #     if num > 10000:
-            #         session.send(CmdId.PackNotice, rsp, True, packet_id)
+            #         session.send(CmdId.PackNotice, rsp,  packet_id)
             #         rsp = pb.PackNotice()
             #         rsp.status = StatusCode_pb2.StatusCode_OK
             #         rsp.temp_pack_max_size = 30

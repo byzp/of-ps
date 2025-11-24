@@ -30,5 +30,5 @@ class Handler(PacketHandler):
         rsp.heads.extend(heads)
 
         session.send(
-            CmdId.UnlockHeadListRsp, rsp, False, packet_id
+            CmdId.UnlockHeadListRsp, rsp, packet_id
         )  # 获取已解锁头像列表 1529 1530

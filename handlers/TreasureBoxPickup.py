@@ -62,7 +62,7 @@ class Handler(PacketHandler):
             item_detail.pack_type = item_data["pack_type"]
             item_detail.extra_quality = item_data["extra_quality"]
 
-        session.send(CmdId.TreasureBoxPickupRsp, rsp, False, packet_id)
+        session.send(CmdId.TreasureBoxPickupRsp, rsp, packet_id)
 
 
 # Hardcoded test data from TreasureBoxPickupRsp.json

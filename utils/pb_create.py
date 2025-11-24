@@ -9,7 +9,7 @@ def make_ScenePlayer(session):
     player = session.scene_player
     player.player_id = session.player_id
     player.player_name = session.player_name
-    
+
     player.food_buff_ids.extend([5013073])  # 食物buff ID
     player.global_buff_ids.extend([481, 491])  # 全局buff ID buff未实现
 
@@ -17,7 +17,9 @@ def make_ScenePlayer(session):
     if birthday_str:
         birthday_date = datetime.strptime(birthday_str, "%Y-%m-%d")
         today = datetime.now()
-        player.is_birthday = today.month == birthday_date.month and today.day == birthday_date.day
+        player.is_birthday = (
+            today.month == birthday_date.month and today.day == birthday_date.day
+        )
     else:
         player.is_birthday = False  # 判断生日
 
@@ -40,8 +42,7 @@ def make_ScenePlayer(session):
         char_1.char_break_lv = chr.max_level
         char_1.weapon_id = chr.equipment_presets[0].weapon
         char_1.gather_weapon = chr.gather_weapon  # 设置采集武器
-        #TODO: 铭文id 铭文等级 防具列表 映像列表
-
+        # TODO: 铭文id 铭文等级 防具列表 映像列表
 
         # char_1.pos.CopyFrom(pb.Vector3())
         # char_1.rot.CopyFrom(pb.Vector3())
@@ -67,7 +68,7 @@ def make_ScenePlayer(session):
         # 从equipment_presets中获取武器ID
         char_2.weapon_id = chr.equipment_presets[0].weapon
         char_2.gather_weapon = chr.gather_weapon  # 设置采集武器
-        #TODO: 铭文id 铭文等级 防具列表 映像列表
+        # TODO: 铭文id 铭文等级 防具列表 映像列表
 
         char_2.pos.x = 2394
         char_2.pos.y = 908
@@ -91,12 +92,11 @@ def make_ScenePlayer(session):
         # 从equipment_presets中获取武器ID
         char_3.weapon_id = chr.equipment_presets[0].weapon
         char_3.gather_weapon = chr.gather_weapon  # 设置采集武器
-        #TODO: 铭文id 铭文等级 防具列表 映像列表
+        # TODO: 铭文id 铭文等级 防具列表 映像列表
 
         char_3.pos.x = 2394
         char_3.pos.y = 908
         char_3.rot.CopyFrom(pb.Vector3())
-        
 
 
 def make_SceneCharacterOutfitPreset(session, outfit):

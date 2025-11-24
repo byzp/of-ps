@@ -27,7 +27,7 @@ class Handler(PacketHandler):
         rsp.status = TEST_DATA["status"]
         # 根据协议定义，collections和items是可选字段，这里使用空列表
 
-        session.send(CmdId.CollectingRsp, rsp, False, packet_id)
+        session.send(CmdId.CollectingRsp, rsp, packet_id)
 
 
 # Hardcoded test data

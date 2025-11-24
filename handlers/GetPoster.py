@@ -36,6 +36,4 @@ class Handler(PacketHandler):
         rsp.total_num = total_num
         rsp.end_index = req.start_index + total_num
 
-        session.send(
-            CmdId.GetPosterRsp, rsp, False, packet_id
-        )  # 获取映像列表 1405 1406
+        session.send(CmdId.GetPosterRsp, rsp, packet_id)  # 获取映像列表 1405 1406

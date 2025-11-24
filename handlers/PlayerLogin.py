@@ -23,7 +23,7 @@ class Handler(PacketHandler):
         player_id = session.player_id
         if req.is_reconnect == True:
             rsp.status = StatusCode_pb2.StatusCode_FAIL
-            session.send(CmdId.PlayerLoginRsp, rsp, True, packet_id)
+            session.send(CmdId.PlayerLoginRsp, rsp, packet_id)
             return
         rsp.status = StatusCode_pb2.StatusCode_OK
         rsp.server_time_ms = int(time.time() * 1000)
@@ -44,4 +44,4 @@ class Handler(PacketHandler):
 
         pb_create.make_ScenePlayer(session)
 
-        session.send(CmdId.PlayerLoginRsp, rsp, True, packet_id)  # 1003,1004
+        session.send(CmdId.PlayerLoginRsp, rsp, packet_id)  # 1003,1004

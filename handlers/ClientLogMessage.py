@@ -16,4 +16,4 @@ class Handler(PacketHandler):
         rsp.ParseFromString(data)
         rsp.status = StatusCode_pb2.StatusCode_OK
 
-        session.send(CmdId.ClientLogMessageRsp, rsp, True, packet_id)  # 2203,2204
+        session.send(CmdId.ClientLogMessageRsp, rsp, packet_id)  # 2203,2204

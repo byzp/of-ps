@@ -29,7 +29,7 @@ class Handler(PacketHandler):
             channel.image_id = channel_data["image_id"]
             channel.title = channel_data["title"]
 
-        session.send(CmdId.GMRecommendChannelNotice, rsp, False, packet_id)
+        session.send(CmdId.GMRecommendChannelNotice, rsp, packet_id)
 
 
 # Hardcoded test data

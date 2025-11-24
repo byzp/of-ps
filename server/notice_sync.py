@@ -1,6 +1,7 @@
 import time
 import threading
 import logging
+import os
 from typing import List
 from proto import OverField_pb2 as OverField_pb2
 import proto.OverField_pb2 as SendActionNotice_pb2
@@ -38,7 +39,18 @@ sync_stop = False
 def init():
     global _rel_time
     _rel_time = time.time()
-    threading.Thread(target=notice_sync_loop, daemon=False).start()
+    threading.Thread(target=start_loop, daemon=False).start()
+
+
+def start_loop():
+    try:
+        notice_sync_loop()
+    except Exception as e:
+        logger.error("A fatal error occurred in notice_sync_loop! Clear and exit.")
+    finally:
+        db.exit()
+        time.sleep(1)
+        os._exit(1)
 
 
 def notice_sync_loop():
@@ -48,19 +60,18 @@ def notice_sync_loop():
         with lock_session:
             # 服务器停止
             if sync_stop:
-                print("Save player data...")
+                logger.info("Save player data...")
                 # 向所有玩家发送离线通知
                 rsp = pb.PlayerOfflineRsp()
                 rsp.status = StatusCode_pb2.StatusCode_OK
                 rsp.reason = pb.PlayerOfflineReason_SERVER_SHUTDOWN
                 for session in session_list:
                     if session.running == True and session.logged_in == True:
-                        session.send(CmdId.PlayerOfflineRsp, rsp, True, 0)
+                        session.send(CmdId.PlayerOfflineRsp, rsp, 0)
                 # 保存玩家数据
                 for session in session_list:
                     if session.logged_in == True:
                         pass
-                db.exit()
                 return
             # 检查并清除掉线玩家
             for session in session_list:
@@ -99,7 +110,7 @@ def notice_sync_loop():
                             rsp.action_id = v[2]
                             rsp.from_player_id = k
                             rsp.from_player_name = v[3]
-                            session.send(CmdId.SendActionNotice, rsp, True, 0)
+                            session.send(CmdId.SendActionNotice, rsp, 0)
                 action.clear()
             with lock_scene_action:
                 for session in session_list:
@@ -112,12 +123,11 @@ def notice_sync_loop():
                         tmp = rsp.data.add().server_data.add()
                         tmp.action_type = OverField_pb2.SceneActionType_TOD_UPDATE
                         tmp.tod_time = int(tod_time)
-                        session.send(CmdId.ServerSceneSyncDataNotice, rsp, False, 0)
+                        session.send(CmdId.ServerSceneSyncDataNotice, rsp, 0)
                     # 1208 其他事件
                     for i in scene_action[session.scene_id][session.channel_id]:
-                        rsp = ServerSceneSyncDataNotice_pb2.ServerSceneSyncDataNotice()
-                        rsp.ParseFromString(i)
-                        session.send(CmdId.ServerSceneSyncDataNotice, rsp, False, 0)
+                        # 消除额外操作以节省性能
+                        session.send(CmdId.ServerSceneSyncDataNotice, i, 0, True)
                 scene_action.clear()
                 _last_send_time = now
             with lock_chat_msg:
@@ -141,7 +151,7 @@ def notice_sync_loop():
                         else:
                             rsp.msg.expression = msg[2]
                         rsp.msg.send_time = int(time.time() * 1000)
-                        session.send(CmdId.ChatMsgNotice, rsp, False, 0)
+                        session.send(CmdId.ChatMsgNotice, rsp, 0)
                 chat_msg.clear()
 
         use_time = time.time() - start_t

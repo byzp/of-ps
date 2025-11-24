@@ -27,7 +27,7 @@ class Handler(PacketHandler):
         # 设置家具ID
         rsp.furniture_id = TEST_DATA["furniture_id"]
 
-        session.send(CmdId.HandingFurnitureRsp, rsp, False, packet_id)
+        session.send(CmdId.HandingFurnitureRsp, rsp, packet_id)
 
 
 # Hardcoded test data

@@ -1114,5 +1114,5 @@ class Handler(PacketHandler):
             )
 
         # Send response
-        session.send(CmdId.SceneDataNotice, rsp, False, packet_id)
+        session.send(CmdId.SceneDataNotice, rsp, packet_id)
         print(rsp.data.players)

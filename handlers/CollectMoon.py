@@ -115,7 +115,7 @@ class Handler(PacketHandler):
             reward.pack_type = reward_data["pack_type"]
             reward.extra_quality = reward_data["extra_quality"]
 
-        session.send(CmdId.CollectMoonRsp, rsp, False, packet_id)
+        session.send(CmdId.CollectMoonRsp, rsp, packet_id)
 
 
 # Hardcoded test data

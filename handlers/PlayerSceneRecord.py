@@ -39,6 +39,4 @@ class Handler(PacketHandler):
             tmp.player_id = k
             tmp.data.add().ParseFromString(v)
 
-        session.send(
-            CmdId.PlayerSceneSyncDataNotice, rsp, False, packet_id
-        )  # 1203,1206
+        session.send(CmdId.PlayerSceneSyncDataNotice, rsp, packet_id)  # 1203,1206

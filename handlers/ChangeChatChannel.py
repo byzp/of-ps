@@ -18,4 +18,4 @@ class Handler(PacketHandler):
         session.chat_channel_id = req.channel_id
         rsp.chat_channel_id = req.channel_id
 
-        session.send(CmdId.ChangeChatChannelRsp, rsp, False, packet_id)  # 1930,1931
+        session.send(CmdId.ChangeChatChannelRsp, rsp, packet_id)  # 1930,1931

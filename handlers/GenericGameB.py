@@ -15,4 +15,4 @@ class Handler(PacketHandler):
         rsp = GenericGameBRsp_pb2.GenericGameBRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
         # session.send(CmdId.GenericGameBReq, rsp) #2303,2304
-        session.sbin(2304, bin["2304"], False, packet_id)  # TODO
+        session.sbin(2304, bin["2304"], packet_id)  # TODO

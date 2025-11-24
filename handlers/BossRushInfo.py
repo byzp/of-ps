@@ -45,7 +45,7 @@ class Handler(PacketHandler):
         # for character_id in TEST_DATA["info"]["used_characters"]:
         #     rsp.info.used_characters.append(character_id)
 
-        session.send(CmdId.BossRushInfoRsp, rsp, False, packet_id)
+        session.send(CmdId.BossRushInfoRsp, rsp, packet_id)
 
 
 # Hardcoded test data

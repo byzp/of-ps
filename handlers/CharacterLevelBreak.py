@@ -20,7 +20,7 @@ class Handler(PacketHandler):
         if not character_data:
             rsp.status = StatusCode_pb2.StatusCode_CHARACTER_NOT_FOUND
             rsp.char_id = req.char_id
-            session.send(CmdId.CharacterLevelBreakRsp, rsp, False, packet_id)
+            session.send(CmdId.CharacterLevelBreakRsp, rsp, packet_id)
             return
 
         character = CharacterLevelBreakReq_pb2.Character()
@@ -37,6 +37,4 @@ class Handler(PacketHandler):
         rsp.exp = character.exp
         rsp.max_level = character.max_level
 
-        session.send(
-            CmdId.CharacterLevelBreakRsp, rsp, False, packet_id
-        )  # 角色突破 1041 1042
+        session.send(CmdId.CharacterLevelBreakRsp, rsp, packet_id)  # 角色突破 1041 1042

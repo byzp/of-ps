@@ -20,7 +20,7 @@ class Handler(PacketHandler):
         rsp.vitality_buy_num = TEST_DATA["parsed_result"]["vitality_buy_num"]
         # items is empty as specified in the requirements
 
-        session.send(CmdId.PlayerVitalityRsp, rsp, False, packet_id)
+        session.send(CmdId.PlayerVitalityRsp, rsp, packet_id)
 
 
 # Hardcoded test data

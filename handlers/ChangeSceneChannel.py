@@ -43,7 +43,7 @@ class Handler(PacketHandler):
         rsp.password_allow_time = 0
         rsp.target_player_id = req.target_player_label
 
-        session.send(CmdId.ChangeSceneChannelRsp, rsp, False, packet_id)
+        session.send(CmdId.ChangeSceneChannelRsp, rsp, packet_id)
 
         # 更新场景
         rsp = SceneDataNotice_pb2.SceneDataNotice()
@@ -61,4 +61,4 @@ class Handler(PacketHandler):
         data.channel_id = session.channel_id
         data.tod_time = 0
         data.channel_label = session.channel_id
-        session.send(CmdId.SceneDataNotice, rsp, False, packet_id)
+        session.send(CmdId.SceneDataNotice, rsp, packet_id)

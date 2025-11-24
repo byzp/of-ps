@@ -1301,4 +1301,4 @@ class Handler(PacketHandler):
                     )
 
         # Send response
-        session.send(CmdId.ServerSceneSyncDataNotice, rsp, False, packet_id)
+        session.send(CmdId.ServerSceneSyncDataNotice, rsp, packet_id)

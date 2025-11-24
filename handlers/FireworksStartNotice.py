@@ -27,7 +27,7 @@ class Handler(PacketHandler):
         fireworks_info.fireworks_duration_time = TEST_DATA["fireworks_duration_time"]
         fireworks_info.fireworks_start_time = int(time.time() * 1000)
 
-        session.send(CmdId.FireworksStartNotice, rsp, False, packet_id)
+        session.send(CmdId.FireworksStartNotice, rsp, packet_id)
 
 
 # Hardcoded test data

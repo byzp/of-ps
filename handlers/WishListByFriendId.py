@@ -15,5 +15,5 @@ class Handler(PacketHandler):
         rsp = GetArchiveInfoRsp_pb2.GetArchiveInfoRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
         # TODO
-        session.send(CmdId.WishListByFriendIdRsp, rsp, False, packet_id)  # 2685,2686
+        session.send(CmdId.WishListByFriendIdRsp, rsp, packet_id)  # 2685,2686
         # session.sbin(2686, bin["2686"])

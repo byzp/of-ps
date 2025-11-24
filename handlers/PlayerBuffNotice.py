@@ -31,7 +31,7 @@ class Handler(PacketHandler):
                 buff.buff_id = buff_item["buff_id"]
                 buff.end_time = buff_item["end_time"]
 
-        session.send(CmdId.PlayerBuffNotice, rsp, False, packet_id)
+        session.send(CmdId.PlayerBuffNotice, rsp, packet_id)
 
 
 # Hardcoded test data

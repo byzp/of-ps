@@ -21,15 +21,15 @@ class Handler(PacketHandler):
         # session.send(CmdId.GetArchiveInfoRsp, rsp) #1213,1214
         key = req.key
         if key == "BlessingTreeTutotal":
-            session.sbin(1214, bin["1214-1"], False, packet_id)
+            session.sbin(1214, bin["1214-1"], packet_id)
             return
         if key == "FixOrFlolowMode":
-            session.sbin(1214, bin["1214-2"], False, packet_id)
+            session.sbin(1214, bin["1214-2"], packet_id)
             return
         if key == "":
-            session.sbin(1214, bin["1214-3"], False, packet_id)
+            session.sbin(1214, bin["1214-3"], packet_id)
             return
         if key == "ButtonModeState":
-            session.sbin(1214, bin["1214-4"], False, packet_id)
+            session.sbin(1214, bin["1214-4"], packet_id)
             return
-        session.sbin(1214, bin["1214-3"], False, packet_id)
+        session.sbin(1214, bin["1214-3"], packet_id)

@@ -20,7 +20,7 @@ class Handler(PacketHandler):
         rsp = GamePlayRewardRsp_pb2.GamePlayRewardRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
-        session.send(CmdId.GamePlayRewardRsp, rsp, False, packet_id)
+        session.send(CmdId.GamePlayRewardRsp, rsp, packet_id)
 
 
 # Hardcoded test data

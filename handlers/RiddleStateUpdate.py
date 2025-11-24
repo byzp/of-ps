@@ -31,7 +31,7 @@ class Handler(PacketHandler):
         riddle_data.state = req.battle_state
         riddle_data.is_win = req.is_win
 
-        session.send(CmdId.RiddleStateUpdateRsp, rsp, False, packet_id)
+        session.send(CmdId.RiddleStateUpdateRsp, rsp, packet_id)
 
 
 # Hardcoded test data

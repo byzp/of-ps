@@ -29,7 +29,7 @@ class Handler(PacketHandler):
         # 空的成就列表
         # rsp.achieves
 
-        session.send(CmdId.AreaAchieveListRsp, rsp, False, packet_id)
+        session.send(CmdId.AreaAchieveListRsp, rsp, packet_id)
 
 
 # Hardcoded test data

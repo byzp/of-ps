@@ -25,7 +25,7 @@ class Handler(PacketHandler):
         # Set fields from hardcoded test data
         rsp.status = TEST_DATA["status"]
 
-        session.send(CmdId.SceneInterActionPlayStatusRsp, rsp, False, packet_id)
+        session.send(CmdId.SceneInterActionPlayStatusRsp, rsp, packet_id)
 
 
 # Hardcoded test data

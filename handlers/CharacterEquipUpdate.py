@@ -133,4 +133,4 @@ class Handler(PacketHandler):
         ep1.CopyFrom(ep)
         db.set_character(session.player_id, req.char_id, chr.SerializeToString())
         rsp.character.add().CopyFrom(chr)
-        session.send(CmdId.CharacterEquipUpdateRsp, rsp, True, packet_id)
+        session.send(CmdId.CharacterEquipUpdateRsp, rsp, packet_id)

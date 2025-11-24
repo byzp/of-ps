@@ -28,5 +28,5 @@ class Handler(PacketHandler):
         db.set_players_info(session.player_id, "pendant", req.appearance.pendant)
 
         session.send(
-            CmdId.UpdatePlayerAppearanceRsp, rsp, False, packet_id
+            CmdId.UpdatePlayerAppearanceRsp, rsp, packet_id
         )  # 更换头像框 挂件 2631 2632

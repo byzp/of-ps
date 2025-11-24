@@ -14,5 +14,5 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         rsp = GetAchieveGroupListRsp_pb2.GetAchieveGroupListRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        session.send(CmdId.GetAchieveGroupListRsp, rsp, False, packet_id)
-        # session.sbin(1758, bin["1758"], False, packet_id)
+        session.send(CmdId.GetAchieveGroupListRsp, rsp, packet_id)
+        # session.sbin(1758, bin["1758"],  packet_id)

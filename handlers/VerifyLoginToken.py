@@ -20,7 +20,7 @@ class Handler(PacketHandler):
         user_id = int(db.get_user_id(req.sdk_uid))
         if not db.verify_sdk_user_info(user_id, req.login_token):
             rsp.status = StatusCode_pb2.StatusCode_FAIL
-            session.send(CmdId.VerifyLoginTokenRsp, rsp, True, packet_id)
+            session.send(CmdId.VerifyLoginTokenRsp, rsp, packet_id)
             return
 
         session.verified = True
@@ -34,4 +34,4 @@ class Handler(PacketHandler):
         rsp.time_left = 4294967295
         rsp.device_uuid = req.device_uuid
 
-        session.send(CmdId.VerifyLoginTokenRsp, rsp, True, packet_id)  # 1001,1002
+        session.send(CmdId.VerifyLoginTokenRsp, rsp, packet_id)  # 1001,1002

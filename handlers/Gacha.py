@@ -60,7 +60,7 @@ class Handler(PacketHandler):
         rsp.info.optional_value = TEST_DATA["info"]["optional_value"]
         rsp.info.guarantee = TEST_DATA["info"]["guarantee"]
 
-        session.send(CmdId.GachaRsp, rsp, False, packet_id)
+        session.send(CmdId.GachaRsp, rsp, packet_id)
 
 
 # Hardcoded test data

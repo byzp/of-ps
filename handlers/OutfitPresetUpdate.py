@@ -24,7 +24,7 @@ class Handler(PacketHandler):
         rsp.status = StatusCode_pb2.StatusCode_OK
         rsp.char_id = req.char_id
         rsp.preset.CopyFrom(req.preset)
-        session.send(CmdId.OutfitPresetUpdateRsp, rsp, False, packet_id)
+        session.send(CmdId.OutfitPresetUpdateRsp, rsp, packet_id)
         # 更新角色数据
         chr = pb.Character()
         chr.ParseFromString(db.get_characters(session.player_id, req.char_id)[0])
@@ -35,7 +35,7 @@ class Handler(PacketHandler):
         rsp.status = StatusCode_pb2.StatusCode_OK
         tmp = rsp.chars.add()
         tmp.CopyFrom(chr)
-        session.send(CmdId.OutfitPresetUpdateNotice, rsp, False, packet_id)
+        session.send(CmdId.OutfitPresetUpdateNotice, rsp, packet_id)
 
         # 广播场景数据
         if req.char_id in db.get_players_info(session.player_id, "team"):

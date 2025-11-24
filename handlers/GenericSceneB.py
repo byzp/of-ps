@@ -21,5 +21,5 @@ class Handler(PacketHandler):
         rsp.status = StatusCode_pb2.StatusCode_OK
         rsp.generic_msg_id = req.generic_msg_id  # TODO
 
-        session.send(CmdId.GenericSceneBRsp, rsp, False, packet_id)  # 2307,2308
-        # session.sbin(1758, bin["1758"], False, packet_id)
+        session.send(CmdId.GenericSceneBRsp, rsp, packet_id)  # 2307,2308
+        # session.sbin(1758, bin["1758"],  packet_id)

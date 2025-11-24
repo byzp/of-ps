@@ -24,7 +24,7 @@ class Handler(PacketHandler):
         # Set data from test data
         rsp.status = TEST_DATA["status"]
 
-        session.send(CmdId.NpcTalkRsp, rsp, False, packet_id)
+        session.send(CmdId.NpcTalkRsp, rsp, packet_id)
 
         # Call QuestNotice handler to send quest data notification
         try:

@@ -47,7 +47,7 @@ class Handler(PacketHandler):
         #     join_info = rsp.join_infos.add()
         #     # Add join_info fields here if needed
 
-        session.send(CmdId.FriendIntervalInitRsp, rsp, False, packet_id)
+        session.send(CmdId.FriendIntervalInitRsp, rsp, packet_id)
 
 
 # Hardcoded test data

@@ -35,7 +35,7 @@ class Handler(PacketHandler):
             param.bool_value = param_data["bool_value"]
             param.string_value = param_data["string_value"]
 
-        session.send(CmdId.GenericGameARsp, rsp, False, packet_id)
+        session.send(CmdId.GenericGameARsp, rsp, packet_id)
 
 
 # Hardcoded test data

@@ -45,7 +45,7 @@ class Handler(PacketHandler):
         character_data_list = db.get_characters(session.player_id, req.char_id)
         if not character_data_list:
             rsp.status = StatusCode_pb2.StatusCode_CHARACTER_NOT_FOUND
-            session.send(CmdId.CharacterLevelUpRsp, rsp, False, packet_id)
+            session.send(CmdId.CharacterLevelUpRsp, rsp, packet_id)
             return
 
         character = Character()
@@ -93,6 +93,4 @@ class Handler(PacketHandler):
         rsp.level = new_level
         rsp.exp = new_exp
 
-        session.send(
-            CmdId.CharacterLevelUpRsp, rsp, False, packet_id
-        )  # 角色升级 1039 1040
+        session.send(CmdId.CharacterLevelUpRsp, rsp, packet_id)  # 角色升级 1039 1040

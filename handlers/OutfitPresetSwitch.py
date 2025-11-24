@@ -27,4 +27,4 @@ class Handler(PacketHandler):
         rsp.char_id = req.char_id
         rsp.use_preset_index = req.use_preset_index
 
-        session.send(CmdId.OutfitPresetSwitchRsp, rsp, False, packet_id)
+        session.send(CmdId.OutfitPresetSwitchRsp, rsp, packet_id)

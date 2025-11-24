@@ -26,4 +26,4 @@ class Handler(PacketHandler):
 
         rsp = SendChatMsgRsp_pb2.SendChatMsgRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK  # TODO
-        session.send(CmdId.SendChatMsgRsp, rsp, False, packet_id)  # 1933,1934 -> 1936
+        session.send(CmdId.SendChatMsgRsp, rsp, packet_id)  # 1933,1934 -> 1936

@@ -25,7 +25,5 @@ class Handler(PacketHandler):
             tmp.achieve_id = i["achieve_id"]
             tmp.count = 6
         rsp.character_id = chr_id
-        session.send(
-            CmdId.GetCharacterAchievementListRsp, rsp, False, packet_id
-        )  # 1479,1480
-        # session.sbin(1758, bin["1758"], False, packet_id)
+        session.send(CmdId.GetCharacterAchievementListRsp, rsp, packet_id)  # 1479,1480
+        # session.sbin(1758, bin["1758"],  packet_id)

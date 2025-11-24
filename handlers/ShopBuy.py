@@ -151,7 +151,7 @@ class Handler(PacketHandler):
             item.pack_type = item_data["pack_type"]
             item.extra_quality = item_data["extra_quality"]
 
-        session.send(CmdId.ShopBuyRsp, rsp, False, packet_id)
+        session.send(CmdId.ShopBuyRsp, rsp, packet_id)
 
         # Call PlayerVitality handler to send vitality data notification
         try:

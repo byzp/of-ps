@@ -37,4 +37,4 @@ class Handler(PacketHandler):
         rsp.total_num = total_num
         rsp.end_index = req.start_index + total_num
 
-        session.send(CmdId.GetArmorRsp, rsp, False, packet_id)  # 获取防具列表 1403 1404
+        session.send(CmdId.GetArmorRsp, rsp, packet_id)  # 获取防具列表 1403 1404

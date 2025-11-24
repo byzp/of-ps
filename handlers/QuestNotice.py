@@ -49,7 +49,7 @@ class Handler(PacketHandler):
         random_bonus = TEST_DATA["parsed_result"]["random_quest_bonus_info"]
         rsp.random_quest_bonus_info.bonus_left = random_bonus["bonus_left"]
 
-        session.send(CmdId.QuestNotice, rsp, False, packet_id)
+        session.send(CmdId.QuestNotice, rsp, packet_id)
 
 
 # Hardcoded test data

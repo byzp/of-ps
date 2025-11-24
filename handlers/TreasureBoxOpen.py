@@ -64,7 +64,7 @@ class Handler(PacketHandler):
 
         rsp.next_refresh_time = TEST_DATA["next_refresh_time"]
 
-        session.send(CmdId.TreasureBoxOpenRsp, rsp, False, packet_id)
+        session.send(CmdId.TreasureBoxOpenRsp, rsp, packet_id)
 
 
 # Hardcoded test data from TreasureBoxOpenRsp.json

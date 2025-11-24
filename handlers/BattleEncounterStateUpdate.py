@@ -41,7 +41,7 @@ class Handler(PacketHandler):
             "dynamic_treasure_box_base_info"
         ]["max_quality"]
 
-        session.send(CmdId.BattleEncounterStateUpdateRsp, rsp, False, packet_id)
+        session.send(CmdId.BattleEncounterStateUpdateRsp, rsp, packet_id)
 
 
 # 硬编码测试数据

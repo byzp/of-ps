@@ -490,7 +490,7 @@ def get_item_detail(player_id, item_id=None, instance_id=None, table=None) -> li
             for row in rows:
                 items.append(row[0])
         return items
-        
+
     if table == "items_s":
         items = []
         cur = db.execute(
@@ -639,10 +639,12 @@ def get_character_equip(player_id, chr_id):
         return pickle.loads(row[0])
     return None
 
+
 def get_friend_info(player_id, friend_id, info_name):
     """获取好友信息"""
     cur = db.execute(
-        f"SELECT {info_name} FROM friend WHERE player_id=? AND friend_id=?", (player_id, friend_id)
+        f"SELECT {info_name} FROM friend WHERE player_id=? AND friend_id=?",
+        (player_id, friend_id),
     )
     row = cur.fetchone()
     if row:
@@ -650,12 +652,28 @@ def get_friend_info(player_id, friend_id, info_name):
     return None
 
 
-def set_friend_info(player_id, friend_id, friend_status=0, alias="", friend_tag=0, friend_intimacy=0, friend_background=0):
+def set_friend_info(
+    player_id,
+    friend_id,
+    friend_status=0,
+    alias="",
+    friend_tag=0,
+    friend_intimacy=0,
+    friend_background=0,
+):
     """设置好友信息"""
     db.execute(
         """INSERT OR REPLACE INTO friend 
         (player_id, friend_id, friend_status, alias, friend_tag, friend_intimacy, friend_background) 
         VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        (player_id, friend_id, friend_status, alias, friend_tag, friend_intimacy, friend_background)
+        (
+            player_id,
+            friend_id,
+            friend_status,
+            alias,
+            friend_tag,
+            friend_intimacy,
+            friend_background,
+        ),
     )
     db.commit()

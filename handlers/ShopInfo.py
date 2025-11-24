@@ -29,6 +29,6 @@ class Handler(PacketHandler):
                     tmp.grid_id = i["grid_i_d"]
                     tmp.pool_id = i["shop_pool_i_d"]
                     tmp.pool_index = 1  # i[""]
-        session.send(CmdId.ShopInfoRsp, rsp, False, packet_id)  # 1675,1676
+        session.send(CmdId.ShopInfoRsp, rsp, packet_id)  # 1675,1676
         # session.sbin(CmdId.ShopInfoRsp, bin["1676"])
-        # session.sbin(1208, bin["1208"], False, packet_id)
+        # session.sbin(1208, bin["1208"],  packet_id)

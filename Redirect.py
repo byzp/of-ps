@@ -17,18 +17,22 @@ class Redirector:
 
         if any(full_host.endswith(suffix) for suffix in suffix_matches):
             print(f"重定向 {full_host} → {ip}:{port}")
-            self._redirect(flow)
+            self._redirect(flow, orig_host=full_host)
             return
 
-    def _redirect(self, flow: http.HTTPFlow):
+    def _redirect(self, flow: http.HTTPFlow, orig_host: str):
+        original_host = orig_host
         flow.request.scheme = "http"
+
         flow.request.host = ip
         flow.request.port = port
 
-        flow.request.headers["Host"] = flow.request.host
-
-        if hasattr(flow, "client_conn"):
-            flow.client_conn.tls = False
+        flow.request.headers["Host"] = original_host
+        try:
+            flow.server_conn.address = (ip, port)
+        except Exception:
+            pass
+        flow.server_conn.tls = False
 
 
 addons = [Redirector()]

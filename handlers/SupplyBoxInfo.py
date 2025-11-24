@@ -12,4 +12,4 @@ class Handler(PacketHandler):
         rsp.status = StatusCode_pb2.StatusCode_OK
         rsp.next_reward_time = int(rel_time) + 600
 
-        session.send(CmdId.SupplyBoxInfoRsp, rsp, False, packet_id)  # 1891,1892
+        session.send(CmdId.SupplyBoxInfoRsp, rsp, packet_id)  # 1891,1892

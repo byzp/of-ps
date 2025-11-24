@@ -45,7 +45,7 @@ class Handler(PacketHandler):
 
             item_detail.pack_type = item_data["pack_type"]
 
-        session.send(CmdId.SupplyBoxRewardRsp, rsp, False, packet_id)
+        session.send(CmdId.SupplyBoxRewardRsp, rsp, packet_id)
 
 
 # Hardcoded test data

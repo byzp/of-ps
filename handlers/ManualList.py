@@ -13,4 +13,4 @@ class Handler(PacketHandler):
         rsp.status = StatusCode_pb2.StatusCode_OK
 
         # session.send(CmdId.ManualListRsp, rsp) #1861,1862
-        session.sbin(1862, bin["1862"], False, packet_id)
+        session.sbin(1862, bin["1862"], packet_id)

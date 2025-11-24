@@ -25,7 +25,5 @@ class Handler(PacketHandler):
         p3.status = OverField_pb2.RewardStatus_Reward
         """
 
-        session.send(
-            CmdId.PosterIllustrationListRsp, rsp, False, packet_id
-        )  # 1423,1424
+        session.send(CmdId.PosterIllustrationListRsp, rsp, packet_id)  # 1423,1424
         # session.sbin(1424, bin["1424"])

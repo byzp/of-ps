@@ -12,4 +12,4 @@ class Handler(PacketHandler):
         rsp = SetArchiveInfoRsp_pb2.SetArchiveInfoRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
         # TODO
-        session.send(CmdId.SetArchiveInfoRsp, rsp, False, packet_id)  # 1211,1212
+        session.send(CmdId.SetArchiveInfoRsp, rsp, packet_id)  # 1211,1212

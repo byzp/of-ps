@@ -22,24 +22,24 @@ class Handler(PacketHandler):
 
         i = req.group_id
         if i == 60010000:
-            session.sbin(1762, bin["1762-1"], False, packet_id)
+            session.sbin(1762, bin["1762-1"], packet_id)
         if i == 60020000:
-            session.sbin(1762, bin["1762-2"], False, packet_id)
+            session.sbin(1762, bin["1762-2"], packet_id)
         if i == 60030000:
-            session.sbin(1762, bin["1762-3"], False, packet_id)
+            session.sbin(1762, bin["1762-3"], packet_id)
         if i == 60040000:
-            session.sbin(1762, bin["1762-4"], False, packet_id)
+            session.sbin(1762, bin["1762-4"], packet_id)
         if i == 60050000:
-            session.sbin(1762, bin["1762-5"], False, packet_id)
+            session.sbin(1762, bin["1762-5"], packet_id)
         if i == 60060000:
-            session.sbin(1762, bin["1762-6"], False, packet_id)
+            session.sbin(1762, bin["1762-6"], packet_id)
         if i == 60070000:
-            session.sbin(1762, bin["1762-7"], False, packet_id)
+            session.sbin(1762, bin["1762-7"], packet_id)
         if i == 60080000:
-            session.sbin(1762, bin["1762-8"], False, packet_id)
+            session.sbin(1762, bin["1762-8"], packet_id)
         if i == 60090000:
-            session.sbin(1762, bin["1762-9"], False, packet_id)
+            session.sbin(1762, bin["1762-9"], packet_id)
         if i == 60100000:
-            session.sbin(1762, bin["1762-10"], False, packet_id)
+            session.sbin(1762, bin["1762-10"], packet_id)
         if i == 60110000:
-            session.sbin(1762, bin["1762-11"], False, packet_id)
+            session.sbin(1762, bin["1762-11"], packet_id)

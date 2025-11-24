@@ -24,12 +24,12 @@ class Handler(PacketHandler):
         player_id = req.player_id
 
         other_info = PlayerBriefInfo_pb2.PlayerBriefInfo()
-        
+
         other_info.player_id = db.get_players_info(player_id, "player_id")
         other_info.nick_name = db.get_players_info(player_id, "player_name")
         other_info.level = db.get_players_info(player_id, "level")
         other_info.head = db.get_players_info(player_id, "head")
-        other_info.last_login_time = 0 
+        other_info.last_login_time = 0
         other_info.sex = db.get_players_info(player_id, "sex")
         other_info.phone_background = db.get_players_info(player_id, "phone_background")
         other_info.is_online = db.get_players_info(player_id, "is_online")
@@ -43,7 +43,7 @@ class Handler(PacketHandler):
         other_info.birthday = db.get_players_info(player_id, "birthday")
         other_info.hide_value = db.get_players_info(player_id, "hide_value")
         other_info.avatar_frame = db.get_players_info(player_id, "avatar_frame")
-        
+
         # 获取队长角色ID以及徽章
         team_chars = db.get_players_info(player_id, "team")
         characters = db.get_characters(player_id, team_chars[0])
@@ -55,19 +55,29 @@ class Handler(PacketHandler):
         rsp.other_info.CopyFrom(other_info)
 
         # 获取数据库中的好友状态，如果没有则设置响应为默认值
-        friend_status = db.get_friend_info(session.player_id, player_id, "friend_status")
+        friend_status = db.get_friend_info(
+            session.player_id, player_id, "friend_status"
+        )
         rsp.friend_status = friend_status if friend_status is not None else 0
-        
+
         alias = db.get_friend_info(session.player_id, player_id, "alias")
         rsp.alias = alias if alias is not None else ""
-        
+
         friend_tag = db.get_friend_info(session.player_id, player_id, "friend_tag")
         rsp.friend_tag = friend_tag if friend_tag is not None else 0
-        
-        friend_intimacy = db.get_friend_info(session.player_id, player_id, "friend_intimacy")
-        rsp.friend_intimacy = friend_intimacy if friend_intimacy is not None else 0
-        
-        friend_background = db.get_friend_info(session.player_id, player_id, "friend_background")
-        rsp.friend_background = friend_background if friend_background is not None else 0
 
-        session.send(CmdId.OtherPlayerInfoRsp, rsp, False, packet_id)  # 1965 1966 获取其他玩家信息
+        friend_intimacy = db.get_friend_info(
+            session.player_id, player_id, "friend_intimacy"
+        )
+        rsp.friend_intimacy = friend_intimacy if friend_intimacy is not None else 0
+
+        friend_background = db.get_friend_info(
+            session.player_id, player_id, "friend_background"
+        )
+        rsp.friend_background = (
+            friend_background if friend_background is not None else 0
+        )
+
+        session.send(
+            CmdId.OtherPlayerInfoRsp, rsp, packet_id
+        )  # 1965 1966 获取其他玩家信息

@@ -72,7 +72,7 @@ class Handler(PacketHandler):
             item.pack_type = item_data["pack_type"]
             item.extra_quality = item_data["extra_quality"]
 
-        session.send(CmdId.MonsterDeadRsp, rsp, False, packet_id)
+        session.send(CmdId.MonsterDeadRsp, rsp, packet_id)
 
 
 # 硬编码测试数据

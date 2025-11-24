@@ -26,7 +26,7 @@ class Handler(PacketHandler):
         db.set_players_info(
             session.player_id, "team", (req.char_1, req.char_2, req.char_3)
         )
-        session.send(CmdId.UpdateTeamRsp, rsp, False, packet_id)
+        session.send(CmdId.UpdateTeamRsp, rsp, packet_id)
 
         # 发送场景同步通知
         pb_create.make_ScenePlayer(session)

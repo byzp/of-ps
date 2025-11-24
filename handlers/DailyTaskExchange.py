@@ -44,7 +44,7 @@ class Handler(PacketHandler):
                 "base_item"
             ]["num"]
 
-        session.send(CmdId.DailyTaskExchangeRsp, rsp, False, packet_id)
+        session.send(CmdId.DailyTaskExchangeRsp, rsp, packet_id)
 
 
 # Hardcoded test data

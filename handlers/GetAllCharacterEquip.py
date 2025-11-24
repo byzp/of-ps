@@ -17,11 +17,13 @@ class Handler(PacketHandler):
 
         rsp = GetAllCharacterEquipRsp_pb2.GetAllCharacterEquipRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        
+
         items_data = db.get_item_detail(session.player_id, table="items_s")
         if items_data:
             for item_blob in items_data:
                 item = rsp.items.add()
                 item.ParseFromString(item_blob)
-        
-        session.send(CmdId.GetAllCharacterEquipRsp, rsp, False, packet_id) # 打开探险员界面响应全部装备
+
+        session.send(
+            CmdId.GetAllCharacterEquipRsp, rsp, packet_id
+        )  # 打开探险员界面响应全部装备

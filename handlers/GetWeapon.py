@@ -38,6 +38,4 @@ class Handler(PacketHandler):
         rsp.total_num = weapon_count
         rsp.end_index = weapon_count
 
-        session.send(
-            CmdId.GetWeaponRsp, rsp, False, packet_id
-        )  # 获取武器列表 1517 1518
+        session.send(CmdId.GetWeaponRsp, rsp, packet_id)  # 获取武器列表 1517 1518

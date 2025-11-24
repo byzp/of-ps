@@ -30,7 +30,7 @@ class Handler(PacketHandler):
         # 添加空的items数组
         # items字段已经在proto中定义为repeated ItemDetail，初始为空数组
 
-        session.send(CmdId.CharacterStarUpRsp, rsp, False, packet_id)
+        session.send(CmdId.CharacterStarUpRsp, rsp, packet_id)
 
 
 # Hardcoded test data

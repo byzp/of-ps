@@ -27,6 +27,4 @@ class Handler(PacketHandler):
         db.set_players_info(session.player_id, "hide_value", new_status)
         rsp.hide_value = new_status
 
-        session.send(
-            CmdId.ChangeHideTypeRsp, rsp, False, packet_id
-        )  # 更改隐藏类型 2317 2318
+        session.send(CmdId.ChangeHideTypeRsp, rsp, packet_id)  # 更改隐藏类型 2317 2318

@@ -34,7 +34,7 @@ class Handler(PacketHandler):
                 TEST_DATA["box_id_first"] if i == 0 else TEST_DATA["box_id_other"]
             )
 
-        session.send(CmdId.BattleEncounterInfoRsp, rsp, False, packet_id)
+        session.send(CmdId.BattleEncounterInfoRsp, rsp, packet_id)
 
 
 # 硬编码测试数据

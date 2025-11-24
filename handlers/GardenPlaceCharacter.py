@@ -29,7 +29,7 @@ class Handler(PacketHandler):
         rsp.seat_id = req.seat_id  # 从请求获取
         rsp.is_remove = req.is_remove  # 从请求获取
 
-        session.send(CmdId.GardenPlaceCharacterRsp, rsp, False, packet_id)
+        session.send(CmdId.GardenPlaceCharacterRsp, rsp, packet_id)
 
 
 # Hardcoded test data

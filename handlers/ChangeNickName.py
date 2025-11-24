@@ -34,9 +34,7 @@ class Handler(PacketHandler):
         tmp.main_item.base_item.num -= 10
         db.set_item_detail(session.player_id, tmp.SerializeToString(), 102, None)
 
-        session.send(
-            CmdId.ChangeNickNameRsp, rsp, False, packet_id
-        )  # 修改昵称 1527 1528
+        session.send(CmdId.ChangeNickNameRsp, rsp, packet_id)  # 修改昵称 1527 1528
 
         # 发送场景同步通知
         notice = pb.ServerSceneSyncDataNotice()

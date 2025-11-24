@@ -46,7 +46,7 @@ class Handler(PacketHandler):
                 "base_item"
             ]["num"]
 
-        session.send(CmdId.BlessTreeUnlockRsp, rsp, False, packet_id)
+        session.send(CmdId.BlessTreeUnlockRsp, rsp, packet_id)
 
 
 # Hardcoded test data

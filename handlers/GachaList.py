@@ -12,5 +12,5 @@ class Handler(PacketHandler):
         rsp = Gacha_pb2.GachaListRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
-        session.send(CmdId.GachaListRsp, rsp, True, packet_id)  # 1443,1444
-        # session.sbin(1444, bin["1444"], False, packet_id)
+        session.send(CmdId.GachaListRsp, rsp, packet_id)  # 1443,1444
+        # session.sbin(1444, bin["1444"],  packet_id)

@@ -44,7 +44,7 @@ class Handler(PacketHandler):
         #     activity = rsp.activity_explore.add()
         #     # Add activity fields here if needed
 
-        session.send(CmdId.ExploreInitRsp, rsp, False, packet_id)
+        session.send(CmdId.ExploreInitRsp, rsp, packet_id)
 
 
 # Hardcoded test data

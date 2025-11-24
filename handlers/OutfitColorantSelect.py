@@ -101,4 +101,4 @@ class Handler(PacketHandler):
         for value in params_values:
             rsp.param.params.append(value)
 
-        session.send(CmdId.OutfitColorantSelectRsp, rsp, False, packet_id)
+        session.send(CmdId.OutfitColorantSelectRsp, rsp, packet_id)

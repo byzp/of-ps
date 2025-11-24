@@ -23,7 +23,7 @@ class Handler(PacketHandler):
         rsp.status = TEST_DATA["status"]
         rsp.weather_type = TEST_DATA["weather_type"]
 
-        session.send(CmdId.SceneWeatherChangeNotice, rsp, False, packet_id)
+        session.send(CmdId.SceneWeatherChangeNotice, rsp, packet_id)
 
 
 # Hardcoded test data

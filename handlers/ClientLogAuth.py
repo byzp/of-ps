@@ -11,4 +11,4 @@ class Handler(PacketHandler):
         rsp = ClientLogAuthRsp_pb2.ClientLogAuthRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
-        session.send(CmdId.ClientLogAuthRsp, rsp, True, packet_id)  # 2201,2202
+        session.send(CmdId.ClientLogAuthRsp, rsp, packet_id)  # 2201,2202

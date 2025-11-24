@@ -28,7 +28,7 @@ class Handler(PacketHandler):
         rsp.action_status.value_4 = TEST_DATA["action_status"]["value_4"]
         rsp.action_status.value_5 = TEST_DATA["action_status"]["value_5"]
 
-        session.send(CmdId.SceneInterActionPlayStatusNotice, rsp, False, packet_id)
+        session.send(CmdId.SceneInterActionPlayStatusNotice, rsp, packet_id)
 
 
 # Hardcoded test data

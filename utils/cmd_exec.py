@@ -46,7 +46,7 @@ def give(cmds: list):
     for session in target_session:
         instance_id = db.get_instance_id(session.player_id)
         for i in res["Item"]["item"]["datas"]:
-            if i["i_d"] == cmds[2]:
+            if i["i_d"] == cmds[2] or cmds[2] == "all":
                 item = pb.ItemDetail()
                 itemb = db.get_item_detail(session.player_id, i["i_d"])
                 if itemb:
@@ -141,4 +141,4 @@ def give(cmds: list):
         for item in db.get_item_detail(session.player_id):
             rsp.items.add().ParseFromString(item)
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, True, 0)
+        session.send(CmdId.PackNotice, rsp, 0)

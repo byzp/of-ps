@@ -25,23 +25,34 @@ class Handler(PacketHandler):
         if not characters:
             rsp = UpdateCharacterAppearanceRsp_pb2.UpdateCharacterAppearanceRsp()
             rsp.status = StatusCode_pb2.StatusCode_Error
-            session.send(CmdId.UpdateCharacterAppearanceRsp, rsp, False, packet_id)
+            session.send(CmdId.UpdateCharacterAppearanceRsp, rsp, packet_id)
             return
 
         character = pb.Character()
         character.ParseFromString(characters[0])
 
-        if req.HasField('appearance'):
+        if req.HasField("appearance"):
             appearance = req.appearance
             default_appearance = pb.CharacterAppearance()
             fields_to_check = [
-                'badge', 'umbrella_id', 'insect_net_instance_id', 'logging_axe_instance_id',
-                'water_bottle_instance_id', 'mining_hammer_instance_id', 
-                'collection_gloves_instance_id', 'fishing_rod_instance_id'
+                "badge",
+                "umbrella_id",
+                "insect_net_instance_id",
+                "logging_axe_instance_id",
+                "water_bottle_instance_id",
+                "mining_hammer_instance_id",
+                "collection_gloves_instance_id",
+                "fishing_rod_instance_id",
             ]
             for field_name in fields_to_check:
-                if getattr(appearance, field_name) != getattr(default_appearance, field_name):
-                    setattr(character.character_appearance, field_name, getattr(appearance, field_name))
+                if getattr(appearance, field_name) != getattr(
+                    default_appearance, field_name
+                ):
+                    setattr(
+                        character.character_appearance,
+                        field_name,
+                        getattr(appearance, field_name),
+                    )
 
         db.set_character(session.player_id, char_id, character.SerializeToString())
 
@@ -52,16 +63,24 @@ class Handler(PacketHandler):
         rsp.appearance.umbrella_id = req.appearance.umbrella_id
         rsp.appearance.insect_net_instance_id = req.appearance.insect_net_instance_id
         rsp.appearance.logging_axe_instance_id = req.appearance.logging_axe_instance_id
-        rsp.appearance.water_bottle_instance_id = req.appearance.water_bottle_instance_id
-        rsp.appearance.mining_hammer_instance_id = req.appearance.mining_hammer_instance_id
-        rsp.appearance.collection_gloves_instance_id = req.appearance.collection_gloves_instance_id
+        rsp.appearance.water_bottle_instance_id = (
+            req.appearance.water_bottle_instance_id
+        )
+        rsp.appearance.mining_hammer_instance_id = (
+            req.appearance.mining_hammer_instance_id
+        )
+        rsp.appearance.collection_gloves_instance_id = (
+            req.appearance.collection_gloves_instance_id
+        )
         rsp.appearance.fishing_rod_instance_id = req.appearance.fishing_rod_instance_id
 
-        session.send(CmdId.UpdateCharacterAppearanceRsp, rsp, False, packet_id)
-        
+        session.send(CmdId.UpdateCharacterAppearanceRsp, rsp, packet_id)
+
         # 发送场景同步通知
         if char_id in db.get_players_info(session.player_id, "team"):
-            session.scene_player.team.char_1.character_appearance.CopyFrom(req.appearance)
+            session.scene_player.team.char_1.character_appearance.CopyFrom(
+                req.appearance
+            )
             notice = pb.ServerSceneSyncDataNotice()
             notice.status = StatusCode_pb2.StatusCode_OK
             data_entry = notice.data.add()

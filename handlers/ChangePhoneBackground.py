@@ -24,5 +24,5 @@ class Handler(PacketHandler):
         db.set_players_info(session.player_id, "phone_background", req.phone_background)
 
         session.send(
-            CmdId.ChangePhoneBackgroundRsp, rsp, False, packet_id
+            CmdId.ChangePhoneBackgroundRsp, rsp, packet_id
         )  # 更换手机背景 1517 1518

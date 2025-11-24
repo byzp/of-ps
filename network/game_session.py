@@ -69,7 +69,12 @@ class GameSession:
                 )
 
                 # 阻止未授权访问
-                if not self.verified and packet_head.msg_id not in [1001, 2201, 2203]:
+                if not self.verified and packet_head.msg_id not in [
+                    1001,
+                    1007,
+                    2201,
+                    2203,
+                ]:
                     logger.warning(f"Unauthorized access: {self.address}")
                     self.close()
                     return
@@ -103,11 +108,19 @@ class GameSession:
             return snappy.uncompress(body)
         return body
 
-    def send(self, cmd_id: int, message: Message, sync: bool, packet_id: int):
+    def send(
+        self,
+        cmd_id: int,
+        message: Message,
+        packet_id: int,
+        is_bin: bool = False,
+    ):
         """Send protobuf message to client"""
         # logger.info(f"Sending message: {cmd_id}")
-
-        body_data = message.SerializeToString()
+        if not is_bin:
+            body_data = message.SerializeToString()
+        else:
+            body_data = message
 
         packet_head = OverField_pb2.PacketHead()
         packet_head.msg_id = cmd_id
@@ -122,7 +135,7 @@ class GameSession:
             packet_head.flag = 0
         packet_head.body_len = len(body_data)
 
-        if sync:
+        if cmd_id in [1002, 1004, 1006, 1008]:
             packet_head.seq_id = 0
         else:
             packet_head.seq_id = self.seq_id
@@ -138,7 +151,7 @@ class GameSession:
             print(e)
         logger.debug(f"Sending message: {cmd_id}")
 
-    def sbin(self, cmd_id: int, path: str, sync: bool, packet_id: int):
+    def sbin(self, cmd_id: int, path: str, packet_id: int):
         """Send protobuf message to client"""
         # logger.info(f"Sending bin message: {cmd_id}")
 
@@ -158,7 +171,7 @@ class GameSession:
             packet_head.flag = 0
         packet_head.body_len = len(body_data)
 
-        if sync:
+        if cmd_id in [1002, 1004, 1006, 1008]:
             packet_head.seq_id = 0
         else:
             packet_head.seq_id = self.seq_id

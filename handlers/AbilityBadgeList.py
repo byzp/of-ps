@@ -12,4 +12,4 @@ class Handler(PacketHandler):
         rsp.status = StatusCode_pb2.StatusCode_OK
 
         # session.send(CmdId.AbilityBadgeListRsp, rsp) #1631,1632
-        session.sbin(1632, bin["1632"], False, packet_id)  # TODO
+        session.sbin(1632, bin["1632"], packet_id)  # TODO

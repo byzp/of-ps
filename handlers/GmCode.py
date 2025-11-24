@@ -32,4 +32,4 @@ class Handler(PacketHandler):
         # # 添加在线玩家列表
         # rsp.online_players.append(session.player_id)
 
-        session.send(CmdId.GmCodeRsp, rsp, False, packet_id)
+        session.send(CmdId.GmCodeRsp, rsp, packet_id)

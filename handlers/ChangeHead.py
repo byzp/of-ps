@@ -24,4 +24,4 @@ class Handler(PacketHandler):
         session.avatar_id = req.head
         db.set_players_info(session.player_id, "head", session.avatar_id)
 
-        session.send(CmdId.ChangeHeadRsp, rsp, False, packet_id)  # 更换头像 1528 1529
+        session.send(CmdId.ChangeHeadRsp, rsp, packet_id)  # 更换头像 1528 1529

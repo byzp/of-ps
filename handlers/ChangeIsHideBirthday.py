@@ -27,5 +27,5 @@ class Handler(PacketHandler):
         db.set_players_info(session.player_id, "is_hide_birthday", new_status)
 
         session.send(
-            CmdId.ChangeIsHideBirthdayRsp, rsp, False, packet_id
+            CmdId.ChangeIsHideBirthdayRsp, rsp, packet_id
         )  # 更改是否隐藏生日 2313 2314
