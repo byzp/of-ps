@@ -90,7 +90,9 @@ def notice_sync_loop():
                         session.scene_id, session.channel_id, notice.SerializeToString()
                     )
 
-            session_list[:] = [s for s in session_list if getattr(s, "running", False)]
+            session_list[:] = [
+                s for s in session_list if getattr(s, "running", False)
+            ]  # 清除已断开的连接
             now = time.time()
             elapsed_real = now - _rel_time
             if elapsed_real > 0:
@@ -113,11 +115,16 @@ def notice_sync_loop():
                             session.send(CmdId.SendActionNotice, rsp, 0)
                 action.clear()
             with lock_scene_action:
+                if now - _last_send_time >= SEND_INTERVAL_REAL:
+                    time_sync = True
+                    _last_send_time = now
+                else:
+                    time_sync = False
                 for session in session_list:
                     if session.running == False or session.logged_in == False:
                         continue
                     # 1208 场景时间同步
-                    if now - _last_send_time >= SEND_INTERVAL_REAL:
+                    if time_sync:
                         rsp = ServerSceneSyncDataNotice_pb2.ServerSceneSyncDataNotice()
                         rsp.status = StatusCode_pb2.StatusCode_OK
                         tmp = rsp.data.add().server_data.add()
@@ -129,7 +136,6 @@ def notice_sync_loop():
                         # 消除额外操作以节省性能
                         session.send(CmdId.ServerSceneSyncDataNotice, i, 0, True)
                 scene_action.clear()
-                _last_send_time = now
             with lock_chat_msg:
                 for session in session_list:
                     # 聊天信息同步

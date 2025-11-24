@@ -16,6 +16,15 @@ lock_chat_msg = threading.Lock()
 lock_session = threading.Lock()
 
 
+def get_session():
+    session_tmp = []
+    with lock_session:
+        for session in _session_list:
+            if session.logged_in and session.running:
+                session_tmp.append(session)
+        return session_tmp
+
+
 def get_recorder(
     scene_id: int, channel_id: int, player_id: Optional[int] = None
 ) -> Optional[Any]:

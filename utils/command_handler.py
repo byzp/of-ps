@@ -1,5 +1,5 @@
 import threading
-from server.scene_data import _session_list as session_list
+from server.scene_data import get_session
 from network.cmd_id import CmdId
 
 # 命令注册
@@ -13,16 +13,16 @@ def register_command(name, handler_func):
 
 def send_to_all_clients(handler_class):
     """通用函数，用于向所有已连接的客户端发送通知"""
-    if not session_list:
+    sessions = get_session()
+    if len(sessions) == 0:
         print("没有已连接的客户端")
         return
 
     try:
         handler = handler_class()
-        for session in session_list:
-            if session.logged_in:
-                handler.handle(session, b"", 0)
-                print(f"已向玩家 {session.player_id} 发送通知")
+        for session in sessions:
+            handler.handle(session, b"", 0)
+            print(f"已向玩家 {session.player_id} 发送通知")
     except Exception as e:
         print(f"错误: {e}")
 

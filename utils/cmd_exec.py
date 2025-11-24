@@ -1,25 +1,32 @@
 from network.cmd_id import CmdId
 import logging
+import time
 
-import proto.OverField_pb2 as GetWeaponReq_pb2
-import proto.OverField_pb2 as GetWeaponRsp_pb2
+import proto.OverField_pb2 as FireworksStartNotice_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 import proto.OverField_pb2 as pb
 
 from utils.res_loader import res
-from server.scene_data import _session_list as session_list
+from server.scene_data import get_session, lock_scene_action
+import server.notice_sync as notice_sync
 import utils.db as db
+
 
 logger = logging.getLogger(__name__)
 
 
 def cmd_exec(cmd: str):
     cmds = cmd.split(" ")
-    if cmds[0] == "give":  # give player_id item_id [num]
-        give(cmds)
-        return
-    else:
-        logger.warning("Unknow command.")
+    match cmds[0]:
+        case "give":  # give player_id item_id [num]
+            give(cmds)
+        case "firework":
+            firework(cmds)  # firework id [dur_time] [start_time]
+        case "time":
+            # 时间设置为0无效
+            set_time(cmds)  # time 1-86400
+        case _:
+            logger.warning("Unknow command.")
 
 
 def give(cmds: list):
@@ -30,16 +37,15 @@ def give(cmds: list):
         return
     else:
         cmds = list(map(lambda x: int(x) if x.lstrip("+-").isdigit() else x, cmds))
-    for session in session_list:
-        if session.logged_in and session.running:
-            if cmds[1] == "all":
+    for session in get_session():
+        if cmds[1] == "all":
+            target_session.append(session)
+            match = True
+        else:
+            if session.player_id == cmds[1]:
                 target_session.append(session)
                 match = True
-            else:
-                if session.player_id == cmds[1]:
-                    target_session.append(session)
-                    match = True
-                    break
+                break
     if not match:
         logger.warning("No matching players found.")
         return
@@ -142,3 +148,35 @@ def give(cmds: list):
             rsp.items.add().ParseFromString(item)
         rsp.temp_pack_max_size = 30
         session.send(CmdId.PackNotice, rsp, 0)
+
+
+def firework(cmds):
+    if not 2 <= len(cmds) <= 4:
+        logger.warning("firework id [dur_time] [start_time]")
+        return
+    cmds = list(map(lambda x: int(x) if x.lstrip("+-").isdigit() else x, cmds))
+    rsp = FireworksStartNotice_pb2.FireworksStartNotice()
+    rsp.status = StatusCode_pb2.StatusCode_OK
+
+    fireworks_info = rsp.fireworks_info
+    fireworks_info.fireworks_id = cmds[1]
+    fireworks_info.fireworks_duration_time = 900
+    fireworks_info.fireworks_start_time = int(time.time())
+    if len(cmds) == 3:
+        fireworks_info.fireworks_duration_time = cmds[2]
+        fireworks_info.fireworks_start_time = int(time.time())
+    if len(cmds) == 4:
+        fireworks_info.fireworks_duration_time = cmds[2]
+        fireworks_info.fireworks_start_time = cmds[3]
+    for session in get_session():
+        session.send(CmdId.FireworksStartNotice, rsp, 0)
+
+
+def set_time(cmds):
+    if not len(cmds) == 2:
+        logger.warning("time 1-86400")
+        return
+    cmds = list(map(lambda x: int(x) if x.lstrip("+-").isdigit() else x, cmds))
+    with lock_scene_action:
+        notice_sync._last_send_time = 0
+        notice_sync.tod_time = cmds[1]

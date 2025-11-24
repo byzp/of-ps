@@ -1,4 +1,3 @@
-from tkinter import N
 from network.packet_handler import PacketHandler, packet_handler
 from network.cmd_id import CmdId
 import logging
@@ -8,7 +7,6 @@ import proto.OverField_pb2 as StatusCode_pb2
 import proto.OverField_pb2 as pb
 import utils.db as db
 from utils.res_loader import res
-from server.scene_data import _session_list as session_list
 
 logger = logging.getLogger(__name__)
 

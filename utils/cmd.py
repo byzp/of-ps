@@ -71,7 +71,7 @@ def _prompt_loop():
 
 def start():
     global _prompt_thread
-    log_module.start(_stop_event, desired_level=logging.INFO)
+    log_module.start(_stop_event)
     _prompt_thread = threading.Thread(target=_prompt_loop, daemon=True)
     _prompt_thread.start()
     return _stop_event
