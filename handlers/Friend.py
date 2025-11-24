@@ -11,7 +11,13 @@ logger = logging.getLogger(__name__)
 @packet_handler(CmdId.FriendReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
+        req = FriendReq_pb2.FriendReq()
+        req.ParseFromString(data)
+
         rsp = FriendReq_pb2.FriendRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
+
+        # TODO: 构建对应列表玩家数据
+
         session.send(CmdId.FriendRsp, rsp, packet_id)  # 1739,1740
         # session.sbin(CmdId.FriendRsp, "tmp\\bin\\packet_66_1740_servertoclient_body.bin")

@@ -2,11 +2,11 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.cmd_id import CmdId
 import logging
 
-import proto.net_pb2 as OtherPlayerInfoReq_pb2
-import proto.net_pb2 as OtherPlayerInfoRsp_pb2
-import proto.net_pb2 as StatusCode_pb2
-import proto.net_pb2 as PlayerBriefInfo_pb2
-import proto.net_pb2 as FriendStatus_pb2
+import proto.OverField_pb2 as OtherPlayerInfoReq_pb2
+import proto.OverField_pb2 as OtherPlayerInfoRsp_pb2
+import proto.OverField_pb2 as StatusCode_pb2
+import proto.OverField_pb2 as PlayerBriefInfo_pb2
+import proto.OverField_pb2 as FriendStatus_pb2
 import utils.db as db
 import proto.OverField_pb2 as pb
 
@@ -54,11 +54,14 @@ class Handler(PacketHandler):
 
         rsp.other_info.CopyFrom(other_info)
 
-        # 获取数据库中的好友状态，如果没有则设置响应为默认值
+        # 获取数据库中的好友状态，如果没有或为4则设置响应为默认值0
         friend_status = db.get_friend_info(
             session.player_id, player_id, "friend_status"
         )
-        rsp.friend_status = friend_status if friend_status is not None else 0
+        # 如果好友状态不存在或为4，则响应0
+        rsp.friend_status = (
+            0 if friend_status is None or friend_status == 4 else friend_status
+        )
 
         alias = db.get_friend_info(session.player_id, player_id, "alias")
         rsp.alias = alias if alias is not None else ""

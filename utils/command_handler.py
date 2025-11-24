@@ -2,6 +2,7 @@ import threading
 from server.scene_data import get_session
 from network.cmd_id import CmdId
 
+
 # 命令注册
 COMMANDS = {}
 
@@ -77,6 +78,45 @@ def send_pack_notice():
     send_to_all_clients(Handler)
 
 
+def send_gm_notice():
+    """构建GmNotice 横幅滚动公告"""
+    import proto.OverField_pb2 as GmNotice_pb2
+    import proto.OverField_pb2 as StatusCode_pb2
+
+    sessions = get_session()
+    if len(sessions) == 0:
+        print("没有已连接的客户端")
+        return
+
+    rsp = GmNotice_pb2.GmNotice()
+    rsp.status = StatusCode_pb2.StatusCode_OK
+
+    notices = ["测试1！", "测试2！", "测试3！"]
+    for notice in notices:
+        rsp.notice.append(notice)
+
+    for session in sessions:
+        session.send(CmdId.GmNotice, rsp, 0)
+
+
+def send_changeScenechannel():
+    """构建ChangeSceneChannelRsp 切换场景频道响应"""
+    import proto.OverField_pb2 as ChangeSceneChannelRsp_pb2
+    import proto.OverField_pb2 as StatusCode_pb2
+
+    sessions = get_session()
+    if len(sessions) == 0:
+        print("没有已连接的客户端")
+        return
+    rsp = ChangeSceneChannelRsp_pb2.ChangeSceneChannelRsp()
+    rsp.status = StatusCode_pb2.StatusCode_OK
+    rsp.scene_id = 1
+    rsp.channel_label = 10000
+
+    for session in sessions:
+        session.send(CmdId.ChangeSceneChannelRsp, rsp, 0)
+
+
 # 注册命令
 register_command("1918", send_weather_change)
 register_command("2016", send_system_notice)
@@ -85,6 +125,8 @@ register_command("2160", send_fireworks_start_notice)
 register_command("2630", send_gm_recommend_channel_notice)
 register_command("2631", send_scene_inter_action_play_status_notice)
 register_command("1400", send_pack_notice)
+register_command("1722", send_gm_notice)
+register_command("1", send_changeScenechannel)
 
 
 def start_command_handler():

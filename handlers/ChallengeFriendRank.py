@@ -9,6 +9,8 @@ import proto.OverField_pb2 as StatusCode_pb2
 logger = logging.getLogger(__name__)
 
 
+# 挑战好友排行信息列表
+# 1301 1302
 @packet_handler(CmdId.ChallengeFriendRankReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
