@@ -7,6 +7,8 @@ import proto.OverField_pb2 as UpdateCharacterAppearanceRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 import proto.OverField_pb2 as pb
 import utils.db as db
+import utils.pb_create as pb_create
+from server.scene_data import up_scene_action
 
 logger = logging.getLogger(__name__)
 
@@ -14,82 +16,59 @@ logger = logging.getLogger(__name__)
 @packet_handler(CmdId.UpdateCharacterAppearanceReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        # 解析请求数据
         req = UpdateCharacterAppearanceReq_pb2.UpdateCharacterAppearanceReq()
         req.ParseFromString(data)
 
-        # 获取角色ID
         char_id = req.char_id
-        logger.info(f"Handling appearance update for character {char_id}")
 
-        # 从数据库获取该玩家对应角色id数据
         characters = db.get_characters(session.player_id, char_id)
         if not characters:
-            logger.error(
-                f"No character found for player {session.player_id} with character id {char_id}"
-            )
-            # 构建错误响应
             rsp = UpdateCharacterAppearanceRsp_pb2.UpdateCharacterAppearanceRsp()
             rsp.status = StatusCode_pb2.StatusCode_Error
             session.send(CmdId.UpdateCharacterAppearanceRsp, rsp, False, packet_id)
             return
 
-        # 解析角色数据
         character = pb.Character()
         character.ParseFromString(characters[0])
 
-        # 修改请求的数据（更新角色外观）
-        character.character_appearance.badge = req.appearance.badge
-        character.character_appearance.umbrella_id = req.appearance.umbrella_id
-        character.character_appearance.insect_net_instance_id = (
-            req.appearance.insect_net_instance_id
-        )
-        character.character_appearance.logging_axe_instance_id = (
-            req.appearance.logging_axe_instance_id
-        )
-        character.character_appearance.water_bottle_instance_id = (
-            req.appearance.water_bottle_instance_id
-        )
-        character.character_appearance.mining_hammer_instance_id = (
-            req.appearance.mining_hammer_instance_id
-        )
-        character.character_appearance.collection_gloves_instance_id = (
-            req.appearance.collection_gloves_instance_id
-        )
-        character.character_appearance.fishing_rod_instance_id = (
-            req.appearance.fishing_rod_instance_id
-        )
+        if req.HasField('appearance'):
+            appearance = req.appearance
+            default_appearance = pb.CharacterAppearance()
+            fields_to_check = [
+                'badge', 'umbrella_id', 'insect_net_instance_id', 'logging_axe_instance_id',
+                'water_bottle_instance_id', 'mining_hammer_instance_id', 
+                'collection_gloves_instance_id', 'fishing_rod_instance_id'
+            ]
+            for field_name in fields_to_check:
+                if getattr(appearance, field_name) != getattr(default_appearance, field_name):
+                    setattr(character.character_appearance, field_name, getattr(appearance, field_name))
 
-        # 保存更新后的角色数据到数据库
         db.set_character(session.player_id, char_id, character.SerializeToString())
-        logger.info(f"Updated character {char_id} appearance")
 
-        # 构建响应
         rsp = UpdateCharacterAppearanceRsp_pb2.UpdateCharacterAppearanceRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
         rsp.char_id = char_id
-
-        # 将更新后的外观数据添加到响应中
-        rsp.appearance.badge = character.character_appearance.badge
-        rsp.appearance.umbrella_id = character.character_appearance.umbrella_id
-        rsp.appearance.insect_net_instance_id = (
-            character.character_appearance.insect_net_instance_id
-        )
-        rsp.appearance.logging_axe_instance_id = (
-            character.character_appearance.logging_axe_instance_id
-        )
-        rsp.appearance.water_bottle_instance_id = (
-            character.character_appearance.water_bottle_instance_id
-        )
-        rsp.appearance.mining_hammer_instance_id = (
-            character.character_appearance.mining_hammer_instance_id
-        )
-        rsp.appearance.collection_gloves_instance_id = (
-            character.character_appearance.collection_gloves_instance_id
-        )
-        rsp.appearance.fishing_rod_instance_id = (
-            character.character_appearance.fishing_rod_instance_id
-        )
+        rsp.appearance.badge = req.appearance.badge
+        rsp.appearance.umbrella_id = req.appearance.umbrella_id
+        rsp.appearance.insect_net_instance_id = req.appearance.insect_net_instance_id
+        rsp.appearance.logging_axe_instance_id = req.appearance.logging_axe_instance_id
+        rsp.appearance.water_bottle_instance_id = req.appearance.water_bottle_instance_id
+        rsp.appearance.mining_hammer_instance_id = req.appearance.mining_hammer_instance_id
+        rsp.appearance.collection_gloves_instance_id = req.appearance.collection_gloves_instance_id
+        rsp.appearance.fishing_rod_instance_id = req.appearance.fishing_rod_instance_id
 
         session.send(CmdId.UpdateCharacterAppearanceRsp, rsp, False, packet_id)
-        logger.info(f"Successfully handled appearance update for character {char_id}")
+        
+        # 发送场景同步通知
+        if char_id in db.get_players_info(session.player_id, "team"):
+            session.scene_player.team.char_1.character_appearance.CopyFrom(req.appearance)
+            notice = pb.ServerSceneSyncDataNotice()
+            notice.status = StatusCode_pb2.StatusCode_OK
+            data_entry = notice.data.add()
+            data_entry.player_id = session.player_id
+            server_data_entry = data_entry.server_data.add()
+            server_data_entry.action_type = pb.SceneActionType_UPDATE_APPEARANCE
+            server_data_entry.player.CopyFrom(session.scene_player)
+            up_scene_action(
+                session.scene_id, session.channel_id, notice.SerializeToString()
+            )

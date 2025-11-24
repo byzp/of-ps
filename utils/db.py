@@ -75,7 +75,8 @@ def init():
             unlock_functions BLOB,
             team BLOB,
             avatar_frame INTEGER DEFAULT 0,
-            pendant INTEGER DEFAULT 0
+            pendant INTEGER DEFAULT 0,
+            apply_list TEXT DEFAULT '[]'
         );
 
         CREATE TABLE IF NOT EXISTS characters (
@@ -117,6 +118,19 @@ def init():
             furniture_limit_num INTEGER DEFAULT 500000,
             is_open INTEGER DEFAULT 1,
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS friend (
+            player_id INTEGER NOT NULL,
+            friend_id INTEGER NOT NULL,
+            friend_status INTEGER DEFAULT 0,
+            alias TEXT DEFAULT '',
+            friend_tag INTEGER DEFAULT 0,
+            friend_intimacy INTEGER DEFAULT 0,
+            friend_background INTEGER DEFAULT 0,
+            PRIMARY KEY (player_id, friend_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE,
+            FOREIGN KEY(friend_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
 
         INSERT OR IGNORE INTO users (id, username, password, user_token) VALUES (1000000, "", "", "");
@@ -166,8 +180,11 @@ def init_player(player_id):
         c.max_level = 20
         c.exp = 200
         c.star = 2
+        c.gather_weapon = 0
 
         t1 = c.equipment_presets.add()
+        t1.preset_index = 0
+        t1.weapon = 0
 
         t1.armors.add()
         t1.armors.add().equip_type = pb.EEquipType_Chest
@@ -210,12 +227,12 @@ def init_player(player_id):
 
         c.character_appearance.badge = 5000
         c.character_appearance.umbrella_id = 4050
-        c.character_appearance.insect_net_instance_id = 0
-        c.character_appearance.logging_axe_instance_id = 0
-        c.character_appearance.water_bottle_instance_id = 0
-        c.character_appearance.mining_hammer_instance_id = 0
-        c.character_appearance.collection_gloves_instance_id = 0
-        c.character_appearance.fishing_rod_instance_id = 0
+        c.character_appearance.insect_net_instance_id = 1004001
+        c.character_appearance.logging_axe_instance_id = 1002001
+        c.character_appearance.water_bottle_instance_id = 1005001
+        c.character_appearance.mining_hammer_instance_id = 1003001
+        c.character_appearance.collection_gloves_instance_id = 1001001
+        c.character_appearance.fishing_rod_instance_id = 1006001
 
         spells = i.get("spell_i_ds", [])
         ex_spells = i.get("ex_spell_i_ds", [])
@@ -621,3 +638,24 @@ def get_character_equip(player_id, chr_id):
     if row and row[0]:
         return pickle.loads(row[0])
     return None
+
+def get_friend_info(player_id, friend_id, info_name):
+    """获取好友信息"""
+    cur = db.execute(
+        f"SELECT {info_name} FROM friend WHERE player_id=? AND friend_id=?", (player_id, friend_id)
+    )
+    row = cur.fetchone()
+    if row:
+        return row[0]
+    return None
+
+
+def set_friend_info(player_id, friend_id, friend_status=0, alias="", friend_tag=0, friend_intimacy=0, friend_background=0):
+    """设置好友信息"""
+    db.execute(
+        """INSERT OR REPLACE INTO friend 
+        (player_id, friend_id, friend_status, alias, friend_tag, friend_intimacy, friend_background) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (player_id, friend_id, friend_status, alias, friend_tag, friend_intimacy, friend_background)
+    )
+    db.commit()
