@@ -1,4 +1,3 @@
-from re import T
 import proto.OverField_pb2 as pb
 import utils.db as db
 from datetime import datetime

@@ -64,15 +64,15 @@ class Handler(PacketHandler):
         rsp.status = StatusCode_pb2.StatusCode_OK
         for i in res["Item"]["item"]["datas"]:
             if i["new_bag_item_tag"] == pb.EBagItemTag_Armor:  # 防具 tag:3
-                # 1100=0, 1200=2, 1300=5, 1400=7, 1500=8
-                armor_property_mapping = {1100: 0, 1200: 2, 1300: 5, 1400: 7, 1500: 8}
+                # # 1100=0, 1200=2, 1300=5, 1400=7, 1500=8
+                # armor_property_mapping = {1100: 0, 1200: 2, 1300: 5, 1400: 7, 1500: 8}
 
-                # 查找对应的 armor 数据
-                armor_data = None
-                for armor_item in res["Armor"]["armor"]["datas"]:
-                    if armor_item["i_d"] == i["i_d"]:
-                        armor_data = armor_item
-                        break
+                # # 查找对应的 armor 数据
+                # armor_data = None
+                # for armor_item in res["Armor"]["armor"]["datas"]:
+                #     if armor_item["i_d"] == i["i_d"]:
+                #         armor_data = armor_item
+                #         break
 
                 item_detail = PackNotice_pb2.ItemDetail()
                 tmp = item_detail.main_item
@@ -85,11 +85,12 @@ class Handler(PacketHandler):
                 armor = tmp.armor
                 armor.armor_id = i["i_d"]
                 armor.instance_id = i["i_d"]
-                if armor_data:
-                    armor.main_property_type = armor_property_mapping.get(
-                        armor_data["armor_property_i_d"]
-                    )  # 主属性还是有问题
-                armor.main_property_val = 1000
+                armor.main_property_type = pb.EPropertyType_DamageBalance
+                # if armor_data:
+                #     armor.main_property_type = armor_property_mapping.get(
+                #         armor_data["armor_property_i_d"]
+                #     )  # 主属性还是有问题
+                armor.main_property_val = 10000
                 armor.wearer_id = 0
                 armor.level = 100
                 armor.strength_level = 5

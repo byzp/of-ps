@@ -4547,6 +4547,13 @@ message GmCodeRsp {
     StatusCode status = 1;
     string result = 2;
     repeated uint32 online_players = 3;
+    repeated GmRewardInfo reward_infos = 4;
+}
+
+message GmRewardInfo {
+    uint32 item_id = 1;
+    int64 num = 2;
+    uint32 level = 3;
 }
 
 message SceneDataNotice {

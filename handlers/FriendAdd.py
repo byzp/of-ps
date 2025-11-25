@@ -19,9 +19,10 @@ class Handler(PacketHandler):
 
         db.set_friend_info(
             session.player_id, friend_id, friend_status=1
-        )  # 设置成申请中状态
-
-        # TODO: 添加到players表plapply_list字段 JSON格式 用于目标玩家申请列表响应
+        )  # 设置请求方为 申请状态
+        db.set_friend_info(
+            friend_id, session.player_id, friend_status=4
+        )  # 设置目标玩家为 被申请状态
 
         rsp = FriendAddRsp_pb2.FriendAddRsp()
         rsp.status = FriendAddRsp_pb2.StatusCode_OK
