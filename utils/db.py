@@ -56,11 +56,11 @@ def init():
             sex INTEGER DEFAULT 0,
             world_level INTEGER DEFAULT 1,
             head INTEGER DEFAULT 41101,
-            team_leader_badge INTEGER DEFAULT 0,
+            team_leader_badge INTEGER DEFAULT 5000,
             is_online INTEGER DEFAULT 0,
             sign TEXT DEFAULT 'sign',
             guild_name TEXT DEFAULT '',
-            character_id INTEGER DEFAULT 0,
+            character_id INTEGER DEFAULT 101001,
             garden_like_num INTEGER DEFAULT 0,
             register_time INTEGER,
             create_time INTEGER,
@@ -75,8 +75,7 @@ def init():
             unlock_functions BLOB,
             team BLOB,
             avatar_frame INTEGER DEFAULT 0,
-            pendant INTEGER DEFAULT 0,
-            apply_list TEXT DEFAULT '[]'
+            pendant INTEGER DEFAULT 0
         );
 
         CREATE TABLE IF NOT EXISTS characters (
@@ -322,16 +321,18 @@ def get_player_id(user_id):
 
 
 def get_players_info(player_index, info_name):
+    """获取玩家信息"""
+    # 如果是BLOB类型字段，需要反序列化
+    is_blob_field = info_name in ["team", "unlock_functions"]
+    
     if isinstance(player_index, int):
         cur = db.execute(
             f"SELECT {info_name} FROM players WHERE player_id=?", (player_index,)
         )
         row = cur.fetchone()
         if row:
-            # 如果是BLOB类型字段，需要反序列化
-            if info_name in ["team", "unlock_functions"]:
-                if row[0]:
-                    return pickle.loads(row[0])
+            if is_blob_field and row[0]:
+                return pickle.loads(row[0])
             return row[0]
         return None
     else:
@@ -340,15 +341,23 @@ def get_players_info(player_index, info_name):
         )
         row = cur.fetchone()
         if row:
-            # 如果是BLOB类型字段，需要反序列化
-            if info_name in ["team", "unlock_functions"]:
-                if row[0]:
-                    return pickle.loads(row[0])
+            if is_blob_field and row[0]:
+                return pickle.loads(row[0])
             return row[0]
         return None
 
 
+def get_player_name_exists(player_name):
+    """检查数据库中是否已存在相同的玩家昵称"""
+    cur = db.execute(
+        "SELECT COUNT(*) FROM players WHERE player_name=?", (player_name,)
+    )
+    row = cur.fetchone()
+    return row[0] > 0
+
+
 def set_players_info(player_id, info_name, value):
+    """设置玩家信息"""
     if info_name in ["team", "unlock_functions"]:
         value = pickle.dumps(value)
     db.execute(
@@ -366,33 +375,6 @@ def get_register_time(player_id):
 
 def get_analysis_account_id(player_id):
     return str(player_id)
-
-
-"""
-message ChangeHideTypeReq {
-    HideType hide_type = 1;
-}
-
-message ChangeHideTypeRsp {
-    StatusCode status = 1;
-    uint32 hide_value = 2;
-}
-
-enum HideType {
-    TYPE_NONE_none = 0;
-    TYPE_NONE_account_type = 1;
-    TYPE_NONE_sign_type = 2;
-    TYPE_NONE_abyss_rank_type = 4;
-}
-"""
-
-
-def get_hide_type(player_id, hide_type) -> bool:
-    pass
-
-
-def set_hide_type(player_id, hide_type) -> bool:
-    pass
 
 
 def get_SupplyBox_next_reward_time(player_id):
@@ -430,6 +412,7 @@ def set_garden_info(player_id, field1, field2, field3, field4, field5):
 
 
 def get_characters(player_id, character_id=None) -> list:
+    """获取玩家角色信息"""
     chrs = []
     if character_id:
         cur = db.execute(
@@ -452,7 +435,7 @@ def get_characters(player_id, character_id=None) -> list:
 
 
 def set_character(player_id, character_id, character_blob):
-    """更新角色信息"""
+    """更新玩家角色信息"""
 
     db.execute(
         "INSERT OR REPLACE INTO characters (player_id, character_id, character_blob) VALUES (?, ?, ?)",
@@ -676,7 +659,6 @@ def set_friend_info(player_id, friend_id, info_name, value):
 
 def init_friend(player_id, friend_id):
     """初始化好友关系"""
-    # 初始化双方关系
     db.execute(
         "INSERT OR IGNORE INTO friend (player_id, friend_id) VALUES (?, ?)",
         (player_id, friend_id),
@@ -691,6 +673,7 @@ def del_friend_info(
     player_id,
     friend_id,
 ):
+    """删除好友关系"""
     db.execute(
         "DELETE FROM friend WHERE player_id=? AND friend_id=?",
         (

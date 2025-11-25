@@ -45,12 +45,8 @@ class Handler(PacketHandler):
         other_info.avatar_frame = db.get_players_info(player_id, "avatar_frame")
 
         # 获取队长角色ID以及徽章
-        team_chars = db.get_players_info(player_id, "team")
-        characters = db.get_characters(player_id, team_chars[0])
-        character = pb.Character()
-        character.ParseFromString(characters[0])
-        other_info.team_leader_badge = character.character_appearance.badge
-        other_info.character_id = team_chars[0]
+        other_info.character_id = db.get_players_info(player_id, "character_id")
+        other_info.team_leader_badge = db.get_players_info(player_id, "team_leader_badge")
 
         friend_status = db.get_friend_info(
             player_id, session.player_id, "friend_status"
