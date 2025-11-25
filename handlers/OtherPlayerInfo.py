@@ -23,7 +23,7 @@ class Handler(PacketHandler):
         rsp.status = StatusCode_pb2.StatusCode_OK
         player_id = req.player_id
 
-        other_info = PlayerBriefInfo_pb2.PlayerBriefInfo()
+        other_info = rsp.other_info
 
         other_info.player_id = db.get_players_info(player_id, "player_id")
         other_info.nick_name = db.get_players_info(player_id, "player_name")
@@ -52,16 +52,12 @@ class Handler(PacketHandler):
         other_info.team_leader_badge = character.character_appearance.badge
         other_info.character_id = team_chars[0]
 
-        rsp.other_info.CopyFrom(other_info)
-
-        # 获取数据库中的好友状态，如果没有或为4则设置响应为默认值0
+        # 获取数据库中的好友状态，如果没有则设置响应为默认值0
         friend_status = db.get_friend_info(
             session.player_id, player_id, "friend_status"
         )
-        # 如果好友状态不存在或为4，则响应0
-        rsp.friend_status = (
-            0 if friend_status is None or friend_status == 4 else friend_status
-        )
+        # 如果好友状态不存在，则响应0
+        rsp.friend_status = 0 if friend_status is None else friend_status
 
         alias = db.get_friend_info(session.player_id, player_id, "alias")
         rsp.alias = alias if alias is not None else ""

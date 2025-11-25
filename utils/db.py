@@ -324,16 +324,31 @@ def get_player_id(user_id):
     return user_id
 
 
-def get_players_info(player_id, info_name):
-    cur = db.execute(f"SELECT {info_name} FROM players WHERE player_id=?", (player_id,))
-    row = cur.fetchone()
-    if row:
-        # 如果是BLOB类型字段，需要反序列化
-        if info_name in ["team", "unlock_functions"]:
-            if row[0]:
-                return pickle.loads(row[0])
-        return row[0]
-    return None
+def get_players_info(player_index, info_name):
+    if isinstance(player_index, int):
+        cur = db.execute(
+            f"SELECT {info_name} FROM players WHERE player_id=?", (player_index,)
+        )
+        row = cur.fetchone()
+        if row:
+            # 如果是BLOB类型字段，需要反序列化
+            if info_name in ["team", "unlock_functions"]:
+                if row[0]:
+                    return pickle.loads(row[0])
+            return row[0]
+        return None
+    else:
+        cur = db.execute(
+            f"SELECT {info_name} FROM players WHERE player_name=?", (player_index,)
+        )
+        row = cur.fetchone()
+        if row:
+            # 如果是BLOB类型字段，需要反序列化
+            if info_name in ["team", "unlock_functions"]:
+                if row[0]:
+                    return pickle.loads(row[0])
+            return row[0]
+        return None
 
 
 def set_players_info(player_id, info_name, value):
@@ -640,16 +655,27 @@ def get_character_equip(player_id, chr_id):
     return None
 
 
-def get_friend_info(player_id, friend_id, info_name):
+def get_friend_info(player_id, friend_id=None, info_name="*"):
     """获取好友信息"""
-    cur = db.execute(
-        f"SELECT {info_name} FROM friend WHERE player_id=? AND friend_id=?",
-        (player_id, friend_id),
-    )
-    row = cur.fetchone()
-    if row:
-        return row[0]
-    return None
+    if friend_id:
+        cur = db.execute(
+            f"SELECT {info_name} FROM friend WHERE player_id=? AND friend_id=?",
+            (player_id, friend_id),
+        )
+        row = cur.fetchone()
+        if row:
+            return row[0]
+        return None
+    else:
+        cur = db.execute(
+            f"SELECT {info_name} FROM friend WHERE player_id=?",
+            (player_id,),
+        )
+        friends = []
+        rows = cur.fetchall()
+        for row in rows:
+            friends.append(row)
+        return friends
 
 
 def set_friend_info(
@@ -674,6 +700,20 @@ def set_friend_info(
             friend_tag,
             friend_intimacy,
             friend_background,
+        ),
+    )
+    db.commit()
+
+
+def del_friend_info(
+    player_id,
+    friend_id,
+):
+    db.execute(
+        "DELETE FROM friend WHERE player_id=? AND friend_id=?",
+        (
+            player_id,
+            friend_id,
         ),
     )
     db.commit()
