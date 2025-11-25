@@ -56,4 +56,3 @@ class Handler(PacketHandler):
                 rsp.target_player_id == session.player_id
                 s.send(CmdId.FriendHandleNotice, rsp, 0)
                 return
-

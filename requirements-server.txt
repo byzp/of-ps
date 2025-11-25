@@ -2,5 +2,6 @@ fastapi
 uvicorn
 protobuf
 python-snappy
+# git+http://github.com/byzp/snappy-py
 prompt-toolkit
 colorama

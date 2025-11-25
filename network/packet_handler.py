@@ -2,8 +2,10 @@ from abc import ABC, abstractmethod
 
 
 class PacketHandler(ABC):
+    __slots__ = ()
+
     @abstractmethod
-    def handle(self, session, data: bytes):
+    def handle(self, session, data: bytes, packet_id: int = 0):
         pass
 
 

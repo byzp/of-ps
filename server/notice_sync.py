@@ -2,7 +2,7 @@ import time
 import threading
 import logging
 import os
-from typing import List
+from config import Config
 from proto import OverField_pb2 as OverField_pb2
 import proto.OverField_pb2 as SendActionNotice_pb2
 import proto.OverField_pb2 as ServerSceneSyncDataNotice_pb2
@@ -24,8 +24,7 @@ import utils.db as db
 
 logger = logging.getLogger(__name__)
 
-max_tps = 120
-
+max_tps = Config.SERVER_MAX_TPS
 tod_time = 21600.0
 _rel_time = 0.0
 _last_send_time = 0.0
@@ -162,7 +161,9 @@ def notice_sync_loop():
 
         use_time = time.time() - start_t
         wait_time = 1.0 / max_tps - use_time
-        if wait_time > 0:
-            time.sleep(wait_time)
         if use_time > 0.001:
             logger.debug(f"notice sync time: {use_time}")
+        if wait_time < 0:
+            continue
+        if wait_time > 0:
+            time.sleep(wait_time)

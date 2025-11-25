@@ -137,7 +137,6 @@ def init():
 
     """
     )
-    db.commit()
 
 
 def init_player(player_id):
@@ -267,8 +266,6 @@ def init_player(player_id):
         (player_id, 102, item.SerializeToString()),
     )
 
-    db.commit()
-
 
 def verify_sdk_user_info(user_id, login_token):
     cur = db.execute(
@@ -357,7 +354,6 @@ def set_players_info(player_id, info_name, value):
     db.execute(
         f"UPDATE players SET {info_name}=? WHERE player_id=?", (value, player_id)
     )
-    db.commit()
 
 
 def get_register_time(player_id):
@@ -412,7 +408,6 @@ def set_SupplyBox_next_reward_time(player_id, next_time):
         "INSERT OR REPLACE INTO supply_box (player_id, next_reward_time) VALUES (?, ?)",
         (player_id, next_time),
     )
-    db.commit()
 
 
 def get_garden_info(player_id):
@@ -432,7 +427,6 @@ def set_garden_info(player_id, field1, field2, field3, field4, field5):
         (player_id, field1, field2, field3, field4, field5) VALUES (?, ?, ?, ?, ?, ?)""",
         (player_id, field1, field2, field3, field4, int(field5)),
     )
-    db.commit()
 
 
 def get_characters(player_id, character_id=None) -> list:
@@ -464,7 +458,6 @@ def set_character(player_id, character_id, character_blob):
         "INSERT OR REPLACE INTO characters (player_id, character_id, character_blob) VALUES (?, ?, ?)",
         (player_id, character_id, character_blob),
     )
-    db.commit()
 
 
 def get_item_detail(player_id, item_id=None, instance_id=None, table=None) -> list:
@@ -551,7 +544,6 @@ def set_item_detail(player_id, item_detail_blob: list, item_id=None, instance_id
             "INSERT OR REPLACE INTO items_s (player_id, instance_id, item_detail_blob) VALUES (?, ?, ?)",
             (player_id, instance_id, item_detail_blob),
         )
-    db.commit()
 
 
 def get_instance_id(player_id):
@@ -578,7 +570,6 @@ def set_month_card_over_due_time(player_id, over_due_time):
         "INSERT OR REPLACE INTO month_card (player_id, over_due_time) VALUES (?, ?)",
         (player_id, over_due_time),
     )
-    db.commit()
 
 
 def get_month_card_reward_days(player_id):
@@ -594,7 +585,6 @@ def set_month_card_reward_days(player_id, reward_days):
         "UPDATE month_card SET reward_days=? WHERE player_id=?",
         (reward_days, player_id),
     )
-    db.commit()
 
 
 def get_chat_history(player_id):
@@ -621,7 +611,6 @@ def add_chat_message(player_id, chat_type, message):
         "UPDATE chat_history SET history_data=? WHERE player_id=?",
         (pickle.dumps(history), player_id),
     )
-    db.commit()
 
 
 def get_character_achievement_lst(player_id, chr_id):
@@ -640,7 +629,6 @@ def set_character_equip(player_id, chr_id, equipment_preset):
         (player_id, character_id, equipment_preset) VALUES (?, ?, ?)""",
         (player_id, chr_id, pickle.dumps(equipment_preset)),
     )
-    db.commit()
 
 
 def get_character_equip(player_id, chr_id):
@@ -682,9 +670,8 @@ def set_friend_info(player_id, friend_id, info_name, value):
     """设置好友信息"""
     db.execute(
         f"UPDATE friend SET {info_name}=? WHERE player_id=? AND friend_id=?",
-        (value, player_id, friend_id)
+        (value, player_id, friend_id),
     )
-    db.commit()
 
 
 def init_friend(player_id, friend_id):
@@ -692,13 +679,12 @@ def init_friend(player_id, friend_id):
     # 初始化双方关系
     db.execute(
         "INSERT OR IGNORE INTO friend (player_id, friend_id) VALUES (?, ?)",
-        (player_id, friend_id)
+        (player_id, friend_id),
     )
     db.execute(
         "INSERT OR IGNORE INTO friend (player_id, friend_id) VALUES (?, ?)",
-        (friend_id, player_id)
+        (friend_id, player_id),
     )
-    db.commit()
 
 
 def del_friend_info(
@@ -712,4 +698,3 @@ def del_friend_info(
             friend_id,
         ),
     )
-    db.commit()

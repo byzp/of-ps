@@ -62,6 +62,3 @@ class Handler(PacketHandler):
                 db.set_friend_info(session.player_id, req.player_id, "friend_status", 3)
 
         session.send(CmdId.FriendBlackRsp, rsp, packet_id)
-
-
-

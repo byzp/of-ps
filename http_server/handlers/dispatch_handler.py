@@ -15,13 +15,13 @@ class DispatchHandler:
     def region_info():
         return json.loads(
             '{"status":true,"message":"success","gate_tcp_ip":"'
-            + Config.GAME_SERVER_IP
+            + Config.GAME_SERVER_GADGET_IP
             + '","gate_tcp_port":'
-            + str(Config.GAME_SERVER_PORT)
+            + str(Config.GAME_SERVER_GADGET_PORT)
             + ',"is_server_open":true,"text":"","client_log_tcp_ip":"'
-            + Config.GAME_SERVER_IP
+            + Config.GAME_SERVER_GADGET_IP
             + '","client_log_tcp_port":'
-            + str(Config.GAME_SERVER_PORT)
+            + str(Config.GAME_SERVER_GADGET_PORT)
             + ',"currentVersion":"'
             + Config.RES_VERSION
             + '","photo_share_cdn_url":"https://cdn-photo-of.inutan.com/cn_prod_main"}'

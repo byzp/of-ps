@@ -53,7 +53,7 @@ class Handler(PacketHandler):
         other_info.character_id = team_chars[0]
 
         friend_status = db.get_friend_info(
-           player_id, session.player_id, "friend_status"
+            player_id, session.player_id, "friend_status"
         )
         # 如果好友状态不存在，则响应0
         rsp.friend_status = 0 if friend_status is None else friend_status

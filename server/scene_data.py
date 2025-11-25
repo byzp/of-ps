@@ -31,7 +31,7 @@ def get_recorder(
     with lock_scene:
         ch = _scene.get(scene_id)
         if not ch:
-            return None
+            return {}
         if player_id is None:
             return ch.get(channel_id)
         return ch.get(channel_id, {}).get(player_id)

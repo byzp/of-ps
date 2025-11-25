@@ -1,6 +1,8 @@
 import logging
 import threading
+import sys
 
+from config import Config
 import http_server.server as http_server
 from network.game_server import GameServer
 import utils.res_loader as res_loader
@@ -19,6 +21,15 @@ logger = logging.getLogger(__name__)
 
 def main():
     logger.info("OverFieldPS Start")
+
+    # GIL
+    if hasattr(sys, "_is_gil_enabled"):
+        if Config.FORCE_DISABLE_GIL:
+            import os
+
+            os.environ.setdefault("PYTHON_GIL", "0")
+        logger.info(f"GIL enabled: {sys._is_gil_enabled()}")
+
     stop_event = cmd.start()
     res_loader.init()
     db.init()

@@ -73,4 +73,3 @@ class Handler(PacketHandler):
                         session.send(CmdId.FriendHandleNotice, rsp1, 0)
 
         session.send(CmdId.FriendHandleRsp, rsp, packet_id)
-
