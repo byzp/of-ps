@@ -33,14 +33,14 @@ class Handler(PacketHandler):
                     else:
 
                         db.set_friend_info(
-                            session.player_id, req.player_id, friend_status=3
+                            session.player_id, req.player_id, "friend_status", 3
                         )
                 case 2:  # 好友
                     rsp1 = FriendHandleNotice_pb2.FriendHandleNotice()
                     rsp1.status = StatusCode_pb2.StatusCode_OK
                     # 已方拉黑
                     db.set_friend_info(
-                        session.player_id, req.player_id, friend_status=3
+                        session.player_id, req.player_id, "friend_status", 3
                     )
                     # 从对方好友删除自己
                     db.del_friend_info(req.player_id, session.player_id)
@@ -59,6 +59,9 @@ class Handler(PacketHandler):
             if req.is_remove:
                 db.del_friend_info(session.player_id, req.player_id)
             else:
-                db.set_friend_info(session.player_id, req.player_id, friend_status=3)
+                db.set_friend_info(session.player_id, req.player_id, "friend_status", 3)
 
         session.send(CmdId.FriendBlackRsp, rsp, packet_id)
+
+
+

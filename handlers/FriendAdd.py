@@ -42,8 +42,9 @@ class Handler(PacketHandler):
                     session.send(CmdId.FriendAddRsp, rsp, packet_id)
                     return
 
+        db.init_friend(req.player_id, session.player_id)  # 初始化好友关系
         db.set_friend_info(
-            req.player_id, session.player_id, friend_status=1
+            req.player_id, session.player_id, "friend_status", 1
         )  # 设置目标玩家为 被申请状态
         session.send(CmdId.FriendAddRsp, rsp, packet_id)
 
@@ -55,3 +56,4 @@ class Handler(PacketHandler):
                 rsp.target_player_id == session.player_id
                 s.send(CmdId.FriendHandleNotice, rsp, 0)
                 return
+

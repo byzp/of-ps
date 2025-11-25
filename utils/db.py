@@ -678,29 +678,25 @@ def get_friend_info(player_id, friend_id=None, info_name="*"):
         return friends
 
 
-def set_friend_info(
-    player_id,
-    friend_id,
-    friend_status=0,
-    alias="",
-    friend_tag=0,
-    friend_intimacy=0,
-    friend_background=0,
-):
+def set_friend_info(player_id, friend_id, info_name, value):
     """设置好友信息"""
     db.execute(
-        """INSERT OR REPLACE INTO friend 
-        (player_id, friend_id, friend_status, alias, friend_tag, friend_intimacy, friend_background) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        (
-            player_id,
-            friend_id,
-            friend_status,
-            alias,
-            friend_tag,
-            friend_intimacy,
-            friend_background,
-        ),
+        f"UPDATE friend SET {info_name}=? WHERE player_id=? AND friend_id=?",
+        (value, player_id, friend_id)
+    )
+    db.commit()
+
+
+def init_friend(player_id, friend_id):
+    """初始化好友关系"""
+    # 初始化双方关系
+    db.execute(
+        "INSERT OR IGNORE INTO friend (player_id, friend_id) VALUES (?, ?)",
+        (player_id, friend_id)
+    )
+    db.execute(
+        "INSERT OR IGNORE INTO friend (player_id, friend_id) VALUES (?, ?)",
+        (friend_id, player_id)
     )
     db.commit()
 
