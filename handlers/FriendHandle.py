@@ -35,10 +35,10 @@ class Handler(PacketHandler):
                     if req.is_agree:
                         # 双方添加好友
                         db.set_friend_info(
-                            req.player_id, session.player_id, friend_status=2
+                            req.player_id, session.player_id, "friend_status", 2
                         )
                         db.set_friend_info(
-                            session.player_id, req.player_id, friend_status=2
+                            session.player_id, req.player_id, "friend_status", 2
                         )
 
                         rsp1.type = FriendHandleType_pb2.FriendHandleType_ADD
@@ -73,3 +73,4 @@ class Handler(PacketHandler):
                         session.send(CmdId.FriendHandleNotice, rsp1, 0)
 
         session.send(CmdId.FriendHandleRsp, rsp, packet_id)
+

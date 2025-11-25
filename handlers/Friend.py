@@ -7,6 +7,7 @@ import proto.OverField_pb2 as FriendRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 
 import utils.db as db
+from server.scene_data import get_session
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,10 @@ class Handler(PacketHandler):
 
         rsp = FriendRsp_pb2.FriendRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
+
+        # 获取在线玩家列表
+        online_sessions = get_session()
+        online_player_ids = [s.player_id for s in online_sessions]
 
         for friend_info in db.get_friend_info(
             session.player_id,
@@ -43,7 +48,8 @@ class Handler(PacketHandler):
                 other_info.phone_background = db.get_players_info(
                     player_id, "phone_background"
                 )
-                other_info.is_online = db.get_players_info(player_id, "is_online")
+                # 通过遍历在线玩家决定在线状态，不从数据库获取
+                other_info.is_online = player_id in online_player_ids
                 other_info.sign = db.get_players_info(player_id, "sign")
                 other_info.guild_name = db.get_players_info(player_id, "guild_name")
                 other_info.character_id = db.get_players_info(player_id, "character_id")

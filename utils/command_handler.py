@@ -31,49 +31,35 @@ def send_to_all_clients(handler_class):
 # 定义调用函数
 def send_weather_change():
     """向所有已连接的客户端发送天气变化通知"""
-    from handlers.SceneWeatherChange import Handler
+    from utils.handlers.SceneWeatherChange import Handler
 
     send_to_all_clients(Handler)
 
 
 def send_system_notice():
     """向所有已连接的客户端发送系统通知"""
-    from handlers.SystemNotice import Handler
+    from utils.handlers.SystemNotice import Handler
 
     send_to_all_clients(Handler)
 
 
 def send_player_buff_notice():
     """向所有已连接的客户端发送玩家Buff通知"""
-    from handlers.PlayerBuffNotice import Handler
+    from utils.handlers.PlayerBuffNotice import Handler
 
     send_to_all_clients(Handler)  # 有问题
 
 
 def send_gm_recommend_channel_notice():
     """向所有已连接的客户端发送GM推荐频道通知"""
-    from handlers.GMRecommendChannelNotice import Handler
+    from utils.handlers.GMRecommendChannelNotice import Handler
 
     send_to_all_clients(Handler)
 
 
-def send_fireworks_start_notice():
-    """向所有已连接的客户端发送烟花开始通知"""
-    from handlers.FireworksStartNotice import Handler
-
-    send_to_all_clients(Handler)  # 有问题
-
-
-def send_scene_inter_action_play_status_notice():
-    """向所有已连接的客户端发送场景互动播放状态通知"""
-    from handlers.SceneInterActionPlayStatusNotice import Handler
-
-    send_to_all_clients(Handler)  # 没测试
-
-
 def send_pack_notice():
     """向所有已连接的客户端发送包裹通知"""
-    from handlers.PackNotice import Handler
+    from utils.handlers.PackNotice import Handler
 
     send_to_all_clients(Handler)
 
@@ -121,9 +107,7 @@ def send_changeScenechannel():
 register_command("1918", send_weather_change)
 register_command("2016", send_system_notice)
 register_command("1880", send_player_buff_notice)
-register_command("2160", send_fireworks_start_notice)
 register_command("2630", send_gm_recommend_channel_notice)
-register_command("2631", send_scene_inter_action_play_status_notice)
 register_command("1400", send_pack_notice)
 register_command("1722", send_gm_notice)
 register_command("1", send_changeScenechannel)

@@ -52,9 +52,8 @@ class Handler(PacketHandler):
         other_info.team_leader_badge = character.character_appearance.badge
         other_info.character_id = team_chars[0]
 
-        # 获取数据库中的好友状态，如果没有则设置响应为默认值0
         friend_status = db.get_friend_info(
-            session.player_id, player_id, "friend_status"
+           player_id, session.player_id, "friend_status"
         )
         # 如果好友状态不存在，则响应0
         rsp.friend_status = 0 if friend_status is None else friend_status
