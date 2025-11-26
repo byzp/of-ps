@@ -8,6 +8,7 @@ import proto.OverField_pb2 as pb
 
 from utils.res_loader import res
 from server.scene_data import get_session, lock_scene_action
+import server.scene_data as scene_data
 import server.notice_sync as notice_sync
 import utils.db as db
 
@@ -18,13 +19,15 @@ logger = logging.getLogger(__name__)
 def cmd_exec(cmd: str):
     cmds = cmd.split(" ")
     match cmds[0]:
-        case "give":  # give player_id item_id [num]
+        case "give":  # give player_id/all item_id [num]
             give(cmds)
         case "firework":
             firework(cmds)  # firework id [dur_time] [start_time]
         case "time":
             # 时间设置为0无效
             set_time(cmds)  # time 1-86400
+        case "tp":
+            changeScenechannel(cmds)  # tp player_id/all scene_id [channel_id]
         case _:
             logger.warning("Unknow command.")
 
@@ -33,7 +36,7 @@ def give(cmds: list):
     match = False
     target_session = []
     if len(cmds) < 3:
-        logger.warning("give player_id item_id [num]")
+        logger.warning("give player_id/all item_id [num]")
         return
     else:
         cmds = list(map(lambda x: int(x) if x.lstrip("+-").isdigit() else x, cmds))
@@ -180,3 +183,63 @@ def set_time(cmds):
     with lock_scene_action:
         notice_sync._last_send_time = 0
         notice_sync.tod_time = cmds[1]
+
+
+def changeScenechannel(cmds):
+    match = False
+    target_session = []
+    if len(cmds) < 3:
+        logger.warning("tp player_id/all scene_id [channel_id]")
+        return
+    else:
+        cmds = list(map(lambda x: int(x) if x.lstrip("+-").isdigit() else x, cmds))
+    for session in get_session():
+        if cmds[1] == "all":
+            target_session.append(session)
+            match = True
+        else:
+            if session.player_id == cmds[1]:
+                target_session.append(session)
+                match = True
+                break
+    if not match:
+        logger.warning("No matching players found.")
+        return
+
+    rsp = pb.ChangeSceneChannelRsp()
+    rsp.status = StatusCode_pb2.StatusCode_OK
+    rsp.scene_id = cmds[2]
+    if len(cmds) > 3:
+        rsp.channel_label = cmds[3]
+    else:
+        rsp.channel_label = 0
+
+    for session in target_session:
+        session.send(CmdId.ChangeSceneChannelRsp, rsp, 0)
+
+        notice = pb.ServerSceneSyncDataNotice()
+        notice.status = StatusCode_pb2.StatusCode_OK
+        d = notice.data.add()
+        d.player_id = session.player_id
+        sd = d.server_data.add()
+        sd.action_type = pb.SceneActionType_LEAVE
+        scene_data.up_scene_action(
+            session.scene_id, session.channel_id, notice.SerializeToString()
+        )
+
+        rsp = pb.SceneDataNotice()
+        rsp.status = StatusCode_pb2.StatusCode_OK
+        data = rsp.data
+        data.scene_id = session.scene_id
+
+        data.players.add().CopyFrom(session.scene_player)
+        for i in scene_data.get_and_up_players(
+            session.scene_id, session.channel_id, session.player_id
+        ):
+            tmp = pb.ServerSceneSyncDataNotice()
+            tmp.ParseFromString(i)
+            data.players.add().CopyFrom(tmp.data[0].server_data[0].player)
+        data.channel_id = session.channel_id
+        data.tod_time = 0
+        data.channel_label = session.channel_id
+        session.send(CmdId.SceneDataNotice, rsp, 0)

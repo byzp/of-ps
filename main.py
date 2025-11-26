@@ -1,6 +1,7 @@
 import logging
 import threading
 import sys
+import os
 
 from config import Config
 import http_server.server as http_server
@@ -25,8 +26,6 @@ def main():
     # GIL
     if hasattr(sys, "_is_gil_enabled"):
         if Config.FORCE_DISABLE_GIL:
-            import os
-
             os.environ.setdefault("PYTHON_GIL", "0")
         logger.info(f"GIL enabled: {sys._is_gil_enabled()}")
 

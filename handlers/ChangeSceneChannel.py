@@ -10,6 +10,7 @@ import proto.OverField_pb2 as StatusCode_pb2
 import proto.OverField_pb2 as pb
 
 import server.scene_data as scene_data
+import server.notice_sync as notice_sync
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,6 @@ class Handler(PacketHandler):
             tmp.ParseFromString(i)
             data.players.add().CopyFrom(tmp.data[0].server_data[0].player)
         data.channel_id = session.channel_id
-        data.tod_time = 0
+        data.tod_time = int(notice_sync.tod_time)
         data.channel_label = session.channel_id
-        session.send(CmdId.SceneDataNotice, rsp, packet_id)
+        session.send(CmdId.SceneDataNotice, rsp, 0)

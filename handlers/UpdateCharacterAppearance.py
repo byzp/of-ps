@@ -78,11 +78,13 @@ class Handler(PacketHandler):
 
         # 如果更换的是badge且req.char_id是队伍角色1，更新数据库的队长徽章ID
         team = db.get_players_info(session.player_id, "team")
-        if (req.HasField("appearance") and 
-            hasattr(req.appearance, "badge") and 
-            team and 
-            len(team) > 0 and 
-            char_id == team[0]):
+        if (
+            req.HasField("appearance")
+            and hasattr(req.appearance, "badge")
+            and team
+            and len(team) > 0
+            and char_id == team[0]
+        ):
             db.set_players_info(
                 session.player_id, "team_leader_badge", req.appearance.badge
             )

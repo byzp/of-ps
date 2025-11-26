@@ -3,43 +3,79 @@ import time
 import os
 import logging
 import pickle
-import json
-from config import Config
+import threading
 import secrets
 
+from config import Config
 from utils.res_loader import res
 import proto.OverField_pb2 as Character_pb2
 import proto.OverField_pb2 as pb
 
 logger = logging.getLogger(__name__)
 
+conn = None
 db = None
+lock_db = threading.Lock()
+
+
+class db_warp:
+    __slots__ = (
+        "_conn",
+        "_patterns",
+    )
+
+    def __init__(self, conn):
+        self._conn = conn
+        self._patterns = {"INSERT", "UPDATE", "DELETE"}
+
+    def exists(self, s):
+        # 滑窗匹配
+        for i in range(len(s) - 5):
+            if s[i : i + 6] in self._patterns:
+                return True
+        return False
+
+    def execute(self, *args, **kwargs):
+        if self.exists(args[0]):
+            with lock_db:
+                return self._conn.execute(*args, **kwargs)
+        else:
+            return self._conn.execute(*args, **kwargs)
 
 
 def exit():
     global db
-    db.commit()
-    if Config.IN_MEMORY:
-        disk = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
-        db.backup(disk)
-        disk.commit()
-        disk.close()
-    db.close()
+    with lock_db:
+        conn.commit()
+        if Config.IN_MEMORY:
+            disk = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
+            conn.backup(disk)
+            disk.commit()
+            disk.close()
+        conn.close()
 
 
 def init():
-    # 初始化数据库连接
+    # 初始化数据库连接,仅主线程调用,无需加锁
     if not os.path.exists(Config.DB_PATH):
         logger.warning("database not exists!")
-    global db
+    global db, conn
     if Config.IN_MEMORY:
         disk = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
-        db = sqlite3.connect(":memory:", check_same_thread=False)
-        disk.backup(db)
+        conn = sqlite3.connect(":memory:", check_same_thread=False)
+        disk.backup(conn)
         disk.close()
+        conn.execute("PRAGMA journal_mode = WAL;")
+        conn.execute("PRAGMA synchronous = OFF;")
+        conn.commit()
     else:
-        db = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
-    db.executescript(
+        conn = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
+        conn.execute("PRAGMA journal_mode = WAL;")
+        conn.commit()
+
+    db = db_warp(conn)
+
+    conn.executescript(
         """
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -324,7 +360,7 @@ def get_players_info(player_index, info_name):
     """获取玩家信息"""
     # 如果是BLOB类型字段，需要反序列化
     is_blob_field = info_name in ["team", "unlock_functions"]
-    
+
     if isinstance(player_index, int):
         cur = db.execute(
             f"SELECT {info_name} FROM players WHERE player_id=?", (player_index,)
@@ -349,9 +385,7 @@ def get_players_info(player_index, info_name):
 
 def get_player_name_exists(player_name):
     """检查数据库中是否已存在相同的玩家昵称"""
-    cur = db.execute(
-        "SELECT COUNT(*) FROM players WHERE player_name=?", (player_name,)
-    )
+    cur = db.execute("SELECT COUNT(*) FROM players WHERE player_name=?", (player_name,))
     row = cur.fetchone()
     return row[0] > 0
 

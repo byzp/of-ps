@@ -10,6 +10,7 @@ import uvicorn
 from http_server.handlers.dispatch_handler import DispatchHandler
 from http_server.handlers.oauth_handler import OAuthHandler
 import utils.db as db
+from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +145,10 @@ async def login_success():
 
 
 def start():
-    logger.info("HTTP server started at http://0.0.0.0:8000/")
+    logger.info(f"HTTP server started at http://{Config.HTTP_HOST}:{Config.HTTP_PORT}")
     uvicorn.run(
-        "http_server.server:app", host="0.0.0.0", port=21000, log_level="warning"
+        "http_server.server:app",
+        host=Config.HTTP_HOST,
+        port=Config.HTTP_PORT,
+        log_level="warning",
     )

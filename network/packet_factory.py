@@ -2,11 +2,11 @@ import logging
 from typing import Dict
 from concurrent.futures import ThreadPoolExecutor
 import traceback
-import os
 
 from network.packet_handler import PacketHandler
 from utils.scanner import scan_handlers
 from network.cmd_id import CmdId
+from config import Config
 from proto import OverField_pb2
 
 logger = logging.getLogger(__name__)
@@ -30,9 +30,8 @@ class PacketFactory:
         """Scan and register all packet handlers"""
         try:
             # 初始化线程池
-            cpu_count = os.cpu_count() or 4
             cls._executor = ThreadPoolExecutor(
-                max_workers=cpu_count * 2, thread_name_prefix="packet"
+                max_workers=Config.PACKET_POOL_MAX_WORKERS, thread_name_prefix="packet"
             )
 
             handler_classes = scan_handlers(package_name)

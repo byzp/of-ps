@@ -25,16 +25,15 @@ def get_session():
         return session_tmp
 
 
-def get_recorder(
-    scene_id: int, channel_id: int, player_id: Optional[int] = None
-) -> Optional[Any]:
+def get_recorder(scene_id: int, channel_id: int) -> Optional[Any]:
     with lock_scene:
-        ch = _scene.get(scene_id)
-        if not ch:
+        sc = _scene.get(scene_id)
+        if not sc:
             return {}
-        if player_id is None:
-            return ch.get(channel_id)
-        return ch.get(channel_id, {}).get(player_id)
+        ch = sc.get(channel_id)
+        if not ch:
+            return
+        return dict(ch)
 
 
 def up_recorder(scene_id: int, channel_id: int, player_id: int, rec_data: Any) -> None:

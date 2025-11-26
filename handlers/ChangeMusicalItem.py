@@ -9,7 +9,7 @@ import proto.OverField_pb2 as pb
 
 from utils.bin import bin
 from server.scene_data import up_scene_action, get_and_up_players
-import utils.db as db
+import server.notice_sync as notice_sync
 
 logger = logging.getLogger(__name__)
 
@@ -40,17 +40,10 @@ class Handler(PacketHandler):
                 rsp = pb.ServerSceneSyncDataNotice()
                 rsp.ParseFromString(i)
                 session.send(CmdId.ServerSceneSyncDataNotice, rsp, 0)
-            # num = 0
-
-            # rsp = pb.PackNotice()
-            # rsp.status = StatusCode_pb2.StatusCode_OK
-            # rsp.temp_pack_max_size = 30
-            # for item in db.get_item_detail(session.player_id, table="items"):
-            #     rsp.items.add().ParseFromString(item)
-            #     num += 1
-            #     if num > 10000:
-            #         session.send(CmdId.PackNotice, rsp,  packet_id)
-            #         rsp = pb.PackNotice()
-            #         rsp.status = StatusCode_pb2.StatusCode_OK
-            #         rsp.temp_pack_max_size = 30
-            #         num = 0
+            # 同步时间
+            rsp = pb.ServerSceneSyncDataNotice()
+            rsp.status = StatusCode_pb2.StatusCode_OK
+            tmp = rsp.data.add().server_data.add()
+            tmp.action_type = pb.SceneActionType_TOD_UPDATE
+            tmp.tod_time = int(notice_sync.tod_time)
+            session.send(CmdId.ServerSceneSyncDataNotice, rsp, 0)

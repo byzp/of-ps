@@ -99,8 +99,6 @@ def notice_sync_loop():
                 _rel_time = now
             with lock_action:
                 for session in session_list:
-                    if session.running == False or session.logged_in == False:
-                        continue
                     # 1970 玩家动作广播
                     for k, v in action.items():
                         if session.player_id == k:
@@ -120,8 +118,6 @@ def notice_sync_loop():
                 else:
                     time_sync = False
                 for session in session_list:
-                    if session.running == False or session.logged_in == False:
-                        continue
                     # 1208 场景时间同步
                     if time_sync:
                         rsp = ServerSceneSyncDataNotice_pb2.ServerSceneSyncDataNotice()
@@ -138,8 +134,6 @@ def notice_sync_loop():
             with lock_chat_msg:
                 for session in session_list:
                     # 聊天信息同步
-                    if session.running == False or session.logged_in == False:
-                        continue
                     for msg in chat_msg["default"][session.scene_id][
                         session.channel_id
                     ]:

@@ -46,7 +46,9 @@ class Handler(PacketHandler):
 
         # 获取队长角色ID以及徽章
         other_info.character_id = db.get_players_info(player_id, "character_id")
-        other_info.team_leader_badge = db.get_players_info(player_id, "team_leader_badge")
+        other_info.team_leader_badge = db.get_players_info(
+            player_id, "team_leader_badge"
+        )
 
         friend_status = db.get_friend_info(
             player_id, session.player_id, "friend_status"

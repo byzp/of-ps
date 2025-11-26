@@ -58,7 +58,5 @@ class Handler(PacketHandler):
         rsp.status = StatusCode_pb2.StatusCode_OK
         item_notify = rsp.items.add()
         item_notify.ParseFromString(item.SerializeToString())
-        
-        session.send(
-            CmdId.PackNotice, rsp, packet_id
-        )
+
+        session.send(CmdId.PackNotice, rsp, packet_id)
