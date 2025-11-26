@@ -7,6 +7,7 @@ import proto.OverField_pb2 as UseItemFriendIntimacyReq_pb2
 import proto.OverField_pb2 as UseItemFriendIntimacyRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 import proto.OverField_pb2 as ItemDetail_pb2
+import proto.OverField_pb2 as PackNotice_pb2
 import utils.db as db
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,6 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = UseItemFriendIntimacyReq_pb2.UseItemFriendIntimacyReq()
         req.ParseFromString(data)
-        print(req)
 
         rsp = UseItemFriendIntimacyRsp_pb2.UseItemFriendIntimacyRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -52,3 +52,13 @@ class Handler(PacketHandler):
         session.send(
             CmdId.UseItemFriendIntimacyRsp, rsp, packet_id
         )  # 2651 2652 使用道具增加好友亲密度
+
+        # 数量更新通知
+        rsp = PackNotice_pb2.PackNotice()
+        rsp.status = StatusCode_pb2.StatusCode_OK
+        item_notify = rsp.items.add()
+        item_notify.ParseFromString(item.SerializeToString())
+        
+        session.send(
+            CmdId.PackNotice, rsp, packet_id
+        )

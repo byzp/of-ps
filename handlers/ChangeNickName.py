@@ -19,13 +19,23 @@ class Handler(PacketHandler):
         req = ChangeNickNameReq_pb2.ChangeNickNameReq()
         req.ParseFromString(data)
 
+        # 检查是否已存在相同的昵称
+        if db.get_player_name_exists(req.nick_name):
+            rsp = ChangeNickNameRsp_pb2.ChangeNickNameRsp()
+            rsp.status = StatusCode_pb2.StatusCode_DUPLICATED_NAME
+            session.send(CmdId.ChangeNickNameRsp, rsp, packet_id)
+            return
+
         rsp = ChangeNickNameRsp_pb2.ChangeNickNameRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
         rsp.nick_name = req.nick_name
 
         session.player_name = req.nick_name
-        db.set_players_info(session.player_id, "birthday", req.birthday)
+
+        # 存在birthday字段才更新数据库 修复不存在会覆盖为空的问题
+        if req.birthday:
+            db.set_players_info(session.player_id, "birthday", req.birthday)
         db.set_players_info(session.player_id, "player_name", req.nick_name)
 
         item = db.get_item_detail(session.player_id, 102)  # 星石-10

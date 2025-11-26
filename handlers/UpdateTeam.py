@@ -28,6 +28,19 @@ class Handler(PacketHandler):
         )
         session.send(CmdId.UpdateTeamRsp, rsp, packet_id)
 
+        # 修改玩家 队长徽章ID
+        characters = db.get_characters(session.player_id, req.char_1)
+        if characters:
+            character = pb.Character()
+            character.ParseFromString(characters[0])
+            db.set_players_info(
+                session.player_id, "team_leader_badge", character.character_appearance.badge
+            )
+        # 修改玩家 队长角色ID
+        db.set_players_info(
+            session.player_id, "character_id", req.char_1
+        )
+
         # 发送场景同步通知
         pb_create.make_ScenePlayer(session)
         notice = pb.ServerSceneSyncDataNotice()

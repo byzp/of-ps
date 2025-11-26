@@ -53,6 +53,7 @@ class Handler(PacketHandler):
             other_info.is_online = db.get_players_info(player_id, "is_online")
             other_info.sign = db.get_players_info(player_id, "sign")
             other_info.guild_name = db.get_players_info(player_id, "guild_name")
+            other_info.team_leader_badge = db.get_players_info(player_id, "team_leader_badge")
             other_info.character_id = db.get_players_info(player_id, "character_id")
             other_info.create_time = db.get_players_info(player_id, "create_time")
             other_info.player_label = db.get_players_info(player_id, "player_id")

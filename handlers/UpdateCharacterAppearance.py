@@ -76,6 +76,17 @@ class Handler(PacketHandler):
 
         session.send(CmdId.UpdateCharacterAppearanceRsp, rsp, packet_id)
 
+        # 如果更换的是badge且req.char_id是队伍角色1，更新数据库的队长徽章ID
+        team = db.get_players_info(session.player_id, "team")
+        if (req.HasField("appearance") and 
+            hasattr(req.appearance, "badge") and 
+            team and 
+            len(team) > 0 and 
+            char_id == team[0]):
+            db.set_players_info(
+                session.player_id, "team_leader_badge", req.appearance.badge
+            )
+
         # 发送场景同步通知
         if char_id in db.get_players_info(session.player_id, "team"):
             session.scene_player.team.char_1.character_appearance.CopyFrom(
