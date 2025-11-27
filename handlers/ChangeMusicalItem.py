@@ -2,7 +2,8 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.cmd_id import CmdId
 import logging
 
-import proto.OverField_pb2 as GetArchiveInfoRsp_pb2
+import proto.OverField_pb2 as ChangeMusicalItemReq_pb2
+import proto.OverField_pb2 as ChangeMusicalItemRsp_pb2
 import proto.OverField_pb2 as Scene_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 import proto.OverField_pb2 as pb
@@ -17,8 +18,14 @@ logger = logging.getLogger(__name__)
 @packet_handler(CmdId.ChangeMusicalItemReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        rsp = GetArchiveInfoRsp_pb2.GetArchiveInfoRsp()
+        req = ChangeMusicalItemReq_pb2.ChangeMusicalItemReq()
+        req.ParseFromString(data)
+
+        rsp = ChangeMusicalItemRsp_pb2.ChangeMusicalItemRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
+        if req.musical_item_instance_id:
+            rsp.musical_item_instance_id = req.musical_item_instance_id
+            rsp.musical_item_id = req.musical_item_instance_id
         session.send(CmdId.ChangeMusicalItemRsp, rsp, packet_id)  # 2671,2672
 
         notice = Scene_pb2.ServerSceneSyncDataNotice()
@@ -27,6 +34,10 @@ class Handler(PacketHandler):
         data_entry.player_id = session.player_id
         server_data_entry = data_entry.server_data.add()
         server_data_entry.action_type = pb.SceneActionType_UPDATE_MUSICAL_ITEM
+        session.scene_player.musical_item_id = req.musical_item_instance_id
+        session.scene_player.musical_item_instance_id = req.musical_item_instance_id
+        session.scene_player.source = req.source
+        server_data_entry.player.CopyFrom(session.scene_player)
         up_scene_action(
             session.scene_id, session.channel_id, notice.SerializeToString()
         )

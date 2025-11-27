@@ -49,7 +49,7 @@ class GameServer:
 
                     with lock_session:
                         session_list.append(session)
-                    self._session_pool.submit(self._run_session, session)
+                    self._session_pool.submit(session.run)
                 except OSError:
                     if self.running:
                         raise
@@ -57,17 +57,6 @@ class GameServer:
 
         except Exception as e:
             logger.error(f"Failed to start server: {e}")
-
-    def _run_session(self, session: GameSession):
-        try:
-            session.run()
-        finally:
-            pass
-            # with lock_session:
-            #     try:
-            #         session_list.remove(session)
-            #     except ValueError:
-            #         pass
 
     def stop(self):
         self.running = False

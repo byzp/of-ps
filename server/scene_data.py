@@ -8,12 +8,14 @@ _action: Dict[int, list] = {}
 _scene_action: Dict[int, Dict[int, List]] = defaultdict(lambda: defaultdict(list))
 _chat_msg: Dict[str, Dict] = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 _session_list: List = []
+_rec_list: List = []
 
 lock_scene = threading.Lock()
 lock_action = threading.Lock()
 lock_scene_action = threading.Lock()
 lock_chat_msg = threading.Lock()
 lock_session = threading.Lock()
+lock_rec_list = threading.Lock()
 
 
 def get_session():
@@ -38,7 +40,11 @@ def get_recorder(scene_id: int, channel_id: int) -> Optional[Any]:
 
 def up_recorder(scene_id: int, channel_id: int, player_id: int, rec_data: Any) -> None:
     with lock_scene:
-        _scene[scene_id][channel_id][player_id] = rec_data
+        with lock_rec_list:
+            _scene[scene_id][channel_id][player_id] = rec_data
+            rec = (scene_id, channel_id)
+            if rec not in _rec_list:
+                _rec_list.append(rec)
 
 
 def up_action(

@@ -2,6 +2,8 @@ import time
 import threading
 import logging
 import os
+import traceback
+
 from config import Config
 from proto import OverField_pb2 as OverField_pb2
 import proto.OverField_pb2 as SendActionNotice_pb2
@@ -18,6 +20,10 @@ from server.scene_data import (
     lock_scene_action,
     _session_list as session_list,
     lock_session,
+    _rec_list as rec_list,
+    lock_rec_list,
+    _scene as scene,
+    lock_scene,
     up_scene_action,
 )
 import utils.db as db
@@ -45,6 +51,7 @@ def start_loop():
     try:
         notice_sync_loop()
     except Exception as e:
+        print(traceback.format_exc())
         logger.error("A fatal error occurred in notice_sync_loop! Clear and exit.")
     finally:
         db.exit()
@@ -152,6 +159,25 @@ def notice_sync_loop():
                         rsp.msg.send_time = int(time.time() * 1000)
                         session.send(CmdId.ChatMsgNotice, rsp, 0)
                 chat_msg.clear()
+            with lock_scene:
+                with lock_rec_list:
+                    for scene_id, channel_id in rec_list:
+                        rsp = OverField_pb2.PlayerSceneSyncDataNotice()
+                        rsp.status = StatusCode_pb2.StatusCode_OK
+                        for k, v in scene[scene_id][channel_id].items():
+                            tmp = rsp.data.add()
+                            tmp.player_id = k
+                            tmp.data.add().ParseFromString(v)
+                        scene[scene_id][channel_id].clear()
+                        for session in session_list:
+                            if (
+                                session.scene_id == scene_id
+                                and session.channel_id == channel_id
+                            ):
+                                session.send(
+                                    CmdId.PlayerSceneSyncDataNotice, rsp, 0
+                                )  # 1203,1206
+                    rec_list.clear()
 
         use_time = time.time() - start_t
         wait_time = 1.0 / max_tps - use_time

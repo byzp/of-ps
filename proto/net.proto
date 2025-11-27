@@ -3639,6 +3639,17 @@ message ScenePlayer {
     repeated uint32 food_buff_ids = 5;
     repeated uint32 global_buff_ids = 6;
     bool is_birthday = 7;
+    uint32 avatar_frame = 8;
+    uint32 musical_item_id = 9;
+    MusicalItemSource source = 10;
+    int64 musical_item_instance_id = 11;
+    uint32 abyss_rank = 12;
+    PlayingMusicNote playing_music_note = 13;
+}
+
+message PlayingMusicNote {
+    uint32 music_note_id = 1;
+    int64 start_time = 2;
 }
 
 message ScenePlayerActionStatus {

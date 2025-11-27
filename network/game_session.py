@@ -55,10 +55,10 @@ class GameSession:
         "chat_channel_id",
         "avatar_id",
         "badge_id",
+        "scene_player",
         "running",
         "verified",
         "logged_in",
-        "scene_player",
     )
 
     HEADER_LENGTH = 2
@@ -93,11 +93,11 @@ class GameSession:
         self.chat_channel_id = 1
         self.avatar_id = 41101
         self.badge_id = 0
+        self.scene_player = OverField_pb2.ScenePlayer()
 
         self.running = True
         self.verified = False
         self.logged_in = False
-        self.scene_player = OverField_pb2.ScenePlayer()
 
     def run(self):
         self._send_thread = Thread(
@@ -138,6 +138,7 @@ class GameSession:
             head.ParseFromString(bytes(self._recv_mv[pos + 2 : hend]))
 
             msg_id = head.msg_id
+            logger.debug(f"Received message: {msg_id}")
             # 阻止未授权访问
             if not self.verified and msg_id not in _UNAUTH_CMDS:
                 self.close()
@@ -161,6 +162,7 @@ class GameSession:
             self._recv_len = rem
 
     def send(self, cmd_id: int, message: Message, packet_id: int, is_bin: bool = False):
+        logger.debug(f"Sending message: {cmd_id}")
         if not self.running:
             return
 
