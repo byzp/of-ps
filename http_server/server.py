@@ -6,6 +6,7 @@ from pathlib import Path
 import logging
 import time
 import uvicorn
+import os
 
 from http_server.handlers.dispatch_handler import DispatchHandler
 from http_server.handlers.oauth_handler import OAuthHandler
@@ -14,8 +15,12 @@ from config import Config
 
 logger = logging.getLogger(__name__)
 
-APP_DIR = Path(__file__).resolve().parent
+APP_DIR = Path("resources").resolve()
 WEBSTATIC_DIR = APP_DIR / "webstatic"
+ASSETS_DIR = APP_DIR / "assets"
+
+if not os.path.isdir(ASSETS_DIR):
+    os.makedirs(ASSETS_DIR, exist_ok=True)
 
 app = FastAPI(title="gadget")
 
@@ -60,6 +65,21 @@ async def hello_world():
 @app.post("/dispatch/client_hot_update")
 async def route_client_hot_update(request: Request):
     return JSONResponse(DispatchHandler.hot_update())
+
+
+@app.get("/Resources/{version:path}/{filename:path}")
+async def get_image(version: str, filename: str, request: Request):
+    target = os.path.abspath(os.path.join(ASSETS_DIR, version, filename))
+    if (
+        not target.startswith(os.path.abspath(ASSETS_DIR) + os.sep)
+        and os.path.abspath(ASSETS_DIR) != target
+    ):
+        # 不是子路径，拒绝
+        raise HTTPException(status_code=400, detail="Illegal path")
+    # 检查文件是否存在
+    if not os.path.exists(target) or not os.path.isfile(target):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(path=target, filename=os.path.basename(target))
 
 
 @app.post("/dispatch/region_info")
@@ -118,7 +138,7 @@ async def dispatch_get_login_url_list():
 
 @app.get("/open/oauth")
 async def open_oauth():
-    return OAuthHandler.oauth_page()
+    return OAuthHandler.oauth_page(WEBSTATIC_DIR)
 
 
 @app.post("/api/login")

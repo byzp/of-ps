@@ -48,15 +48,17 @@ def init():
 
 
 def start_loop():
+    status_code = 0
     try:
         notice_sync_loop()
     except Exception as e:
         print(traceback.format_exc())
         logger.error("A fatal error occurred in notice_sync_loop! Clear and exit.")
+        status_code = 1
     finally:
         db.exit()
         time.sleep(1)
-        os._exit(1)
+        os._exit(status_code)
 
 
 def notice_sync_loop():
@@ -161,6 +163,7 @@ def notice_sync_loop():
                 chat_msg.clear()
             with lock_scene:
                 with lock_rec_list:
+                    # 玩家动作同步
                     for scene_id, channel_id in rec_list:
                         rsp = OverField_pb2.PlayerSceneSyncDataNotice()
                         rsp.status = StatusCode_pb2.StatusCode_OK

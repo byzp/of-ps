@@ -5,7 +5,8 @@ __pycache__/
 /proto/cfg_pb2.py
 /proto/net_pb2.py
 /trash
-/resources
+/resources/assets
+/resources/data
 /player.db
 /player.db-journal
 /.vscode
