@@ -19,9 +19,6 @@ APP_DIR = Path("resources").resolve()
 WEBSTATIC_DIR = APP_DIR / "webstatic"
 ASSETS_DIR = APP_DIR / "assets"
 
-if not os.path.isdir(ASSETS_DIR):
-    os.makedirs(ASSETS_DIR, exist_ok=True)
-
 app = FastAPI(title="gadget")
 
 app.add_middleware(

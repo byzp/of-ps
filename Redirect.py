@@ -2,7 +2,7 @@ from mitmproxy import http
 
 ip = "localhost"
 port = 21000
-rd_res = True
+rd_res = False
 
 
 class Redirector:
@@ -12,7 +12,7 @@ class Redirector:
 
         suffix_matches = (".inutan.com",)
 
-        if not rd_res or full_host == "cdn-of.inutan.com":
+        if not rd_res and full_host == "cdn-of.inutan.com":
             print(f"排除域名: {full_host}")
             return
 

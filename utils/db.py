@@ -5,6 +5,7 @@ import logging
 import pickle
 import threading
 import secrets
+from contextlib import contextmanager
 
 from config import Config
 from utils.res_loader import res
@@ -18,29 +19,71 @@ db = None
 lock_db = threading.Lock()
 
 
+class RWLock:
+    # 多读，单写，写优先
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._cond = threading.Condition(self._lock)
+        self._readers = 0
+        self._writers_waiting = 0
+        self._writing = False
+
+    @contextmanager
+    def read_lock(self):
+        with self._cond:
+            # 有写操作进行中 或 有写操作等待
+            while self._writing or self._writers_waiting > 0:
+                self._cond.wait()
+            self._readers += 1
+        try:
+            yield
+        finally:
+            with self._cond:
+                self._readers -= 1
+                if self._readers == 0:
+                    self._cond.notify_all()
+
+    @contextmanager
+    def write_lock(self):
+        with self._cond:
+            self._writers_waiting += 1
+            # 有读操作 或 有写操作进行中
+            while self._readers > 0 or self._writing:
+                self._cond.wait()
+            self._writers_waiting -= 1
+            self._writing = True
+        try:
+            yield
+        finally:
+            with self._cond:
+                self._writing = False
+                self._cond.notify_all()
+
+
 class db_warp:
-    __slots__ = (
-        "_conn",
-        "_patterns",
-    )
+    __slots__ = ("_conn", "_rw_lock", "_write_patterns")
 
     def __init__(self, conn):
         self._conn = conn
-        self._patterns = {"INSERT", "UPDATE", "DELETE"}
+        self._rw_lock = RWLock()
+        self._write_patterns = frozenset(
+            {"INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER"}
+        )
 
-    def exists(self, s):
-        # 滑窗匹配
-        for i in range(len(s) - 5):
-            if s[i : i + 6] in self._patterns:
-                return True
-        return False
+    def _is_write_operation(self, sql: str) -> bool:
+        # 去除前导空白，取第一个词并大写
+        first_word = sql.strip().split(maxsplit=1)[0].upper()
+        return first_word in self._write_patterns
 
     def execute(self, *args, **kwargs):
-        if self.exists(args[0]):
-            with lock_db:
+        sql = args[0]
+
+        if self._is_write_operation(sql):
+            with self._rw_lock.write_lock():
                 return self._conn.execute(*args, **kwargs)
         else:
-            return self._conn.execute(*args, **kwargs)
+            with self._rw_lock.read_lock():
+                return self._conn.execute(*args, **kwargs)
 
 
 def exit():
@@ -205,8 +248,6 @@ def init_player(player_id):
     # 初始化角色
     datas = res.get("Character", {}).get("character", {}).get("datas", [])
     for i in datas:
-        if not i.get("ex_spell_i_ds"):
-            continue
         c = Character_pb2.Character()
 
         c.character_id = i["i_d"]
@@ -272,15 +313,15 @@ def init_player(player_id):
         ex_spells = i.get("ex_spell_i_ds", [])
 
         s = c.character_skill_list.add()
-        s.skill_id = spells[0]
+        s.skill_id = spells[0] if len(spells)>0 else 0
         s.skill_level = 1
 
         s = c.character_skill_list.add()
-        s.skill_id = spells[1]
+        s.skill_id = spells[1] if len(spells)>1 else 0
         s.skill_level = 1
 
         s = c.character_skill_list.add()
-        s.skill_id = ex_spells[0]
+        s.skill_id = ex_spells[0] if len(ex_spells)>0 else 0
         s.skill_level = 1
 
         db.execute(

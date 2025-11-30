@@ -4,13 +4,12 @@ from network.cmd_id import CmdId
 import proto.OverField_pb2 as ChangeChatChannelReq_pb2
 import proto.OverField_pb2 as ChangeChatChannelRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-from utils.bin import bin
 
 
 @packet_handler(CmdId.ChangeChatChannelReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = ChangeChatChannelRsp_pb2.ChangeChatChannelReq()
+        req = ChangeChatChannelReq_pb2.ChangeChatChannelReq()
         req.ParseFromString(data)
 
         rsp = ChangeChatChannelRsp_pb2.ChangeChatChannelRsp()

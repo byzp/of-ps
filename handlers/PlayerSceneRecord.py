@@ -3,10 +3,7 @@ from network.cmd_id import CmdId
 import logging
 
 import proto.OverField_pb2 as PlayerSceneRecordReq_pb2
-import proto.OverField_pb2 as PlayerSceneRecordRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
 
-from utils.bin import bin
 from server.scene_data import up_recorder
 
 logger = logging.getLogger(__name__)

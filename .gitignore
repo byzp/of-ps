@@ -9,6 +9,8 @@ __pycache__/
 /resources/data
 /player.db
 /player.db-journal
+/player.db-shm
+/player.db-wal
 /.vscode
 /venv
 /star.bat

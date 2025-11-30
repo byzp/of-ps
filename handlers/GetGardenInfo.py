@@ -3,7 +3,6 @@ from network.cmd_id import CmdId
 
 import proto.OverField_pb2 as GetGardenInfoRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-from utils.bin import bin
 import utils.db as db
 
 
@@ -22,4 +21,3 @@ class Handler(PacketHandler):
         ) = db.get_garden_info(session.player_id)
 
         session.send(CmdId.GetGardenInfoRsp, rsp, packet_id)  # 1685,1686
-        # session.sbin(1686, bin["1686"])

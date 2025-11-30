@@ -8,7 +8,6 @@ import proto.OverField_pb2 as Scene_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 import proto.OverField_pb2 as pb
 
-from utils.bin import bin
 from server.scene_data import up_scene_action, get_and_up_players
 import server.notice_sync as notice_sync
 
