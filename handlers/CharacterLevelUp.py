@@ -5,6 +5,7 @@ import logging
 import proto.OverField_pb2 as CharacterLevelUpReq_pb2
 import proto.OverField_pb2 as CharacterLevelUpRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
+import proto.OverField_pb2 as PackNotice_pb2
 import utils.db as db
 import utils.res_loader as res_loader
 from proto.OverField_pb2 import Character
@@ -84,7 +85,26 @@ class Handler(PacketHandler):
         character.level = new_level
         character.exp = new_exp
 
-        # 扣除金币未实现
+        coin_cost = 0
+        if current_level > 0 and current_level <= len(level_configs):
+            for level_config in level_configs:
+                if level_config["level"] == current_level:
+                    coin_cost = int(total_exp * level_config["exp_to_coin"])
+                    break
+        if coin_cost > 0:
+            coin_item_id = 101  # 金币ID
+            coin_data = db.get_item_detail(session.player_id, coin_item_id)
+            if coin_data:
+                coin_item = CharacterLevelUpReq_pb2.ItemDetail()
+                coin_item.ParseFromString(coin_data)
+                coin_item.main_item.base_item.num = max(0, coin_item.main_item.base_item.num - coin_cost)
+                db.set_item_detail(session.player_id, coin_item.SerializeToString(), coin_item_id, None)
+                
+                # 更新金币通知
+                notice = PackNotice_pb2.PackNotice()
+                notice.status = StatusCode_pb2.StatusCode_OK
+                notice.items.add().CopyFrom(coin_item)
+                session.send(CmdId.PackNotice, notice, packet_id)
 
         db.set_character(session.player_id, req.char_id, character.SerializeToString())
 

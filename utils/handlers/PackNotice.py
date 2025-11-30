@@ -780,6 +780,7 @@ class Handler(PacketHandler):
                 tmp.item_tag = i["new_bag_item_tag"]
                 tmp.base_item.item_id = i["i_d"]
                 tmp.base_item.num = 1
+                item_detail.extra_quality = i["quality"]
                 rsp.items.add().CopyFrom(item_detail)
 
                 items = item_detail.SerializeToString()
