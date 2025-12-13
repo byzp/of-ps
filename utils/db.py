@@ -137,14 +137,14 @@ def init():
             head INTEGER DEFAULT 41101,
             team_leader_badge INTEGER DEFAULT 5000,
             is_online INTEGER DEFAULT 0,
-            sign TEXT DEFAULT 'sign',
+            sign TEXT DEFAULT '',
             guild_name TEXT DEFAULT '',
             character_id INTEGER DEFAULT 101001,
             garden_like_num INTEGER DEFAULT 0,
             register_time INTEGER,
             create_time INTEGER,
             region_name TEXT DEFAULT 'cn_prod_main',
-            client_log_server_token TEXT DEFAULT 'dG9rZW4=',
+            client_log_server_token TEXT DEFAULT '',
             server_time_zone INTEGER DEFAULT 28800,
             phone_background INTEGER DEFAULT 8000,
             birthday TEXT DEFAULT '1992-02-25',
@@ -313,15 +313,15 @@ def init_player(player_id):
         ex_spells = i.get("ex_spell_i_ds", [])
 
         s = c.character_skill_list.add()
-        s.skill_id = spells[0] if len(spells)>0 else 0
+        s.skill_id = spells[0] if len(spells) > 0 else 0
         s.skill_level = 1
 
         s = c.character_skill_list.add()
-        s.skill_id = spells[1] if len(spells)>1 else 0
+        s.skill_id = spells[1] if len(spells) > 1 else 0
         s.skill_level = 1
 
         s = c.character_skill_list.add()
-        s.skill_id = ex_spells[0] if len(ex_spells)>0 else 0
+        s.skill_id = ex_spells[0] if len(ex_spells) > 0 else 0
         s.skill_level = 1
 
         db.execute(

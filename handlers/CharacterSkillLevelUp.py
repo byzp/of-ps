@@ -22,4 +22,6 @@ class Handler(PacketHandler):
 
         # TODO 技能升级
 
-        session.send(CmdId.CharacterSkillLevelUpRsp, rsp, packet_id)  # 角色技能升级 1035 1036
+        session.send(
+            CmdId.CharacterSkillLevelUpRsp, rsp, packet_id
+        )  # 角色技能升级 1035 1036

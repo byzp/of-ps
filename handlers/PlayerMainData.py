@@ -89,13 +89,13 @@ class Handler(PacketHandler):
                     item = rsp.items.add()
                     item.ParseFromString(item_blob)
                 session.send(
-                    CmdId.PackNotice, rsp, packet_id
+                    CmdId.PackNotice, rsp, 0
                 )  # 按物品类型分组发送items物品数据
         # session.sbin(CmdId.PackNotice, bin["1400"],  packet_id)
 
         rsp = ShopInitNotice_pb2.ShopInitNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        session.send(CmdId.ShopInitNotice, rsp, packet_id)
+        session.send(CmdId.ShopInitNotice, rsp, 0)
         # session.sbin(1706, bin["1706"],  packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
@@ -132,7 +132,7 @@ class Handler(PacketHandler):
         rsp = ActivitySignInDataNotice_pb2.ActivitySignInDataNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
         # session.send(1984, rsp)
-        session.sbin(CmdId.ActivitySignInDataNotice, bin["1984"], packet_id)  # TODO
+        session.sbin(CmdId.ActivitySignInDataNotice, bin["1984"], 0)  # TODO
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -141,19 +141,19 @@ class Handler(PacketHandler):
 
         rsp = IntimacyGiftDayCountNotice_pb2.IntimacyGiftDayCountNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        session.send(CmdId.IntimacyGiftDayCountNotice, rsp, packet_id)
+        session.send(CmdId.IntimacyGiftDayCountNotice, rsp, 0)
         # session.sbin(2658, bin["2658"],  packet_id)
 
         rsp = AbyssServerRankNotice_pb2.AbyssServerRankNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        session.send(CmdId.AbyssServerRankNotice, rsp, packet_id)
+        session.send(CmdId.AbyssServerRankNotice, rsp, 0)
         # session.sbin(2648, bin["2648"],  packet_id)
 
         session.sbin(1454, bin["1454"], packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        session.send(2630, rsp, packet_id)
+        session.send(2630, rsp, 0)
         # session.sbin(2630, bin["2630"],  packet_id)
 
         rsp = SceneDataNotice_pb2.SceneDataNotice()
@@ -162,17 +162,15 @@ class Handler(PacketHandler):
         data.scene_id = session.scene_id
         data.players.add().CopyFrom(session.scene_player)
 
-        tmp = pb.ServerSceneSyncDataNotice()
-        for i in scene_data.get_and_up_players(
-            session.scene_id, session.channel_id, session.player_id
-        ):
+        tmp = pb.ScenePlayer()
+        for i in scene_data.get_scene_player(session.scene_id, session.channel_id):
             tmp.ParseFromString(i)
-            data.players.add().CopyFrom(tmp.data[0].server_data[0].player)
+            data.players.add().CopyFrom(tmp)
 
         data.channel_id = session.channel_id
         data.tod_time = 0
         data.channel_label = session.channel_id
-        session.send(CmdId.SceneDataNotice, rsp, packet_id)
+        session.send(CmdId.SceneDataNotice, rsp, 0)
 
         rsp = ChangeChatChannelRsp_pb2.ChangeChatChannelRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK

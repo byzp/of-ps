@@ -99,7 +99,7 @@ def get_channel_id(player_id: int) -> Optional[int]:
     return 9999
 
 
-def get_and_up_players(scene_id, channel_id, player_id):
+def get_scene_player(scene_id, channel_id):
     players = []
     with lock_session:
         for session in _session_list:
@@ -107,21 +107,8 @@ def get_and_up_players(scene_id, channel_id, player_id):
                 continue
             if session.scene_id == scene_id and session.channel_id == channel_id:
                 # 获取所有同场景玩家
-                notice = pb.ServerSceneSyncDataNotice()
-                notice.status = pb.StatusCode_OK
-
-                d = notice.data.add()
-                d.player_id = session.player_id
-
-                sd = d.server_data.add()
-                sd.action_type = pb.SceneActionType_ENTER
-
-                sd.player.CopyFrom(session.scene_player)
-                res = notice.SerializeToString()
-
-                if session.player_id == player_id:
-                    # 如果是自己，向其他玩家广播
-                    up_scene_action(session.scene_id, session.channel_id, res)
-                else:
-                    players.append(res)
+                pl = pb.ScenePlayer()
+                pl.CopyFrom(session.scene_player)
+                res = pl.SerializeToString()
+                players.append(res)
         return players

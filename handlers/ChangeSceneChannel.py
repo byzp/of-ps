@@ -33,14 +33,14 @@ class Handler(PacketHandler):
         )
 
         session.scene_id = req.scene_id
-        session.channel_id = req.channel_label
+        session.channel_id = req.channel_label or 1
 
         rsp = ChangeSceneChannelRsp_pb2.ChangeSceneChannelRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
         rsp.scene_id = req.scene_id
-        rsp.channel_id = req.channel_label
-        rsp.channel_label = req.channel_label
+        rsp.channel_id = session.channel_id
+        rsp.channel_label = session.channel_id
         rsp.password_allow_time = 0
         rsp.target_player_id = req.target_player_label
 
@@ -51,15 +51,24 @@ class Handler(PacketHandler):
         rsp.status = StatusCode_pb2.StatusCode_OK
         data = rsp.data
         data.scene_id = session.scene_id
-
         data.players.add().CopyFrom(session.scene_player)
-        for i in scene_data.get_and_up_players(
-            session.scene_id, session.channel_id, session.player_id
-        ):
-            tmp = ServerSceneSyncDataNotice_pb2.ServerSceneSyncDataNotice()
+
+        tmp = pb.ScenePlayer()
+        for i in scene_data.get_scene_player(session.scene_id, session.channel_id):
             tmp.ParseFromString(i)
-            data.players.add().CopyFrom(tmp.data[0].server_data[0].player)
+            data.players.add().CopyFrom(tmp)
         data.channel_id = session.channel_id
         data.tod_time = int(notice_sync.tod_time)
         data.channel_label = session.channel_id
         session.send(CmdId.SceneDataNotice, rsp, 0)
+
+        # 广播加入消息
+        notice = pb.ServerSceneSyncDataNotice()
+        notice.status = pb.StatusCode_OK
+        d = notice.data.add()
+        d.player_id = session.player_id
+        sd = d.server_data.add()
+        sd.action_type = pb.SceneActionType_ENTER
+        sd.player.CopyFrom(session.scene_player)
+        res = notice.SerializeToString()
+        scene_data.up_scene_action(session.scene_id, session.channel_id, res)

@@ -227,19 +227,28 @@ def changeScenechannel(cmds):
             session.scene_id, session.channel_id, notice.SerializeToString()
         )
 
-        rsp = pb.SceneDataNotice()
-        rsp.status = StatusCode_pb2.StatusCode_OK
-        data = rsp.data
+        tmp = pb.SceneDataNotice()
+        tmp.status = StatusCode_pb2.StatusCode_OK
+        data = tmp.data
         data.scene_id = session.scene_id
-
         data.players.add().CopyFrom(session.scene_player)
-        for i in scene_data.get_and_up_players(
-            session.scene_id, session.channel_id, session.player_id
-        ):
-            tmp = pb.ServerSceneSyncDataNotice()
-            tmp.ParseFromString(i)
-            data.players.add().CopyFrom(tmp.data[0].server_data[0].player)
+
+        tmp1 = pb.ScenePlayer()
+        for i in scene_data.get_scene_player(session.scene_id, session.channel_id):
+            tmp1.ParseFromString(i)
+            data.players.add().CopyFrom(tmp1)
+
         data.channel_id = session.channel_id
         data.tod_time = 0
         data.channel_label = session.channel_id
-        session.send(CmdId.SceneDataNotice, rsp, 0)
+        session.send(CmdId.SceneDataNotice, tmp, 0)
+
+        notice = pb.ServerSceneSyncDataNotice()
+        notice.status = pb.StatusCode_OK
+        d = notice.data.add()
+        d.player_id = session.player_id
+        sd = d.server_data.add()
+        sd.action_type = pb.SceneActionType_ENTER
+        sd.player.CopyFrom(session.scene_player)
+        res = notice.SerializeToString()
+        scene_data.up_scene_action(session.scene_id, session.channel_id, res)

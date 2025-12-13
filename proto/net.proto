@@ -676,74 +676,74 @@ enum ECookPageType {
 }
 
 message MonsterInfo {
-  uint32 monster_id = 1;
-  uint32 remain_hp = 2;
+    uint32 monster_id = 1;
+    uint32 remain_hp = 2;
 }
 
 message BossRushRankInfo {
-  uint32 player_id = 1;
-  uint64 score = 2;
-  uint32 rank_ratio = 3;
+    uint32 player_id = 1;
+    uint64 score = 2;
+    uint32 rank_ratio = 3;
 }
 
 message AbyssAllServerRankInfo {
-  uint32 season_id = 1;
-  uint32 total_time = 2;
-  PlayerBriefInfo player_info = 5;
+    uint32 season_id = 1;
+    uint32 total_time = 2;
+    PlayerBriefInfo player_info = 5;
 }
 
 message BossRushFriendRankInfo {
-  PlayerBriefInfo player_info = 1;
-  BossRushRankInfo rank_info = 2;
+    PlayerBriefInfo player_info = 1;
+    BossRushRankInfo rank_info = 2;
 }
 
 message BossRushInfo {
-  uint32 season_id = 1;
-  uint64 best_total_score = 2;
-  uint32 total_rank_ratio = 3;
-  int32 current_stage_index = 4;
-  repeated BossRushStageInfo stage_infos = 5;
-  int64 start_time = 6;
-  int64 end_time = 7;
-  int64 show_rank_time = 8;
-  int64 challenge_end_time = 9;
-  repeated uint32 used_characters = 10;
+    uint32 season_id = 1;
+    uint64 best_total_score = 2;
+    uint32 total_rank_ratio = 3;
+    int32 current_stage_index = 4;
+    repeated BossRushStageInfo stage_infos = 5;
+    int64 start_time = 6;
+    int64 end_time = 7;
+    int64 show_rank_time = 8;
+    int64 challenge_end_time = 9;
+    repeated uint32 used_characters = 10;
 }
 
 message BossRushSeasonDetail {
-  uint32 season_id = 1;
-  uint64 score = 2;
-  uint32 rank_ratio = 3;
-  repeated BossRushSeasonDetailStage stage = 4;
+    uint32 season_id = 1;
+    uint64 score = 2;
+    uint32 rank_ratio = 3;
+    repeated BossRushSeasonDetailStage stage = 4;
 }
 
 message BossRushSeasonDetailStage {
-  int32 stage_index = 1;
-  uint64 best_score = 2;
-  bool is_passed = 3;
-  repeated BossRushSeasonDetailStageTeam teams = 4;
+    int32 stage_index = 1;
+    uint64 best_score = 2;
+    bool is_passed = 3;
+    repeated BossRushSeasonDetailStageTeam teams = 4;
 }
 
 message BossRushSeasonDetailStageTeam {
-  repeated uint32 characters = 1;
-  uint64 total_damage_hp = 2;
-  int64 total_consume_time = 3;
+    repeated uint32 characters = 1;
+    uint64 total_damage_hp = 2;
+    int64 total_consume_time = 3;
 }
 
 message BossRushStageBattleInfo {
-  int32 stage_index = 1;
-  uint32 trigger_id = 2;
-  repeated MonsterInfo monsters = 3;
+    int32 stage_index = 1;
+    uint32 trigger_id = 2;
+    repeated MonsterInfo monsters = 3;
 }
 
 message BossRushStageInfo {
-  int32 stage_index = 1;
-  uint64 best_score = 2;
-  bool is_passed = 3;
-  uint64 total_score = 4;
-  uint64 total_damage_hp = 5;
-  int64 total_consume_time = 6;
-  repeated BossRushSeasonDetailStageTeam teams = 7;
+    int32 stage_index = 1;
+    uint64 best_score = 2;
+    bool is_passed = 3;
+    uint64 total_score = 4;
+    uint64 total_damage_hp = 5;
+    int64 total_consume_time = 6;
+    repeated BossRushSeasonDetailStageTeam teams = 7;
 }
 
 enum ETreasureBoxType {
@@ -1098,6 +1098,9 @@ enum EFunctionOfAchievement {
     EFunctionOfAchievement_GatherAchievement = 27;
     EFunctionOfAchievement_ActivityGift = 28;
     EFunctionOfAchievement_ActivityInvite = 29;
+    EFunctionOfAchievement_ActivityFashion = 30;
+    EFunctionOfAchievement_BossRushQuest = 31;
+    EFunctionOfAchievement_MoonQuest = 32;
 }
 
 enum EExploreDifficulty {
@@ -2747,25 +2750,25 @@ message RandomProperty {
 }
 
 message ItemSweepReq {
-  uint32 item_id = 1;
-  uint32 count = 2;
-  bool is_sweep = 3;
+    uint32 item_id = 1;
+    uint32 count = 2;
+    bool is_sweep = 3;
 }
 
 message ItemSweepRsp {
-  StatusCode status = 1;
-  repeated ItemDetail rewards = 2;
+    StatusCode status = 1;
+    repeated ItemDetail rewards = 2;
 }
 
 message SceneTransmitReq {
-  uint32 player_id = 1;
+    uint32 player_id = 1;
 }
 
 message SceneTransmitRsp {
-  StatusCode status = 1;
-  uint32 scene_id = 2;
-  uint32 channel_id = 3;
-  uint32 channel_label = 4;
+    StatusCode status = 1;
+    uint32 scene_id = 2;
+    uint32 channel_id = 3;
+    uint32 channel_label = 4;
 }
 
 message ItemDetail {
@@ -2962,38 +2965,38 @@ message PosterInfo {
 }
 
 message OutfitPreset {
-  uint32 preset_index = 1;
-  uint32 hat = 2;
-  uint32 hair = 3;
-  uint32 clothes = 4;
-  uint32 ornament = 5;
+    uint32 preset_index = 1;
+    uint32 hat = 2;
+    uint32 hair = 3;
+    uint32 clothes = 4;
+    uint32 ornament = 5;
 
-  uint32 hat_dye_scheme_index = 6;
-  uint32 hair_dye_scheme_index = 7;
-  uint32 clothes_dye_scheme_index = 8;
-  uint32 ornament_dye_scheme_index = 9;
+    uint32 hat_dye_scheme_index = 6;
+    uint32 hair_dye_scheme_index = 7;
+    uint32 clothes_dye_scheme_index = 8;
+    uint32 ornament_dye_scheme_index = 9;
 
-  OutfitHideInfo outfit_hide_info = 10;
+    OutfitHideInfo outfit_hide_info = 10;
 
-  uint32 pend_top = 11;
-  uint32 pend_chest = 12;
-  uint32 pend_pelvis = 13;
-  uint32 pend_up_face = 14;
-  uint32 pend_down_face = 15;
-  uint32 pend_left_hand = 16;
-  uint32 pend_right_hand = 17;
-  uint32 pend_left_foot = 18;
-  uint32 pend_right_foot = 19;
+    uint32 pend_top = 11;
+    uint32 pend_chest = 12;
+    uint32 pend_pelvis = 13;
+    uint32 pend_up_face = 14;
+    uint32 pend_down_face = 15;
+    uint32 pend_left_hand = 16;
+    uint32 pend_right_hand = 17;
+    uint32 pend_left_foot = 18;
+    uint32 pend_right_foot = 19;
 
-  uint32 pend_top_dye_scheme_index = 20;
-  uint32 pend_chest_dye_scheme_index = 21;
-  uint32 pend_pelvis_dye_scheme_index = 22;
-  uint32 pend_up_face_dye_scheme_index = 23;
-  uint32 pend_down_face_dye_scheme_index = 24;
-  uint32 pend_left_hand_dye_scheme_index = 25;
-  uint32 pend_right_hand_dye_scheme_index = 26;
-  uint32 pend_left_foot_dye_scheme_index = 27;
-  uint32 pend_right_foot_dye_scheme_index = 28;
+    uint32 pend_top_dye_scheme_index = 20;
+    uint32 pend_chest_dye_scheme_index = 21;
+    uint32 pend_pelvis_dye_scheme_index = 22;
+    uint32 pend_up_face_dye_scheme_index = 23;
+    uint32 pend_down_face_dye_scheme_index = 24;
+    uint32 pend_left_hand_dye_scheme_index = 25;
+    uint32 pend_right_hand_dye_scheme_index = 26;
+    uint32 pend_left_foot_dye_scheme_index = 27;
+    uint32 pend_right_foot_dye_scheme_index = 28;
 }
 
 message GachaInfo {
@@ -3086,10 +3089,10 @@ message CharacterAppearance {
 }
 
 message SceneServerData {
-  SceneActionType action_type = 1;
-  ScenePlayer player = 2;
-  uint32 tod_time = 3;
-  ScenePlacedCharacter character = 4;
+    SceneActionType action_type = 1;
+    ScenePlayer player = 2;
+    uint32 tod_time = 3;
+    ScenePlacedCharacter character = 4;
 }
 
 message Chapter {
@@ -3160,117 +3163,117 @@ message CollectMoonRsp {
 }
 
 message PlayMusicNoteReq {
-  uint32 music_note_id = 1;
-  uint32 join_player_id = 2;
+    uint32 music_note_id = 1;
+    uint32 join_player_id = 2;
 }
 
 message PlayMusicNoteRsp {
-  StatusCode status = 1;
-  uint32 player_id = 2;
-  uint32 music_note_id = 3;
-  int64 start_time = 4;
+    StatusCode status = 1;
+    uint32 player_id = 2;
+    uint32 music_note_id = 3;
+    int64 start_time = 4;
 }
 
 message GetCollectMoonInfoReq {
-  uint32 scene_id = 1;
+    uint32 scene_id = 1;
 }
 
 message GetCollectMoonInfoRsp {
-  StatusCode status = 1;
-  uint32 scene_id = 2;
-  repeated uint32 collected_moon_ids = 3;
-  repeated EmotionMoonInfo emotion_moons = 4;
+    StatusCode status = 1;
+    uint32 scene_id = 2;
+    repeated uint32 collected_moon_ids = 3;
+    repeated EmotionMoonInfo emotion_moons = 4;
 }
 
 message GardenPlaceCharacterReq {
-  uint32 character_id = 1;
-  int64 furniture_id = 2;
-  int32 seat_id = 3;
-  bool is_remove = 4;
+    uint32 character_id = 1;
+    int64 furniture_id = 2;
+    int32 seat_id = 3;
+    bool is_remove = 4;
 }
 
 message GardenPlaceCharacterRsp {
-  StatusCode status = 1;
-  uint32 character_id = 2;
-  int64 furniture_id = 3;
-  int32 seat_id = 4;
-  bool is_remove = 5;
+    StatusCode status = 1;
+    uint32 character_id = 2;
+    int64 furniture_id = 3;
+    int32 seat_id = 4;
+    bool is_remove = 5;
 }
 
 message GardenPlaceCharacterNotice {
-  StatusCode status = 1;
-  ScenePlacedCharacter character = 2;
-  uint32 remove_character_id = 3;
+    StatusCode status = 1;
+    ScenePlacedCharacter character = 2;
+    uint32 remove_character_id = 3;
 }
 
 message GardenFurnitureSaveReq {
-  uint32 scheme_id = 1;
+    uint32 scheme_id = 1;
 }
 
 message GardenFurnitureSaveRsp {
-  StatusCode status = 1;
-  uint32 scheme_id = 2;
+    StatusCode status = 1;
+    uint32 scheme_id = 2;
 }
 
 message GardenFurnitureRemoveAllReq {
 }
 
 message GardenFurnitureRemoveAllRsp {
-  StatusCode status = 1;
+    StatusCode status = 1;
 }
 
 message GardenFurnitureApplySchemeRsp {
-  StatusCode status = 1;
-  uint32 scheme_id = 2;
+    StatusCode status = 1;
+    uint32 scheme_id = 2;
 }
 
 message GardenFurnitureBatchUpdateNotice {
-  StatusCode status = 1;
-  uint32 player_id = 2;
-  uint32 furniture_point_num = 3;
-  repeated FurnitureDetailsInfo new_furniture_list = 4;
+    StatusCode status = 1;
+    uint32 player_id = 2;
+    uint32 furniture_point_num = 3;
+    repeated FurnitureDetailsInfo new_furniture_list = 4;
 }
 
 message GardenSchemeFurnitureListReq {
-  uint32 scheme_id = 1;
+    uint32 scheme_id = 1;
 }
 
 message GardenSchemeFurnitureListRsp {
-  StatusCode status = 1;
-  uint32 scheme_id = 2;
-  repeated uint32 furniture_item_id = 3;
+    StatusCode status = 1;
+    uint32 scheme_id = 2;
+    repeated uint32 furniture_item_id = 3;
 }
 
 message GardenFurnitureSchemeSetNameReq {
-  uint32 scheme_id = 1;
-  string name = 2;
+    uint32 scheme_id = 1;
+    string name = 2;
 }
 
 message GardenFurnitureSchemeSetNameRsp {
-  StatusCode status = 1;
-  uint32 scheme_id = 2;
-  string name = 3;
+    StatusCode status = 1;
+    uint32 scheme_id = 2;
+    string name = 3;
 }
 
 message GardenFurnitureSchemeReq {
 }
 
 message GardenFurnitureSchemeRsp {
-  StatusCode status = 1;
+    StatusCode status = 1;
 }
 
 message EmotionMoonInfo {
-  uint32 moon_id = 1;
-  bool interacted = 2;
+    uint32 moon_id = 1;
+    bool interacted = 2;
 }
 
 message EmotionMoonInteractReq {
-  uint32 emotion_moon_id = 1;
+    uint32 emotion_moon_id = 1;
 }
 
 message EmotionMoonInteractRsp {
-  StatusCode status = 1;
-  EmotionMoonInfo info = 2;
+    StatusCode status = 1;
+    EmotionMoonInfo info = 2;
 }
 
 message SceneData {
@@ -3308,24 +3311,24 @@ message SceneData {
 }
 
 message SPOperateReq {
-  SPOperateType operate_type = 1;
-  string password = 2;
-  string old_password = 3;
+    SPOperateType operate_type = 1;
+    string password = 2;
+    string old_password = 3;
 }
 
 message SPOperateRsp {
-  StatusCode status = 1;
-  SPOperateType operate_type = 2;
-  bool sp_open_status = 3;
-  bool sp_check_status = 4;
+    StatusCode status = 1;
+    SPOperateType operate_type = 2;
+    bool sp_open_status = 3;
+    bool sp_check_status = 4;
 }
 
 enum SPOperateType {
-  none = 0;
-  open = 1;
-  change = 2;
-  check = 3;
-  close = 4;
+    none = 0;
+    open = 1;
+    change = 2;
+    check = 3;
+    close = 4;
 }
 
 message RoomDecorData {
@@ -3335,16 +3338,16 @@ message RoomDecorData {
 }
 
 message RoomDecorNotice {
-  StatusCode status = 1;
-  repeated RoomDecorData decor_list = 2;
+    StatusCode status = 1;
+    repeated RoomDecorData decor_list = 2;
 }
 
 message SetRoomDecorReq {
-  repeated RoomDecorData decor_list = 1;
+    repeated RoomDecorData decor_list = 1;
 }
 
 message SetRoomDecorRsp {
-  StatusCode status = 1;
+    StatusCode status = 1;
 }
 
 message MoonSpotData {
@@ -3405,7 +3408,7 @@ message OutfitHideInfo {
 message NetworkEventData {
     int64 object_id = 1;
     uint32 event_id = 2;
-  repeated CommonParam param = 3;
+    repeated CommonParam param = 3;
 }
 
 enum CommonParamType {
@@ -3454,24 +3457,24 @@ message ChallengeFriendRankReq {
 }
 
 message ChallengeFriendRankRsp {
-  StatusCode status = 1;
-  repeated ChallengeFriendRankInfo rank_info = 2;
-  PlayerChallengeCache self_challenge = 3;
+    StatusCode status = 1;
+    repeated ChallengeFriendRankInfo rank_info = 2;
+    PlayerChallengeCache self_challenge = 3;
 }
 
 message ChallengeFriendRankInfo {
-  PlayerBriefInfo player_info = 1;
-  PlayerChallengeCache challenge = 2;
+    PlayerBriefInfo player_info = 1;
+    PlayerChallengeCache challenge = 2;
 }
 
 message PlayerChallengeCache {
-  uint32 player_id = 1;
-  repeated PlayerChallengeInfo challenge_infos = 2;
+    uint32 player_id = 1;
+    repeated PlayerChallengeInfo challenge_infos = 2;
 }
 
 message PlayerChallengeInfo {
-  uint32 challenge_id = 1;
-  uint32 use_time = 2;
+    uint32 challenge_id = 1;
+    uint32 use_time = 2;
 }
 
 message FurnitureDetailsInfo {
@@ -4522,13 +4525,13 @@ message PlayerMainDataRsp {
 }
 
 message PlayerAppearance {
-  uint32 avatar_frame = 1;
-  uint32 pendant = 2;
+    uint32 avatar_frame = 1;
+    uint32 pendant = 2;
 }
 
 message PlayerDailyTask {
-  uint32 today_converted = 2;
-  uint32 exchange_times_left = 3;
+    uint32 today_converted = 2;
+    uint32 exchange_times_left = 3;
 }
 
 message PlayerPingReq {
@@ -4689,24 +4692,24 @@ message ReceiveMailNotice {
 }
 
 message ChangeSceneChannelReq {
-  uint32 scene_id = 1;
-  uint32 channel_label = 2;
-  Vector3 pos = 3;
-  Vector3 rot = 4;
-  bool not_in_scene = 5;
-  string password = 6;
-  uint32 target_player_label = 7;
-  bytes fg_info = 8;
+    uint32 scene_id = 1;
+    uint32 channel_label = 2;
+    Vector3 pos = 3;
+    Vector3 rot = 4;
+    bool not_in_scene = 5;
+    string password = 6;
+    uint32 target_player_label = 7;
+    bytes fg_info = 8;
 }
 
 // 消息ID: 1202
 message ChangeSceneChannelRsp {
-  StatusCode status = 1;
-  uint32 scene_id = 2;
-  uint32 channel_id = 3;
-  uint32 channel_label = 4;
-  int64 password_allow_time = 5;
-  uint32 target_player_id = 6;
+    StatusCode status = 1;
+    uint32 scene_id = 2;
+    uint32 channel_id = 3;
+    uint32 channel_label = 4;
+    int64 password_allow_time = 5;
+    uint32 target_player_id = 6;
 }
 
 message PlayerSceneRecordReq {
@@ -5783,12 +5786,12 @@ message SwitchGardenStatusRsp {
 }
 
 message DungeonSweepReq {
-  uint32 dungeon_id = 1;
+    uint32 dungeon_id = 1;
 }
 
 message DungeonSweepRsp {
-  StatusCode status = 1;
-  repeated ItemDetail rewards = 2;
+    StatusCode status = 1;
+    repeated ItemDetail rewards = 2;
 }
 
 message DoLikesReq {
@@ -6271,19 +6274,19 @@ message MonsterDeadRsp {
 }
 
 message UseItemFriendIntimacyReq {
-  uint32 item_id = 1;
-  uint32 friend_id = 2;
+    uint32 item_id = 1;
+    uint32 friend_id = 2;
 }
 
 message UseItemFriendIntimacyRsp {
-  StatusCode status = 1;
-  uint32 friend_id = 2;
-  uint32 intimacy = 3;
+    StatusCode status = 1;
+    uint32 friend_id = 2;
+    uint32 intimacy = 3;
 }
 
 message IntimacyGiftDayCountNotice {
-  StatusCode status = 1;
-  uint32 count = 2;
+    StatusCode status = 1;
+    uint32 count = 2;
 }
 
 message ManualListReq {
@@ -6826,120 +6829,120 @@ message AbyssFriendRankRsp {
 }
 
 message AbyssAllServerRankReq {
-  uint32 season_id = 1;
-  AbyssRankType bonus_type = 2;
+    uint32 season_id = 1;
+    AbyssRankType bonus_type = 2;
 }
 
 message AbyssAllServerRankRsp {
-  StatusCode status = 1;
-  repeated AbyssAllServerRankInfo rank_list = 2;
+    StatusCode status = 1;
+    repeated AbyssAllServerRankInfo rank_list = 2;
 }
 
 message BossRushInfoReq {
-  uint32 season_id = 1;
+    uint32 season_id = 1;
 }
 
 message BossRushInfoRsp {
-  StatusCode status = 1;
-  BossRushInfo info = 2;
+    StatusCode status = 1;
+    BossRushInfo info = 2;
 }
 
 message BossRushStartChallengeReq {
-  uint32 season_id = 1;
-  int32 stage_index = 2;
+    uint32 season_id = 1;
+    int32 stage_index = 2;
 }
 
 message BossRushStartChallengeRsp {
-  StatusCode status = 1;
-  uint32 season_id = 2;
-  BossRushStageInfo stage_info = 3;
+    StatusCode status = 1;
+    uint32 season_id = 2;
+    BossRushStageInfo stage_info = 3;
 }
 
 message BossRushEnterStageReq {
-  uint32 season_id = 1;
-  repeated uint32 characters = 2;
+    uint32 season_id = 1;
+    repeated uint32 characters = 2;
 }
 
 message BossRushEnterStageRsp {
-  StatusCode status = 1;
-  uint32 season_id = 2;
-  BossRushStageBattleInfo battle_info = 3;
+    StatusCode status = 1;
+    uint32 season_id = 2;
+    BossRushStageBattleInfo battle_info = 3;
 }
 
 // 消息ID: 2707
 message BossRushStartBattleReq {
-  uint32 season_id = 1;
+    uint32 season_id = 1;
 }
 
 // 消息ID: 2708
 message BossRushStartBattleRsp {
-  StatusCode status = 1;
-  uint32 season_id = 2;
-  int32 stage_index = 3;
-  int64 battle_start_time = 4;
+    StatusCode status = 1;
+    uint32 season_id = 2;
+    int32 stage_index = 3;
+    int64 battle_start_time = 4;
 }
 
 // 消息ID: 2709
 message BossRushLeaveStageReq {
-  uint32 season_id = 1;
-  uint64 total_damage_hp = 2;
-  bool win = 3;
-  BossRushStageBattleInfo battle_info = 4;
+    uint32 season_id = 1;
+    uint64 total_damage_hp = 2;
+    bool win = 3;
+    BossRushStageBattleInfo battle_info = 4;
 }
 
 // 消息ID: 2710
 message BossRushLeaveStageRsp {
-  StatusCode status = 1;
-  uint64 stage_best_score = 2;
-  uint64 best_total_score = 3;
-  uint32 total_rank_ratio = 4;
+    StatusCode status = 1;
+    uint64 stage_best_score = 2;
+    uint64 best_total_score = 3;
+    uint32 total_rank_ratio = 4;
 }
 
 // 消息ID: 2711
 message BossRushFriendRankReq {
-  uint32 season_id = 1;
+    uint32 season_id = 1;
 }
 
 // 消息ID: 2712
 message BossRushFriendRankRsp {
-  StatusCode status = 1;
-  uint32 season_id = 2;
-  repeated BossRushFriendRankInfo rank_info = 3;
+    StatusCode status = 1;
+    uint32 season_id = 2;
+    repeated BossRushFriendRankInfo rank_info = 3;
 }
 
 // 消息ID: 2713
 message BossRushFriendDetailReq {
-  uint32 player_id = 1;
+    uint32 player_id = 1;
 }
 
 // 消息ID: 2714
 message BossRushFriendDetailRsp {
-  StatusCode status = 1;
-  uint32 player_id = 2;
-  repeated BossRushSeasonDetail details = 3;
+    StatusCode status = 1;
+    uint32 player_id = 2;
+    repeated BossRushSeasonDetail details = 3;
 }
 
 // 消息ID: 2715
 message BossRushTerminateChallengeReq {
-  uint32 season_id = 1;
+    uint32 season_id = 1;
 }
 
 // 消息ID: 2716
 message BossRushTerminateChallengeRsp {
-  StatusCode status = 1;
-  uint32 season_id = 2;
+    StatusCode status = 1;
+    uint32 season_id = 2;
 }
 
 
 // 消息ID: 2717
 message BossRushQuestRewardReq {
-  uint32 season_id = 1;
-  uint32 achieve_id = 2;
+    uint32 season_id = 1;
+    uint32 achieve_id = 2;
 }
 
 message AbyssServerRankNotice {
-  StatusCode status = 1;
-  uint32 rank = 2;
+    StatusCode status = 1;
+    uint32 rank = 2;
 }
 
 message ActivityGiftRewardReq {
@@ -8062,7 +8065,7 @@ message PhotoShareCopyFashionDyeRsp {
 message FreezePlayerActionNotice {
     StatusCode status = 1;
     uint32 verification_code = 2;
-    }
+}
 
 message UnfreezePlayerActionReq {
     uint32 verification_code = 1;
@@ -8438,31 +8441,31 @@ message WishListByFriendIdRsp {
 
 // 消息ID: 2683
 message WishListByShopIdReq {
-  uint32 shop_id = 1;
-  uint32 grid_id = 2;
+    uint32 shop_id = 1;
+    uint32 grid_id = 2;
 }
 
 // 消息ID: 2684
 message WishListByShopIdRsp {
-  StatusCode status = 1;
-  repeated FriendBriefInfo info = 2;
-  uint32 week_send_count = 3;
+    StatusCode status = 1;
+    repeated FriendBriefInfo info = 2;
+    uint32 week_send_count = 3;
 }
 
 // 消息ID: 2681
 message WishListOperateReq {
-  WishListOperateType operate_type = 1;
-  uint32 shop_id = 2;
-  uint32 grid_id = 3;
+    WishListOperateType operate_type = 1;
+    uint32 shop_id = 2;
+    uint32 grid_id = 3;
 }
 
 // 消息ID: 2682
 message WishListOperateRsp {
-  StatusCode status = 1;
-  WishListOperateType operate_type = 2;
-  uint32 shop_id = 3;
-  uint32 grid_id = 4;
-  uint32 pool_id = 5;
+    StatusCode status = 1;
+    WishListOperateType operate_type = 2;
+    uint32 shop_id = 3;
+    uint32 grid_id = 4;
+    uint32 pool_id = 5;
 }
 
 enum WishListOperateType {

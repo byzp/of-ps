@@ -97,9 +97,13 @@ class Handler(PacketHandler):
             if coin_data:
                 coin_item = CharacterLevelUpReq_pb2.ItemDetail()
                 coin_item.ParseFromString(coin_data)
-                coin_item.main_item.base_item.num = max(0, coin_item.main_item.base_item.num - coin_cost)
-                db.set_item_detail(session.player_id, coin_item.SerializeToString(), coin_item_id, None)
-                
+                coin_item.main_item.base_item.num = max(
+                    0, coin_item.main_item.base_item.num - coin_cost
+                )
+                db.set_item_detail(
+                    session.player_id, coin_item.SerializeToString(), coin_item_id, None
+                )
+
                 # 更新金币通知
                 notice = PackNotice_pb2.PackNotice()
                 notice.status = StatusCode_pb2.StatusCode_OK

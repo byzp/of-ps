@@ -8,7 +8,7 @@ import proto.OverField_pb2 as Scene_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 import proto.OverField_pb2 as pb
 
-from server.scene_data import up_scene_action, get_and_up_players
+from server.scene_data import up_scene_action
 import server.notice_sync as notice_sync
 
 logger = logging.getLogger(__name__)
@@ -44,12 +44,17 @@ class Handler(PacketHandler):
         # 视为完成登录，同步场景玩家并广播加入事件
         if session.logged_in == False:
             session.logged_in = True
-            for i in get_and_up_players(
-                session.scene_id, session.channel_id, session.player_id
-            ):
-                rsp = pb.ServerSceneSyncDataNotice()
-                rsp.ParseFromString(i)
-                session.send(CmdId.ServerSceneSyncDataNotice, rsp, 0)
+
+            notice = pb.ServerSceneSyncDataNotice()
+            notice.status = pb.StatusCode_OK
+            d = notice.data.add()
+            d.player_id = session.player_id
+            sd = d.server_data.add()
+            sd.action_type = pb.SceneActionType_ENTER
+            sd.player.CopyFrom(session.scene_player)
+            res = notice.SerializeToString()
+            up_scene_action(session.scene_id, session.channel_id, res)
+
             # 同步时间
             rsp = pb.ServerSceneSyncDataNotice()
             rsp.status = StatusCode_pb2.StatusCode_OK

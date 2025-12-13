@@ -1,9 +1,7 @@
 import logging
 import threading
 import sys
-import os
 
-from config import Config
 import http_server.server as http_server
 from network.game_server import GameServer
 import utils.res_loader as res_loader
@@ -25,9 +23,9 @@ def main():
 
     # GIL
     if hasattr(sys, "_is_gil_enabled"):
-        if Config.FORCE_DISABLE_GIL:
-            os.environ.setdefault("PYTHON_GIL", "0")
         logger.info(f"GIL enabled: {sys._is_gil_enabled()}")
+    else:
+        logger.info(f"GIL enabled: True")
 
     stop_event = cmd.start()
     res_loader.init()

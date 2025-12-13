@@ -1,7 +1,4 @@
 class Config:
-    # CPython
-    FORCE_DISABLE_GIL = False
-
     # HTTP Server
     HTTP_HOST = "0.0.0.0"
     HTTP_PORT = 21000
