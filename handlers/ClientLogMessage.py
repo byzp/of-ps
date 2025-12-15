@@ -1,12 +1,12 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 
 import proto.OverField_pb2 as ClientLogMessageReq_pb2
 import proto.OverField_pb2 as ClientLogMessageRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 
 
-@packet_handler(CmdId.ClientLogMessageReq)
+@packet_handler(MsgId.ClientLogMessageReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = ClientLogMessageReq_pb2.ClientLogMessageReq()
@@ -16,4 +16,4 @@ class Handler(PacketHandler):
         rsp.ParseFromString(data)
         rsp.status = StatusCode_pb2.StatusCode_OK
 
-        session.send(CmdId.ClientLogMessageRsp, rsp, packet_id)  # 2203,2204
+        session.send(MsgId.ClientLogMessageRsp, rsp, packet_id)  # 2203,2204

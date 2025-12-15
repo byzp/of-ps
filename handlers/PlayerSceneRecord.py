@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as PlayerSceneRecordReq_pb2
@@ -9,7 +9,7 @@ from server.scene_data import up_recorder
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.PlayerSceneRecordReq)
+@packet_handler(MsgId.PlayerSceneRecordReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = PlayerSceneRecordReq_pb2.PlayerSceneRecordReq()

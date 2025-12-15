@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as UpdateCharacterAppearanceReq_pb2
@@ -13,7 +13,7 @@ from server.scene_data import up_scene_action
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.UpdateCharacterAppearanceReq)
+@packet_handler(MsgId.UpdateCharacterAppearanceReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = UpdateCharacterAppearanceReq_pb2.UpdateCharacterAppearanceReq()
@@ -25,7 +25,7 @@ class Handler(PacketHandler):
         if not characters:
             rsp = UpdateCharacterAppearanceRsp_pb2.UpdateCharacterAppearanceRsp()
             rsp.status = StatusCode_pb2.StatusCode_Error
-            session.send(CmdId.UpdateCharacterAppearanceRsp, rsp, packet_id)
+            session.send(MsgId.UpdateCharacterAppearanceRsp, rsp, packet_id)
             return
 
         character = pb.Character()
@@ -74,7 +74,7 @@ class Handler(PacketHandler):
         )
         rsp.appearance.fishing_rod_instance_id = req.appearance.fishing_rod_instance_id
 
-        session.send(CmdId.UpdateCharacterAppearanceRsp, rsp, packet_id)
+        session.send(MsgId.UpdateCharacterAppearanceRsp, rsp, packet_id)
 
         # 如果更换的是badge且req.char_id是队伍角色1，更新数据库的队长徽章ID
         team = db.get_players_info(session.player_id, "team")

@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as ChallengeFriendRankReq_pb2
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # 挑战好友排行信息列表
 # 1301 1302
-@packet_handler(CmdId.ChallengeFriendRankReq)
+@packet_handler(MsgId.ChallengeFriendRankReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = ChallengeFriendRankReq_pb2.ChallengeFriendRankReq()
@@ -54,7 +54,7 @@ class Handler(PacketHandler):
             challenge_info.challenge_id = challenge_info_data["challenge_id"]
             challenge_info.use_time = challenge_info_data["use_time"]
 
-        session.send(CmdId.ChallengeFriendRankRsp, rsp, packet_id)
+        session.send(MsgId.ChallengeFriendRankRsp, rsp, packet_id)
 
 
 # Hardcoded test data

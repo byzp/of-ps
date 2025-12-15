@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as FriendReq_pb2
@@ -12,7 +12,7 @@ from server.scene_data import get_session
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.FriendReq)
+@packet_handler(MsgId.FriendReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = FriendReq_pb2.FriendReq()
@@ -66,5 +66,5 @@ class Handler(PacketHandler):
                 other_info.hide_value = db.get_players_info(player_id, "hide_value")
                 other_info.avatar_frame = db.get_players_info(player_id, "avatar_frame")
 
-        session.send(CmdId.FriendRsp, rsp, packet_id)  # 1739,1740
-        # session.sbin(CmdId.FriendRsp, "tmp\\bin\\packet_66_1740_servertoclient_body.bin")
+        session.send(MsgId.FriendRsp, rsp, packet_id)  # 1739,1740
+        # session.sbin(MsgId.FriendRsp, "tmp\\bin\\packet_66_1740_servertoclient_body.bin")

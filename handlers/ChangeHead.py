@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as ChangeHeadReq_pb2
@@ -11,7 +11,7 @@ import utils.db as db
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.ChangeHeadReq)
+@packet_handler(MsgId.ChangeHeadReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = ChangeHeadReq_pb2.ChangeHeadReq()
@@ -24,4 +24,4 @@ class Handler(PacketHandler):
         session.avatar_id = req.head
         db.set_players_info(session.player_id, "head", session.avatar_id)
 
-        session.send(CmdId.ChangeHeadRsp, rsp, packet_id)  # 更换头像 1528 1529
+        session.send(MsgId.ChangeHeadRsp, rsp, packet_id)  # 更换头像 1528 1529

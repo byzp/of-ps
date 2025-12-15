@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as UnlockHeadListReq_pb2
@@ -12,7 +12,7 @@ import utils.db as db
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.UnlockHeadListReq)
+@packet_handler(MsgId.UnlockHeadListReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = UnlockHeadListReq_pb2.UnlockHeadListReq()
@@ -30,5 +30,5 @@ class Handler(PacketHandler):
         rsp.heads.extend(heads)
 
         session.send(
-            CmdId.UnlockHeadListRsp, rsp, packet_id
+            MsgId.UnlockHeadListRsp, rsp, packet_id
         )  # 获取已解锁头像列表 1529 1530

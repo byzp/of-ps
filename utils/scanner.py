@@ -16,7 +16,7 @@ def scan_handlers(package_name: str) -> List[Type]:
 
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
-                if isinstance(attr, type) and hasattr(attr, "cmd_id"):
+                if isinstance(attr, type) and hasattr(attr, "msg_id"):
                     handlers.append(attr)
 
     except Exception as e:

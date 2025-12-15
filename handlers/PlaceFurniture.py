@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as PlaceFurnitureReq_pb2
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 """
 
 
-@packet_handler(CmdId.PlaceFurnitureReq)
+@packet_handler(MsgId.PlaceFurnitureReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = PlaceFurnitureReq_pb2.PlaceFurnitureReq()
@@ -43,7 +43,7 @@ class Handler(PacketHandler):
         # 设置层级
         furniture_details.layer_num = req.layer_num
 
-        session.send(CmdId.PlaceFurnitureRsp, rsp, packet_id)
+        session.send(MsgId.PlaceFurnitureRsp, rsp, packet_id)
 
 
 # Hardcoded test data

@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as AreaAchieveListReq_pb2
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 """
 
 
-@packet_handler(CmdId.AreaAchieveListReq)
+@packet_handler(MsgId.AreaAchieveListReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = AreaAchieveListReq_pb2.AreaAchieveListReq()
@@ -29,7 +29,7 @@ class Handler(PacketHandler):
         # 空的成就列表
         # rsp.achieves
 
-        session.send(CmdId.AreaAchieveListRsp, rsp, packet_id)
+        session.send(MsgId.AreaAchieveListRsp, rsp, packet_id)
 
 
 # Hardcoded test data

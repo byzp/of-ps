@@ -23,10 +23,10 @@ _COMPRESS_THRESHOLD = Config.COMPRESS_THRESHOLD
 
 
 class SendTask:
-    __slots__ = ("cmd_id", "data", "packet_id", "is_bin")
+    __slots__ = ("msg_id", "data", "packet_id", "is_bin")
 
-    def __init__(self, cmd_id, data, packet_id, is_bin):
-        self.cmd_id = cmd_id
+    def __init__(self, msg_id, data, packet_id, is_bin):
+        self.msg_id = msg_id
         self.data = data
         self.packet_id = packet_id
         self.is_bin = is_bin
@@ -161,8 +161,8 @@ class GameSession:
                 self._recv_buf[:rem] = self._recv_buf[pos:end]
             self._recv_len = rem
 
-    def send(self, cmd_id: int, message: Message, packet_id: int, is_bin: bool = False):
-        logger.debug(f"Sending message: {cmd_id}")
+    def send(self, msg_id: int, message: Message, packet_id: int, is_bin: bool = False):
+        logger.debug(f"Sending message: {msg_id}")
         if not self.running:
             return
 
@@ -170,7 +170,7 @@ class GameSession:
         data_bytes = message if is_bin else message.SerializeToString()
 
         # 构造任务对象
-        task = SendTask(cmd_id, data_bytes, packet_id, is_bin)
+        task = SendTask(msg_id, data_bytes, packet_id, is_bin)
 
         # 入队
         with self._send_lock:
@@ -179,10 +179,10 @@ class GameSession:
             if len(self._send_queue) == 1:
                 self._send_event.set()
 
-    def sbin(self, cmd_id: int, path: str, packet_id: int):
+    def sbin(self, msg_id: int, path: str, packet_id: int):
         try:
             with open(path, "rb") as f:
-                self.send(cmd_id, f.read(), packet_id, is_bin=True)
+                self.send(msg_id, f.read(), packet_id, is_bin=True)
         except FileNotFoundError:
             logger.error(f"File not found: {path}")
 
@@ -227,13 +227,13 @@ class GameSession:
                     body_len = len(body)
 
                 head_proto.Clear()
-                head_proto.msg_id = task.cmd_id
+                head_proto.msg_id = task.msg_id
                 if task.packet_id:
                     head_proto.packet_id = task.packet_id
                 head_proto.flag = flag
                 head_proto.body_len = body_len
 
-                if task.cmd_id in _NOSEQ_CMDS:
+                if task.msg_id in _NOSEQ_CMDS:
                     head_proto.seq_id = 0
                 else:
                     head_proto.seq_id = self._seq_id

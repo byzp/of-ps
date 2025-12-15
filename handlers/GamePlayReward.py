@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 
@@ -10,7 +10,7 @@ import proto.OverField_pb2 as StatusCode_pb2
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.GamePlayRewardReq)
+@packet_handler(MsgId.GamePlayRewardReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
 
@@ -20,7 +20,7 @@ class Handler(PacketHandler):
         rsp = GamePlayRewardRsp_pb2.GamePlayRewardRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
-        session.send(CmdId.GamePlayRewardRsp, rsp, packet_id)
+        session.send(MsgId.GamePlayRewardRsp, rsp, packet_id)
 
 
 # Hardcoded test data

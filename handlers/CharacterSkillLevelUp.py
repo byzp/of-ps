@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 import proto.OverField_pb2 as CharacterSkillLevelUpReq_pb2
 import proto.OverField_pb2 as CharacterSkillLevelUpRsp_pb2
@@ -11,7 +11,7 @@ from utils.res_loader import res
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.CharacterSkillLevelUpReq)
+@packet_handler(MsgId.CharacterSkillLevelUpReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = CharacterSkillLevelUpReq_pb2.CharacterSkillLevelUpReq()
@@ -23,5 +23,5 @@ class Handler(PacketHandler):
         # TODO 技能升级
 
         session.send(
-            CmdId.CharacterSkillLevelUpRsp, rsp, packet_id
+            MsgId.CharacterSkillLevelUpRsp, rsp, packet_id
         )  # 角色技能升级 1035 1036

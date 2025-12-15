@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as GetCharacterAchievementListReq_pb2
@@ -11,7 +11,7 @@ import utils.db as db
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.GetCharacterAchievementListReq)
+@packet_handler(MsgId.GetCharacterAchievementListReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = GetCharacterAchievementListReq_pb2.GetCharacterAchievementListReq()
@@ -25,5 +25,5 @@ class Handler(PacketHandler):
             tmp.achieve_id = 8
             tmp.count = 6
         rsp.character_id = chr_id
-        session.send(CmdId.GetCharacterAchievementListRsp, rsp, packet_id)  # 1479,1480
+        session.send(MsgId.GetCharacterAchievementListRsp, rsp, packet_id)  # 1479,1480
         # session.sbin(1758, bin["1758"],  packet_id)

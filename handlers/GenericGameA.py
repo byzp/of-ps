@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as GenericGameAReq_pb2
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 """
 
 
-@packet_handler(CmdId.GenericGameAReq)
+@packet_handler(MsgId.GenericGameAReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = GenericGameAReq_pb2.GenericGameAReq()
@@ -35,7 +35,7 @@ class Handler(PacketHandler):
             param.bool_value = param_data["bool_value"]
             param.string_value = param_data["string_value"]
 
-        session.send(CmdId.GenericGameARsp, rsp, packet_id)
+        session.send(MsgId.GenericGameARsp, rsp, packet_id)
 
 
 # Hardcoded test data

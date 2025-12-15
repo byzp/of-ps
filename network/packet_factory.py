@@ -5,7 +5,7 @@ import traceback
 
 from network.packet_handler import PacketHandler
 from utils.scanner import scan_handlers
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 from config import Config
 from proto import OverField_pb2
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 id_to_name = {
     v: k
-    for k, v in vars(CmdId).items()
+    for k, v in vars(MsgId).items()
     if not k.startswith("__") and isinstance(v, int)
 }
 
@@ -37,11 +37,11 @@ class PacketFactory:
             handler_classes = scan_handlers(package_name)
 
             for handler_class in handler_classes:
-                if hasattr(handler_class, "cmd_id"):
+                if hasattr(handler_class, "msg_id"):
                     instance = handler_class()
-                    cls._handlers[handler_class.cmd_id] = instance
+                    cls._handlers[handler_class.msg_id] = instance
                     logger.debug(
-                        f"Registered handler for cmd_id: {handler_class.cmd_id}"
+                        f"Registered handler for msg_id: {handler_class.msg_id}"
                     )
 
             logger.info(f"Registered {len(cls._handlers)} handlers in total")
@@ -50,32 +50,32 @@ class PacketFactory:
             logger.error(f"Failed to register handlers: {e}")
 
     @classmethod
-    def process_packet(cls, cmd_id: int, data: bytes, packet_id: int, session):
+    def process_packet(cls, msg_id: int, data: bytes, packet_id: int, session):
         """Process incoming packet"""
-        handler = cls._handlers.get(cmd_id)
+        handler = cls._handlers.get(msg_id)
 
         if handler:
-            if cmd_id in cls._SYNC_CMDS:
-                cls._handle_packet(handler, session, data, packet_id, cmd_id)
+            if msg_id in cls._SYNC_CMDS:
+                cls._handle_packet(handler, session, data, packet_id, msg_id)
             else:
                 cls._executor.submit(
-                    cls._handle_packet, handler, session, data, packet_id, cmd_id
+                    cls._handle_packet, handler, session, data, packet_id, msg_id
                 )
         else:
-            logger.warning(f"No handler found for cmd_id: {cmd_id}")
-            cls._log_unknown_packet(cmd_id, data)
+            logger.warning(f"No handler found for msg_id: {msg_id}")
+            cls._log_unknown_packet(msg_id, data)
 
     @classmethod
-    def _handle_packet(cls, handler, session, data: bytes, packet_id: int, cmd_id: int):
+    def _handle_packet(cls, handler, session, data: bytes, packet_id: int, msg_id: int):
         try:
             handler.handle(session, data, packet_id)
         except Exception:
             exception_traceback = traceback.format_exc()
-            logger.error(f"Error processing {cmd_id} packet: \n{exception_traceback}")
+            logger.error(f"Error processing {msg_id} packet: \n{exception_traceback}")
 
     @classmethod
-    def _log_unknown_packet(cls, cmd_id: int, data: bytes):
-        name = id_to_name.get(cmd_id)
+    def _log_unknown_packet(cls, msg_id: int, data: bytes):
+        name = id_to_name.get(msg_id)
         if name:
             msg_class = getattr(OverField_pb2, name, None)
             if msg_class:

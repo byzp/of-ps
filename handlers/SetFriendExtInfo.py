@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 
 import proto.OverField_pb2 as SetFriendExtInfoRsp_pb2
 import proto.OverField_pb2 as SetFriendExtInfoReq_pb2
@@ -7,7 +7,7 @@ import proto.OverField_pb2 as StatusCode_pb2
 import utils.db as db
 
 
-@packet_handler(CmdId.SetFriendExtInfoReq)
+@packet_handler(MsgId.SetFriendExtInfoReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = SetFriendExtInfoReq_pb2.SetFriendExtInfoReq()
@@ -32,5 +32,5 @@ class Handler(PacketHandler):
                 )
 
         session.send(
-            CmdId.SetFriendExtInfoRsp, rsp, packet_id
+            MsgId.SetFriendExtInfoRsp, rsp, packet_id
         )  # 1781 1782 好友亲密标签

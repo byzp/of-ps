@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as ChangeHideTypeReq_pb2
@@ -11,7 +11,7 @@ import utils.db as db
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.ChangeHideTypeReq)
+@packet_handler(MsgId.ChangeHideTypeReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = ChangeHideTypeReq_pb2.ChangeHideTypeReq()
@@ -27,4 +27,4 @@ class Handler(PacketHandler):
         db.set_players_info(session.player_id, "hide_value", new_status)
         rsp.hide_value = new_status
 
-        session.send(CmdId.ChangeHideTypeRsp, rsp, packet_id)  # 更改隐藏类型 2317 2318
+        session.send(MsgId.ChangeHideTypeRsp, rsp, packet_id)  # 更改隐藏类型 2317 2318

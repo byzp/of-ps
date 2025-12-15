@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 import json
 import os
@@ -10,7 +10,7 @@ import proto.OverField_pb2 as StatusCode_pb2
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.SceneDataNotice)
+@packet_handler(MsgId.SceneDataNotice)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         # Load hardcoded data from JSON file
@@ -1114,5 +1114,5 @@ class Handler(PacketHandler):
             )
 
         # Send response
-        session.send(CmdId.SceneDataNotice, rsp, packet_id)
+        session.send(MsgId.SceneDataNotice, rsp, packet_id)
         print(rsp.data.players)

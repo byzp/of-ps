@@ -1,6 +1,6 @@
 import threading
 from server.scene_data import get_session
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 
 
 # 命令注册
@@ -82,7 +82,7 @@ def send_gm_notice():
         rsp.notice.append(notice)
 
     for session in sessions:
-        session.send(CmdId.GmNotice, rsp, 0)
+        session.send(MsgId.GmNotice, rsp, 0)
 
 
 def send_changeScenechannel():
@@ -100,7 +100,7 @@ def send_changeScenechannel():
     rsp.channel_label = 10000
 
     for session in sessions:
-        session.send(CmdId.ChangeSceneChannelRsp, rsp, 0)
+        session.send(MsgId.ChangeSceneChannelRsp, rsp, 0)
 
 
 # 注册命令

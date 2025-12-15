@@ -1,12 +1,12 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 
 import proto.OverField_pb2 as ChangeChatChannelReq_pb2
 import proto.OverField_pb2 as ChangeChatChannelRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 
 
-@packet_handler(CmdId.ChangeChatChannelReq)
+@packet_handler(MsgId.ChangeChatChannelReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = ChangeChatChannelReq_pb2.ChangeChatChannelReq()
@@ -17,4 +17,4 @@ class Handler(PacketHandler):
         session.chat_channel_id = req.channel_id
         rsp.chat_channel_id = req.channel_id
 
-        session.send(CmdId.ChangeChatChannelRsp, rsp, packet_id)  # 1930,1931
+        session.send(MsgId.ChangeChatChannelRsp, rsp, packet_id)  # 1930,1931

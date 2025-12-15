@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as ChangeSceneChannelReq_pb2
@@ -15,7 +15,7 @@ import server.notice_sync as notice_sync
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.ChangeSceneChannelReq)
+@packet_handler(MsgId.ChangeSceneChannelReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = ChangeSceneChannelReq_pb2.ChangeSceneChannelReq()
@@ -44,7 +44,7 @@ class Handler(PacketHandler):
         rsp.password_allow_time = 0
         rsp.target_player_id = req.target_player_label
 
-        session.send(CmdId.ChangeSceneChannelRsp, rsp, packet_id)
+        session.send(MsgId.ChangeSceneChannelRsp, rsp, packet_id)
 
         # 更新场景
         rsp = SceneDataNotice_pb2.SceneDataNotice()
@@ -60,7 +60,7 @@ class Handler(PacketHandler):
         data.channel_id = session.channel_id
         data.tod_time = int(notice_sync.tod_time)
         data.channel_label = session.channel_id
-        session.send(CmdId.SceneDataNotice, rsp, 0)
+        session.send(MsgId.SceneDataNotice, rsp, 0)
 
         # 广播加入消息
         notice = pb.ServerSceneSyncDataNotice()

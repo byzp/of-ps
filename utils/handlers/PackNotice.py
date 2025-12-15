@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as PackNotice_pb2
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 num = 1000000  # 物品数量
 
 
-@packet_handler(CmdId.PackNotice)
+@packet_handler(MsgId.PackNotice)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         rsp = PackNotice_pb2.PackNotice()
@@ -32,7 +32,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -58,7 +58,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items_s, None, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -104,7 +104,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items_s, None, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -122,7 +122,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -143,7 +143,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items_s, None, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -161,7 +161,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -179,7 +179,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -197,7 +197,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -215,7 +215,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -233,7 +233,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         # rsp = PackNotice_pb2.PackNotice()
         # rsp.status = StatusCode_pb2.StatusCode_OK
@@ -251,7 +251,7 @@ class Handler(PacketHandler):
         # db.set_item_detail(session.player_id, items, i["i_d"])
 
         # rsp.temp_pack_max_size = 30
-        # session.send(CmdId.PackNotice, rsp,  packet_id)
+        # session.send(MsgId.PackNotice, rsp,  packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -269,7 +269,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -287,7 +287,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         # rsp = PackNotice_pb2.PackNotice()
         # rsp.status = StatusCode_pb2.StatusCode_OK
@@ -305,7 +305,7 @@ class Handler(PacketHandler):
         # db.set_item_detail(session.player_id, items, i["i_d"])
 
         # rsp.temp_pack_max_size = 30
-        # session.send(CmdId.PackNotice, rsp,  packet_id)
+        # session.send(MsgId.PackNotice, rsp,  packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -323,7 +323,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         # rsp = PackNotice_pb2.PackNotice()
         # rsp.status = StatusCode_pb2.StatusCode_OK
@@ -341,7 +341,7 @@ class Handler(PacketHandler):
         # db.set_item_detail(session.player_id, items, i["i_d"])
 
         # rsp.temp_pack_max_size = 30
-        # session.send(CmdId.PackNotice, rsp,  packet_id)
+        # session.send(MsgId.PackNotice, rsp,  packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -359,7 +359,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -377,7 +377,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -397,7 +397,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -415,7 +415,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -436,7 +436,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -454,7 +454,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -472,7 +472,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -492,7 +492,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -512,7 +512,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -530,7 +530,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         # rsp = PackNotice_pb2.PackNotice()
         # rsp.status = StatusCode_pb2.StatusCode_OK
@@ -548,7 +548,7 @@ class Handler(PacketHandler):
         # db.set_item_detail(session.player_id, items, i["i_d"])
 
         # rsp.temp_pack_max_size = 30
-        # session.send(CmdId.PackNotice, rsp,  packet_id)
+        # session.send(MsgId.PackNotice, rsp,  packet_id)
 
         # rsp = PackNotice_pb2.PackNotice()
         # rsp.status = StatusCode_pb2.StatusCode_OK
@@ -566,7 +566,7 @@ class Handler(PacketHandler):
         # db.set_item_detail(session.player_id, items, i["i_d"])
 
         # rsp.temp_pack_max_size = 30
-        # session.send(CmdId.PackNotice, rsp,  packet_id)
+        # session.send(MsgId.PackNotice, rsp,  packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -586,7 +586,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -606,7 +606,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -624,7 +624,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -642,7 +642,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -660,7 +660,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -677,7 +677,7 @@ class Handler(PacketHandler):
                 items = item_detail.SerializeToString()
                 db.set_item_detail(session.player_id, items, i["i_d"])
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -694,7 +694,7 @@ class Handler(PacketHandler):
                 items = item_detail.SerializeToString()
                 db.set_item_detail(session.player_id, items, i["i_d"])
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         # rsp = PackNotice_pb2.PackNotice()
         # rsp.status = StatusCode_pb2.StatusCode_OK
@@ -712,7 +712,7 @@ class Handler(PacketHandler):
         # db.set_item_detail(session.player_id, items, i["i_d"])
 
         # rsp.temp_pack_max_size = 30
-        # session.send(CmdId.PackNotice, rsp,  packet_id)
+        # session.send(MsgId.PackNotice, rsp,  packet_id)
 
         # rsp = PackNotice_pb2.PackNotice()
         # rsp.status = StatusCode_pb2.StatusCode_OK
@@ -730,7 +730,7 @@ class Handler(PacketHandler):
         #         db.set_item_detail(session.player_id, items, i["i_d"])
 
         # rsp.temp_pack_max_size = 30
-        # session.send(CmdId.PackNotice, rsp,  packet_id)
+        # session.send(MsgId.PackNotice, rsp,  packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -750,7 +750,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -768,7 +768,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -787,7 +787,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -808,7 +808,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -826,7 +826,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -844,7 +844,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -862,7 +862,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -882,7 +882,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -900,7 +900,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -920,7 +920,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -940,7 +940,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -960,7 +960,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -980,7 +980,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -1000,7 +1000,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(session.player_id, items, i["i_d"])
 
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp, packet_id)
 
 
 # #导入全部测试用
@@ -1026,4 +1026,4 @@ class Handler(PacketHandler):
 
 
 #         rsp.temp_pack_max_size = 30
-#         session.send(CmdId.PackNotice, rsp,  packet_id)
+#         session.send(MsgId.PackNotice, rsp,  packet_id)

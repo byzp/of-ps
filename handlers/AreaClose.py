@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as AreaCloseReq_pb2
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 """
 
 
-@packet_handler(CmdId.AreaCloseReq)
+@packet_handler(MsgId.AreaCloseReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = AreaCloseReq_pb2.AreaCloseReq()
@@ -30,7 +30,7 @@ class Handler(PacketHandler):
         area_data.area_state = TEST_DATA["area_state"]
         area_data.level = TEST_DATA["level"]
 
-        session.send(CmdId.AreaCloseRsp, rsp, packet_id)
+        session.send(MsgId.AreaCloseRsp, rsp, packet_id)
 
 
 # Hardcoded test data

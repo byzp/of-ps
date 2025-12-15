@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as SceneWeatherChangeNotice_pb2
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 """
 
 
-@packet_handler(CmdId.SceneWeatherChangeNotice)
+@packet_handler(MsgId.SceneWeatherChangeNotice)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         rsp = SceneWeatherChangeNotice_pb2.SceneWeatherChangeNotice()
@@ -23,7 +23,7 @@ class Handler(PacketHandler):
         rsp.status = TEST_DATA["status"]
         rsp.weather_type = TEST_DATA["weather_type"]
 
-        session.send(CmdId.SceneWeatherChangeNotice, rsp, packet_id)
+        session.send(MsgId.SceneWeatherChangeNotice, rsp, packet_id)
 
 
 # Hardcoded test data

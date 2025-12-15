@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as TakeOutHandingFurnitureReq_pb2
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 """
 
 
-@packet_handler(CmdId.TakeOutHandingFurnitureReq)
+@packet_handler(MsgId.TakeOutHandingFurnitureReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = TakeOutHandingFurnitureReq_pb2.TakeOutHandingFurnitureReq()
@@ -26,7 +26,7 @@ class Handler(PacketHandler):
         rsp.status = TEST_DATA["status"]
         rsp.furniture_id = req.furniture_id  # 从请求获取
 
-        session.send(CmdId.TakeOutHandingFurnitureRsp, rsp, packet_id)
+        session.send(MsgId.TakeOutHandingFurnitureRsp, rsp, packet_id)
 
 
 # Hardcoded test data

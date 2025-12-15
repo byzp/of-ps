@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as RiddleStateUpdateReq_pb2
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 """
 
 
-@packet_handler(CmdId.RiddleStateUpdateReq)
+@packet_handler(MsgId.RiddleStateUpdateReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = RiddleStateUpdateReq_pb2.RiddleStateUpdateReq()
@@ -31,7 +31,7 @@ class Handler(PacketHandler):
         riddle_data.state = req.battle_state
         riddle_data.is_win = req.is_win
 
-        session.send(CmdId.RiddleStateUpdateRsp, rsp, packet_id)
+        session.send(MsgId.RiddleStateUpdateRsp, rsp, packet_id)
 
 
 # Hardcoded test data

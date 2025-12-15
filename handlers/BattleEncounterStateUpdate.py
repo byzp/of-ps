@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as BattleEncounterStateUpdateReq_pb2
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 """
 
 
-@packet_handler(CmdId.BattleEncounterStateUpdateReq)
+@packet_handler(MsgId.BattleEncounterStateUpdateReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = BattleEncounterStateUpdateReq_pb2.BattleEncounterStateUpdateReq()
@@ -41,7 +41,7 @@ class Handler(PacketHandler):
             "dynamic_treasure_box_base_info"
         ]["max_quality"]
 
-        session.send(CmdId.BattleEncounterStateUpdateRsp, rsp, packet_id)
+        session.send(MsgId.BattleEncounterStateUpdateRsp, rsp, packet_id)
 
 
 # 硬编码测试数据

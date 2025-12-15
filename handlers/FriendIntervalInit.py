@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as FriendIntervalInitReq_pb2
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 """
 
 
-@packet_handler(CmdId.FriendIntervalInitReq)
+@packet_handler(MsgId.FriendIntervalInitReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = FriendIntervalInitReq_pb2.FriendIntervalInitReq()
@@ -47,7 +47,7 @@ class Handler(PacketHandler):
         #     join_info = rsp.join_infos.add()
         #     # Add join_info fields here if needed
 
-        session.send(CmdId.FriendIntervalInitRsp, rsp, packet_id)
+        session.send(MsgId.FriendIntervalInitRsp, rsp, packet_id)
 
 
 # Hardcoded test data

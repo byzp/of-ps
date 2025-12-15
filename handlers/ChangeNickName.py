@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as ChangeNickNameReq_pb2
@@ -13,7 +13,7 @@ import utils.db as db
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.ChangeNickNameReq)
+@packet_handler(MsgId.ChangeNickNameReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = ChangeNickNameReq_pb2.ChangeNickNameReq()
@@ -23,7 +23,7 @@ class Handler(PacketHandler):
         if db.get_player_name_exists(req.nick_name):
             rsp = ChangeNickNameRsp_pb2.ChangeNickNameRsp()
             rsp.status = StatusCode_pb2.StatusCode_DUPLICATED_NAME
-            session.send(CmdId.ChangeNickNameRsp, rsp, packet_id)
+            session.send(MsgId.ChangeNickNameRsp, rsp, packet_id)
             return
 
         rsp = ChangeNickNameRsp_pb2.ChangeNickNameRsp()
@@ -44,7 +44,7 @@ class Handler(PacketHandler):
         tmp.main_item.base_item.num -= 10
         db.set_item_detail(session.player_id, tmp.SerializeToString(), 102, None)
 
-        session.send(CmdId.ChangeNickNameRsp, rsp, packet_id)  # 修改昵称 1527 1528
+        session.send(MsgId.ChangeNickNameRsp, rsp, packet_id)  # 修改昵称 1527 1528
 
         # 发送场景同步通知
         notice = pb.ServerSceneSyncDataNotice()

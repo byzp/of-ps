@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as CharacterLevelUpReq_pb2
@@ -13,7 +13,7 @@ from proto.OverField_pb2 import Character
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.CharacterLevelUpReq)
+@packet_handler(MsgId.CharacterLevelUpReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = CharacterLevelUpReq_pb2.CharacterLevelUpReq()
@@ -46,7 +46,7 @@ class Handler(PacketHandler):
         character_data_list = db.get_characters(session.player_id, req.char_id)
         if not character_data_list:
             rsp.status = StatusCode_pb2.StatusCode_CHARACTER_NOT_FOUND
-            session.send(CmdId.CharacterLevelUpRsp, rsp, packet_id)
+            session.send(MsgId.CharacterLevelUpRsp, rsp, packet_id)
             return
 
         character = Character()
@@ -108,7 +108,7 @@ class Handler(PacketHandler):
                 notice = PackNotice_pb2.PackNotice()
                 notice.status = StatusCode_pb2.StatusCode_OK
                 notice.items.add().CopyFrom(coin_item)
-                session.send(CmdId.PackNotice, notice, packet_id)
+                session.send(MsgId.PackNotice, notice, packet_id)
 
         db.set_character(session.player_id, req.char_id, character.SerializeToString())
 
@@ -117,4 +117,4 @@ class Handler(PacketHandler):
         rsp.level = new_level
         rsp.exp = new_exp
 
-        session.send(CmdId.CharacterLevelUpRsp, rsp, packet_id)  # 角色升级 1039 1040
+        session.send(MsgId.CharacterLevelUpRsp, rsp, packet_id)  # 角色升级 1039 1040

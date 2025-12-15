@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as GetWeaponReq_pb2
@@ -12,7 +12,7 @@ import utils.db as db
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.GetWeaponReq)
+@packet_handler(MsgId.GetWeaponReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = GetWeaponReq_pb2.GetWeaponReq()
@@ -38,4 +38,4 @@ class Handler(PacketHandler):
         rsp.total_num = weapon_count
         rsp.end_index = weapon_count
 
-        session.send(CmdId.GetWeaponRsp, rsp, packet_id)  # 获取武器列表 1517 1518
+        session.send(MsgId.GetWeaponRsp, rsp, packet_id)  # 获取武器列表 1517 1518

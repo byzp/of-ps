@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as BattleEncounterInfoReq_pb2
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 """
 
 
-@packet_handler(CmdId.BattleEncounterInfoReq)
+@packet_handler(MsgId.BattleEncounterInfoReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = BattleEncounterInfoReq_pb2.BattleEncounterInfoReq()
@@ -34,7 +34,7 @@ class Handler(PacketHandler):
                 TEST_DATA["box_id_first"] if i == 0 else TEST_DATA["box_id_other"]
             )
 
-        session.send(CmdId.BattleEncounterInfoRsp, rsp, packet_id)
+        session.send(MsgId.BattleEncounterInfoRsp, rsp, packet_id)
 
 
 # 硬编码测试数据

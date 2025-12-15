@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 import json
 import os
@@ -11,7 +11,7 @@ import proto.OverField_pb2 as StatusCode_pb2
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.GachaRecordReq)
+@packet_handler(MsgId.GachaRecordReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         # Parse request
@@ -41,7 +41,7 @@ class Handler(PacketHandler):
             record.gacha_time = record_data.get("gacha_time", 0)
 
         # Send response
-        session.send(CmdId.GachaRecordRsp, rsp, packet_id)
+        session.send(MsgId.GachaRecordRsp, rsp, packet_id)
 
 
 # Hardcoded test data

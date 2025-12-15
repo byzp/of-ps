@@ -1,6 +1,6 @@
 import logging
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import proto.OverField_pb2 as VerifyLoginTokenReq_pb2
 import proto.OverField_pb2 as VerifyLoginTokenRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
@@ -9,7 +9,7 @@ import utils.db as db
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.VerifyLoginTokenReq)
+@packet_handler(MsgId.VerifyLoginTokenReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = VerifyLoginTokenReq_pb2.VerifyLoginTokenReq()
@@ -20,7 +20,7 @@ class Handler(PacketHandler):
         user_id = int(db.get_user_id(req.sdk_uid))
         if not db.verify_sdk_user_info(user_id, req.login_token):
             rsp.status = StatusCode_pb2.StatusCode_FAIL
-            session.send(CmdId.VerifyLoginTokenRsp, rsp, packet_id)
+            session.send(MsgId.VerifyLoginTokenRsp, rsp, packet_id)
             return
 
         session.verified = True
@@ -34,4 +34,4 @@ class Handler(PacketHandler):
         rsp.time_left = 4294967295
         rsp.device_uuid = req.device_uuid
 
-        session.send(CmdId.VerifyLoginTokenRsp, rsp, packet_id)  # 1001,1002
+        session.send(MsgId.VerifyLoginTokenRsp, rsp, packet_id)  # 1001,1002

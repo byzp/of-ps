@@ -1,4 +1,4 @@
-class CmdId:
+class MsgId:
     InValid = -1
     VerifyLoginTokenReq = 1001
     VerifyLoginTokenRsp = 1002

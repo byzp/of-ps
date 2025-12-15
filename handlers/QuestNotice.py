@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as QuestNotice_pb2
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 """
 
 
-@packet_handler(CmdId.QuestNotice)
+@packet_handler(MsgId.QuestNotice)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = QuestNotice_pb2.QuestNotice()
@@ -49,7 +49,7 @@ class Handler(PacketHandler):
         random_bonus = TEST_DATA["parsed_result"]["random_quest_bonus_info"]
         rsp.random_quest_bonus_info.bonus_left = random_bonus["bonus_left"]
 
-        session.send(CmdId.QuestNotice, rsp, packet_id)
+        session.send(MsgId.QuestNotice, rsp, packet_id)
 
 
 # Hardcoded test data

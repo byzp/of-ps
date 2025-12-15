@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as GetPosterReq_pb2
@@ -12,7 +12,7 @@ import utils.db as db
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.GetPosterReq)
+@packet_handler(MsgId.GetPosterReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = GetPosterReq_pb2.GetPosterReq()
@@ -36,4 +36,4 @@ class Handler(PacketHandler):
         rsp.total_num = total_num
         rsp.end_index = req.start_index + total_num
 
-        session.send(CmdId.GetPosterRsp, rsp, packet_id)  # 获取映像列表 1405 1406
+        session.send(MsgId.GetPosterRsp, rsp, packet_id)  # 获取映像列表 1405 1406

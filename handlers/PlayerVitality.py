@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as PlayerVitalityReq_pb2
@@ -9,7 +9,7 @@ import proto.OverField_pb2 as StatusCode_pb2
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.PlayerVitalityReq)
+@packet_handler(MsgId.PlayerVitalityReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = PlayerVitalityReq_pb2.PlayerVitalityReq()
@@ -20,7 +20,7 @@ class Handler(PacketHandler):
         rsp.vitality_buy_num = TEST_DATA["parsed_result"]["vitality_buy_num"]
         # items is empty as specified in the requirements
 
-        session.send(CmdId.PlayerVitalityRsp, rsp, packet_id)
+        session.send(MsgId.PlayerVitalityRsp, rsp, packet_id)
 
 
 # Hardcoded test data

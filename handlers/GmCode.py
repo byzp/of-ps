@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as GmCodeReq_pb2
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.GmCodeReq)
+@packet_handler(MsgId.GmCodeReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = GmCodeReq_pb2.GmCodeReq()
@@ -32,4 +32,4 @@ class Handler(PacketHandler):
         # # 添加在线玩家列表
         # rsp.online_players.append(session.player_id)
 
-        session.send(CmdId.GmCodeRsp, rsp, packet_id)
+        session.send(MsgId.GmCodeRsp, rsp, packet_id)

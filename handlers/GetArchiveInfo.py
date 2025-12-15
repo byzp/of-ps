@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as GetArchiveInfoReq_pb2
@@ -10,7 +10,7 @@ from utils.bin import bin
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.GetArchiveInfoReq)
+@packet_handler(MsgId.GetArchiveInfoReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = GetArchiveInfoReq_pb2.GetArchiveInfoReq()
@@ -18,7 +18,7 @@ class Handler(PacketHandler):
 
         rsp = GetArchiveInfoRsp_pb2.GetArchiveInfoRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        # session.send(CmdId.GetArchiveInfoRsp, rsp) #1213,1214
+        # session.send(MsgId.GetArchiveInfoRsp, rsp) #1213,1214
         key = req.key
         if key == "BlessingTreeTutotal":
             session.sbin(1214, bin["1214-1"], packet_id)

@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import proto.OverField_pb2 as OverField_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 import time
@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.PlayerPingReq)
+@packet_handler(MsgId.PlayerPingReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = OverField_pb2.PlayerPingReq()
@@ -19,4 +19,4 @@ class Handler(PacketHandler):
         rsp.client_time_ms = req.client_time_ms
         rsp.server_time_ms = int(time.time() * 1000)
 
-        session.send(CmdId.PlayerPingRsp, rsp, packet_id)
+        session.send(MsgId.PlayerPingRsp, rsp, packet_id)

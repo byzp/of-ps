@@ -9,11 +9,11 @@ class PacketHandler(ABC):
         pass
 
 
-def packet_handler(cmd_id: int):
+def packet_handler(msg_id: int):
     """Decorator for registering packet handlers"""
 
     def decorator(cls):
-        cls.cmd_id = cmd_id
+        cls.msg_id = msg_id
         return cls
 
     return decorator

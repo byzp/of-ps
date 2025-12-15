@@ -1,4 +1,4 @@
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 import time
 
@@ -150,7 +150,7 @@ def give(cmds: list):
         for item in db.get_item_detail(session.player_id):
             rsp.items.add().ParseFromString(item)
         rsp.temp_pack_max_size = 30
-        session.send(CmdId.PackNotice, rsp, 0)
+        session.send(MsgId.PackNotice, rsp, 0)
 
 
 def firework(cmds):
@@ -172,7 +172,7 @@ def firework(cmds):
         fireworks_info.fireworks_duration_time = cmds[2]
         fireworks_info.fireworks_start_time = cmds[3]
     for session in get_session():
-        session.send(CmdId.FireworksStartNotice, rsp, 0)
+        session.send(MsgId.FireworksStartNotice, rsp, 0)
 
 
 def set_time(cmds):
@@ -215,7 +215,7 @@ def changeScenechannel(cmds):
         rsp.channel_label = 0
 
     for session in target_session:
-        session.send(CmdId.ChangeSceneChannelRsp, rsp, 0)
+        session.send(MsgId.ChangeSceneChannelRsp, rsp, 0)
 
         notice = pb.ServerSceneSyncDataNotice()
         notice.status = StatusCode_pb2.StatusCode_OK
@@ -241,7 +241,7 @@ def changeScenechannel(cmds):
         data.channel_id = session.channel_id
         data.tod_time = 0
         data.channel_label = session.channel_id
-        session.send(CmdId.SceneDataNotice, tmp, 0)
+        session.send(MsgId.SceneDataNotice, tmp, 0)
 
         notice = pb.ServerSceneSyncDataNotice()
         notice.status = pb.StatusCode_OK

@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as GetAchieveOneGroupRsp_pb2
@@ -10,7 +10,7 @@ from utils.bin import bin
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.GetAchieveOneGroupReq)
+@packet_handler(MsgId.GetAchieveOneGroupReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = GetAchieveOneGroupReq_pb2.GetAchieveOneGroupReq()
@@ -18,7 +18,7 @@ class Handler(PacketHandler):
 
         rsp = GetAchieveOneGroupRsp_pb2.GetAchieveOneGroupRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        # session.send(CmdId.GetAchieveOneGroupRsp, rsp) #1761,1762
+        # session.send(MsgId.GetAchieveOneGroupRsp, rsp) #1761,1762
 
         i = req.group_id
         if i == 60010000:

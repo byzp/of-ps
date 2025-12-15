@@ -1,11 +1,11 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import proto.OverField_pb2 as OverField_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 from utils.bin import bin
 
 
-@packet_handler(CmdId.PosterIllustrationListReq)
+@packet_handler(MsgId.PosterIllustrationListReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         rsp = OverField_pb2.PosterIllustrationListRsp()
@@ -25,5 +25,5 @@ class Handler(PacketHandler):
         p3.status = OverField_pb2.RewardStatus_Reward
         """
 
-        session.send(CmdId.PosterIllustrationListRsp, rsp, packet_id)  # 1423,1424
+        session.send(MsgId.PosterIllustrationListRsp, rsp, packet_id)  # 1423,1424
         # session.sbin(1424, bin["1424"])

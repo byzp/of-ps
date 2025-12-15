@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as MonsterDead_pb2
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 """
 
 
-@packet_handler(CmdId.MonsterDeadReq)
+@packet_handler(MsgId.MonsterDeadReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = MonsterDead_pb2.MonsterDeadReq()
@@ -72,7 +72,7 @@ class Handler(PacketHandler):
             item.pack_type = item_data["pack_type"]
             item.extra_quality = item_data["extra_quality"]
 
-        session.send(CmdId.MonsterDeadRsp, rsp, packet_id)
+        session.send(MsgId.MonsterDeadRsp, rsp, packet_id)
 
 
 # 硬编码测试数据

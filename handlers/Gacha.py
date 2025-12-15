@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as GachaReq_pb2
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 """
 
 
-@packet_handler(CmdId.GachaReq)
+@packet_handler(MsgId.GachaReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = GachaReq_pb2.GachaReq()
@@ -60,7 +60,7 @@ class Handler(PacketHandler):
         rsp.info.optional_value = TEST_DATA["info"]["optional_value"]
         rsp.info.guarantee = TEST_DATA["info"]["guarantee"]
 
-        session.send(CmdId.GachaRsp, rsp, packet_id)
+        session.send(MsgId.GachaRsp, rsp, packet_id)
 
 
 # Hardcoded test data

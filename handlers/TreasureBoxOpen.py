@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as TreasureBoxOpenReq_pb2
@@ -10,7 +10,7 @@ import proto.OverField_pb2 as StatusCode_pb2
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.TreasureBoxOpenReq)
+@packet_handler(MsgId.TreasureBoxOpenReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = TreasureBoxOpenReq_pb2.TreasureBoxOpenReq()
@@ -64,7 +64,7 @@ class Handler(PacketHandler):
 
         rsp.next_refresh_time = TEST_DATA["next_refresh_time"]
 
-        session.send(CmdId.TreasureBoxOpenRsp, rsp, packet_id)
+        session.send(MsgId.TreasureBoxOpenRsp, rsp, packet_id)
 
 
 # Hardcoded test data from TreasureBoxOpenRsp.json

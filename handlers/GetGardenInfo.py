@@ -1,12 +1,12 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 
 import proto.OverField_pb2 as GetGardenInfoRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 import utils.db as db
 
 
-@packet_handler(CmdId.GetGardenInfoReq)
+@packet_handler(MsgId.GetGardenInfoReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         rsp = GetGardenInfoRsp_pb2.GetGardenInfoRsp()
@@ -20,4 +20,4 @@ class Handler(PacketHandler):
             rsp.garden_info.is_open,
         ) = db.get_garden_info(session.player_id)
 
-        session.send(CmdId.GetGardenInfoRsp, rsp, packet_id)  # 1685,1686
+        session.send(MsgId.GetGardenInfoRsp, rsp, packet_id)  # 1685,1686

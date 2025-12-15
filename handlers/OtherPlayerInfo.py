@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as OtherPlayerInfoReq_pb2
@@ -13,7 +13,7 @@ import proto.OverField_pb2 as pb
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.OtherPlayerInfoReq)
+@packet_handler(MsgId.OtherPlayerInfoReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = OtherPlayerInfoReq_pb2.OtherPlayerInfoReq()
@@ -75,5 +75,5 @@ class Handler(PacketHandler):
         )
 
         session.send(
-            CmdId.OtherPlayerInfoRsp, rsp, packet_id
+            MsgId.OtherPlayerInfoRsp, rsp, packet_id
         )  # 1965 1966 获取其他玩家信息

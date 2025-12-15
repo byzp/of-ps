@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as BossRushInfoReq_pb2
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 """
 
 
-@packet_handler(CmdId.BossRushInfoReq)
+@packet_handler(MsgId.BossRushInfoReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = BossRushInfoReq_pb2.BossRushInfoReq()
@@ -45,7 +45,7 @@ class Handler(PacketHandler):
         # for character_id in TEST_DATA["info"]["used_characters"]:
         #     rsp.info.used_characters.append(character_id)
 
-        session.send(CmdId.BossRushInfoRsp, rsp, packet_id)
+        session.send(MsgId.BossRushInfoRsp, rsp, packet_id)
 
 
 # Hardcoded test data

@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as NpcTalkReq_pb2
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 """
 
 
-@packet_handler(CmdId.NpcTalkReq)
+@packet_handler(MsgId.NpcTalkReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = NpcTalkReq_pb2.NpcTalkReq()
@@ -24,7 +24,7 @@ class Handler(PacketHandler):
         # Set data from test data
         rsp.status = TEST_DATA["status"]
 
-        session.send(CmdId.NpcTalkRsp, rsp, packet_id)
+        session.send(MsgId.NpcTalkRsp, rsp, packet_id)
 
         # Call QuestNotice handler to send quest data notification
         try:

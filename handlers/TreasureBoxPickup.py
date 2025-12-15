@@ -1,5 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
-from network.cmd_id import CmdId
+from network.msg_id import MsgId
 import logging
 
 import proto.OverField_pb2 as TreasureBoxPickupReq_pb2
@@ -10,7 +10,7 @@ import proto.OverField_pb2 as StatusCode_pb2
 logger = logging.getLogger(__name__)
 
 
-@packet_handler(CmdId.TreasureBoxPickupReq)
+@packet_handler(MsgId.TreasureBoxPickupReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = TreasureBoxPickupReq_pb2.TreasureBoxPickupReq()
@@ -62,7 +62,7 @@ class Handler(PacketHandler):
             item_detail.pack_type = item_data["pack_type"]
             item_detail.extra_quality = item_data["extra_quality"]
 
-        session.send(CmdId.TreasureBoxPickupRsp, rsp, packet_id)
+        session.send(MsgId.TreasureBoxPickupRsp, rsp, packet_id)
 
 
 # Hardcoded test data from TreasureBoxPickupRsp.json
