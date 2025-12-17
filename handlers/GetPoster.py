@@ -24,7 +24,7 @@ class Handler(PacketHandler):
         max_num = req.end_index - req.start_index
         total_num = 0
 
-        for item in db.get_item_detail(session.player_id):
+        for item in db.get_item_detail(session.player_id, table="items_s"):
             tmp = pb.ItemDetail()
             tmp.ParseFromString(item)
             if tmp.main_item.item_tag == pb.EBagItemTag_Poster:

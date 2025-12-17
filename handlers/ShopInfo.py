@@ -30,5 +30,3 @@ class Handler(PacketHandler):
                     tmp.pool_id = i["shop_pool_i_d"]
                     tmp.pool_index = 1  # i[""]
         session.send(MsgId.ShopInfoRsp, rsp, packet_id)  # 1675,1676
-        # session.sbin(MsgId.ShopInfoRsp, bin["1676"])
-        # session.sbin(1208, bin["1208"],  packet_id)

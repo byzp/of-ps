@@ -11,7 +11,7 @@ from server.scene_data import get_session, lock_scene_action
 import server.scene_data as scene_data
 import server.notice_sync as notice_sync
 import utils.db as db
-
+from utils.pb_create import make_item
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ def give(cmds: list):
     match = False
     target_session = []
     if len(cmds) < 3:
-        logger.warning("give player_id/all item_id [num]")
+        logger.warning("give player_id/all item_id/all [num]")
         return
     else:
         cmds = list(map(lambda x: int(x) if x.lstrip("+-").isdigit() else x, cmds))
@@ -53,103 +53,23 @@ def give(cmds: list):
         logger.warning("No matching players found.")
         return
     for session in target_session:
+        rsp = pb.PackNotice()
+        rsp.status = StatusCode_pb2.StatusCode_OK
         instance_id = db.get_instance_id(session.player_id)
         for i in res["Item"]["item"]["datas"]:
             if i["i_d"] == cmds[2] or cmds[2] == "all":
                 item = pb.ItemDetail()
-                itemb = db.get_item_detail(session.player_id, i["i_d"])
-                if itemb:
-                    item.ParseFromString(itemb)
-                tmp = item.main_item
-                tmp.item_id = i["i_d"]
-                tmp.item_tag = i["new_bag_item_tag"]
-                match i["new_bag_item_tag"]:
-                    case pb.EBagItemTag_Gift:
-                        tmp.base_item.item_id = i["i_d"]
-                        db.set_item_detail(
-                            session.player_id, item.SerializeToString(), i["i_d"]
-                        )
-                    case pb.EBagItemTag_Weapon:
-                        weapon = tmp.weapon
-                        weapon.weapon_id = i["i_d"]
-                        weapon.instance_id = instance_id
-                        weapon.attack = 35
-                        weapon.damage_balance = 0  # 平衡
-                        weapon.critical_ratio = 0  # 暴击
-                        # weapon.wearer_id = #已装备的角色id
-                        weapon.level = 1
-                        # weapon.strength_level=5
-                        weapon.star = 1
-                        weapon.property_index = 1
-                        db.set_item_detail(
-                            session.player_id,
-                            item.SerializeToString(),
-                            None,
-                            instance_id,
-                        )
-                        instance_id += 1
-                    case pb.EBagItemTag_Armor:
-                        armor = tmp.armor
-                        armor.armor_id = i["i_d"]
-                        armor.instance_id = instance_id
-                        armor.main_property_type = pb.EPropertyType_MaxHP
-                        armor.main_property_val = 100
-                        armor.level = 100
-                        armor.property_index = 1
-                        db.set_item_detail(
-                            session.player_id,
-                            item.SerializeToString(),
-                            None,
-                            instance_id,
-                        )
-                        instance_id += 1
-                    case pb.EBagItemTag_Poster:
-                        poster = tmp.poster
-                        poster.poster_id = i["i_d"]
-                        poster.instance_id = instance_id
-                        poster.star = 1
-                        db.set_item_detail(
-                            session.player_id,
-                            item.SerializeToString(),
-                            None,
-                            instance_id,
-                        )
-                        instance_id += 1
-                    case pb.EBagItemTag_Fashion:  # 时装
-                        outfit = tmp.outfit
-                        outfit.outfit_id = i["i_d"]
-                        tmp = outfit.dye_schemes.add()
-                        tmp.is_un_lock = True
-                        items = item.SerializeToString()
-                        db.set_item_detail(
-                            session.player_id, item.SerializeToString(), i["i_d"]
-                        )
-                    case pb.EBagItemTag_Card:
-                        pass
-                    case pb.EBagItemTag_SpellCard:
-                        pass
-                    case pb.EBagItemTag_Fish:
-                        pass
-                    case pb.EBagItemTag_Recipe:
-                        pass
-                    case (
-                        _
-                    ):  # Fragment, Collection, Material, Currency, Food, Item, Head,
-                        tmp.base_item.item_id = i["i_d"]
-                        if len(cmds) >= 4:
-                            tmp.base_item.num += cmds[3]
-                        else:
-                            tmp.base_item.num += 1
-                        items = item.SerializeToString()
-                        db.set_item_detail(session.player_id, items, i["i_d"])
+                tmp = db.get_item_detail(session.player_id, i["i_d"])
+                if not tmp:
+                    tmp = make_item(i["i_d"], 0, session.player_id)
+                item.ParseFromString(tmp)
+                item.main_item.base_item.num += 1 if len(cmds) < 3 else cmds[3]
+                rsp.items.add().CopyFrom(item)
+                db.set_item_detail(
+                    session.player_id, item.SerializeToString(), i["i_d"]
+                )
                 if not cmds[2] == "all":
                     break
-
-        rsp = pb.PackNotice()
-        rsp.status = StatusCode_pb2.StatusCode_OK
-        for item in db.get_item_detail(session.player_id):
-            rsp.items.add().ParseFromString(item)
-        rsp.temp_pack_max_size = 30
         session.send(MsgId.PackNotice, rsp, 0)
 
 

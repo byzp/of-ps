@@ -5,7 +5,6 @@ import logging
 import proto.OverField_pb2 as GetArchiveInfoReq_pb2
 import proto.OverField_pb2 as GetArchiveInfoRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-from utils.bin import bin
 
 logger = logging.getLogger(__name__)
 
@@ -18,18 +17,15 @@ class Handler(PacketHandler):
 
         rsp = GetArchiveInfoRsp_pb2.GetArchiveInfoRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        # session.send(MsgId.GetArchiveInfoRsp, rsp) #1213,1214
-        key = req.key
-        if key == "BlessingTreeTutotal":
-            session.sbin(1214, bin["1214-1"], packet_id)
-            return
-        if key == "FixOrFlolowMode":
-            session.sbin(1214, bin["1214-2"], packet_id)
-            return
-        if key == "":
-            session.sbin(1214, bin["1214-3"], packet_id)
-            return
-        if key == "ButtonModeState":
-            session.sbin(1214, bin["1214-4"], packet_id)
-            return
-        session.sbin(1214, bin["1214-3"], packet_id)
+        match req.key:
+            case "BlessingTreeTutotal":
+                rsp.value = "1"
+            case "FixOrFlolowMode":
+                pass
+            case "":
+                rsp.value = "5/31/2025"
+            case "ButtonModeState":
+                pass
+            case _:
+                rsp.value = "已显示"
+        session.send(MsgId.GetArchiveInfoRsp, rsp, packet_id)  # 1213,1214

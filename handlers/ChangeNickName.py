@@ -4,6 +4,7 @@ import logging
 
 import proto.OverField_pb2 as ChangeNickNameReq_pb2
 import proto.OverField_pb2 as ChangeNickNameRsp_pb2
+import proto.OverField_pb2 as PackNotice_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 import proto.OverField_pb2 as pb
 from server.scene_data import up_scene_action
@@ -38,13 +39,26 @@ class Handler(PacketHandler):
             db.set_players_info(session.player_id, "birthday", req.birthday)
         db.set_players_info(session.player_id, "player_name", req.nick_name)
 
-        item = db.get_item_detail(session.player_id, 102)  # 星石-10
+        item = db.get_item_detail(session.player_id, 102)
         tmp = rsp.items.add()
         tmp.ParseFromString(item)
-        tmp.main_item.base_item.num -= 10
-        db.set_item_detail(session.player_id, tmp.SerializeToString(), 102, None)
+        if tmp.main_item.base_item.num >= 10:  # 一般客户端会检查, 补上以防万一
+            tmp.main_item.base_item.num -= 10  # 星石-10
+            db.set_item_detail(session.player_id, tmp.SerializeToString(), 102, None)
+        else:
+            rsp.status = StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+            rsp.ClearField("items")
+            session.send(MsgId.ChangeNickNameRsp, rsp, packet_id)  # 修改昵称 1527 1528
+            return
 
         session.send(MsgId.ChangeNickNameRsp, rsp, packet_id)  # 修改昵称 1527 1528
+
+        # 同步背包物品
+        rsp = PackNotice_pb2.PackNotice()
+        rsp.status = StatusCode_pb2.StatusCode_OK
+        item = rsp.items.add()
+        item.CopyFrom(tmp)
+        session.send(MsgId.PackNotice, rsp, 0)
 
         # 发送场景同步通知
         notice = pb.ServerSceneSyncDataNotice()

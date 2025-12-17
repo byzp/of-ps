@@ -17,6 +17,8 @@ class Config:
     SERVER_MAX_TPS = 120
     COMPRESS_THRESHOLD = 1200
 
+    REJECT_PAYMENT = False  # CreatePayOrderReq
+
     # database
     DB_PATH = "./player.db"
     IN_MEMORY = True

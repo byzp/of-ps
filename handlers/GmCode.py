@@ -8,12 +8,9 @@ import proto.OverField_pb2 as StatusCode_pb2
 
 logger = logging.getLogger(__name__)
 
-
 """
 # GM代码处理 1013 1014
 """
-
-logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.GmCodeReq)

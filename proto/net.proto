@@ -4530,6 +4530,7 @@ message PlayerAppearance {
 }
 
 message PlayerDailyTask {
+    map<uint32, uint32> tasks = 1,
     uint32 today_converted = 2;
     uint32 exchange_times_left = 3;
 }
