@@ -3086,6 +3086,7 @@ message CharacterAppearance {
     uint32 mining_hammer_instance_id = 6;
     uint32 collection_gloves_instance_id = 7;
     uint32 fishing_rod_instance_id = 8;
+    uint32 vehicle_instance_id = 9;
 }
 
 message SceneServerData {
@@ -4530,7 +4531,7 @@ message PlayerAppearance {
 }
 
 message PlayerDailyTask {
-    map<uint32, uint32> tasks = 1,
+    map<uint32, uint32> tasks = 1;
     uint32 today_converted = 2;
     uint32 exchange_times_left = 3;
 }
@@ -8489,44 +8490,75 @@ message SceneSitVehicleRsp {
     bool is_sit = 5;
 }
 
+enum GemDuelActionType {
+    GEM_DUEL_ACTION_NONE = 0;
+    GEM_DUEL_ACTION_MOVE = 1;
+    GEM_DUEL_ACTION_CLEAR = 2;
+    GEM_DUEL_ACTION_CAST_SKILL = 3;
+    GEM_DUEL_ACTION_ROUND = 4;
+    GEM_DUEL_ACTION_SPAWN = 5;
+    GEM_DUEL_ACTION_DESTROY = 6;
+    GEM_DUEL_ACTION_ATTACK = 7;
+    GEM_DUEL_ACTION_GET_ENERGY = 8;
+    GEM_DUEL_ACTION_WIN = 9;
+    GEM_DUEL_ACTION_RESET_GRIDS = 10;
+    GEM_DUEL_ACTION_RECOMMEND = 11;
+    GEM_DUEL_ACTION_HEALTH_CHANGE = 12;
+    GEM_DUEL_ACTION_CHANGE_GEM_TYPE = 13;
+    GEM_DUEL_ACTION_CHANGE_HEALTH_MAX = 14;
+    GEM_DUEL_ACTION_PASSIVE_SKILL = 15;
+    GEM_DUEL_ACTION_CHANGE_GEM_DEF_RATIO = 16;
+    GEM_DUEL_ACTION_SHIELD_CHANGE = 17;
+}
+
 enum GemDuelGameType {
-    GEM_DUEL_GAME_TYPE_NONE = 0;
-    GEM_DUEL_GAME_TYPE_PVE = 1;
-    GEM_DUEL_GAME_TYPE_ARENA = 2;
+    GEM_DUEL_GAME_NONE = 0;
+    GEM_DUEL_GAME_PVE = 1;
+    GEM_DUEL_GAME_ARENA = 2;
 }
 
 enum GemDuelGamePlayerType {
-    GEM_DUEL_GAME_PLAYER_TYPE_NONE = 0;
-    GEM_DUEL_GAME_PLAYER_TYPE_HUMAN = 1;
-    GEM_DUEL_GAME_PLAYER_TYPE_AI = 2;
-}
-
-enum GemDuelActionType {
-    GEM_DUEL_ACTION_TYPE_NONE = 0;
-    GEM_DUEL_ACTION_TYPE_MOVE = 1;
-    GEM_DUEL_ACTION_TYPE_CLEAR = 2;
-    GEM_DUEL_ACTION_TYPE_CAST_SKILL = 3;
-    GEM_DUEL_ACTION_TYPE_ROUND = 4;
-    GEM_DUEL_ACTION_TYPE_SPAWN = 5;
-    GEM_DUEL_ACTION_TYPE_DESTROY = 6;
-    GEM_DUEL_ACTION_TYPE_ATTACK = 7;
-    GEM_DUEL_ACTION_TYPE_GET_ENERGY = 8;
-    GEM_DUEL_ACTION_TYPE_WIN = 9;
-    GEM_DUEL_ACTION_TYPE_RESET_GRIDS = 10;
-    GEM_DUEL_ACTION_TYPE_RECOMMEND = 11;
-    GEM_DUEL_ACTION_TYPE_HEALTH_CHANGE = 12;
-    GEM_DUEL_ACTION_TYPE_CHANGE_GEM_TYPE = 13;
-    GEM_DUEL_ACTION_TYPE_CHANGE_HEALTH_MAX = 14;
-    GEM_DUEL_ACTION_TYPE_PASSIVE_SKILL = 15;
-    GEM_DUEL_ACTION_TYPE_CHANGE_GEM_DEF_RATIO = 16;
-    GEM_DUEL_ACTION_TYPE_SHIELD_CHANGE = 17;
+    GEM_DUEL_PLAYER_NONE = 0;
+    GEM_DUEL_PLAYER_HUMAN = 1;
+    GEM_DUEL_PLAYER_AI = 2;
 }
 
 enum GemDuelSkillTargetType {
-    GEM_DUEL_SKILL_TARGET_TYPE_NONE = 0;
-    GEM_DUEL_SKILL_TARGET_TYPE_SELF = 1;
-    GEM_DUEL_SKILL_TARGET_TYPE_TARGET = 2;
-    GEM_DUEL_SKILL_TARGET_TYPE_TEAM_ALL = 3;
+    GEM_DUEL_SKILL_TARGET_NONE = 0;
+    GEM_DUEL_SKILL_TARGET_SELF = 1;
+    GEM_DUEL_SKILL_TARGET_TARGET = 2;
+    GEM_DUEL_SKILL_TARGET_TEAM_ALL = 3;
+}
+
+
+message GemDuelActionMove {
+    int32 from_grid_index = 1;
+    int32 to_grid_index = 2;
+}
+
+message GemDuelCharacterData {
+    uint32 id = 1;
+    uint32 level = 2;
+    uint32 star = 3;
+    repeated uint32 unlock_passive_skill_index = 4;
+    bool is_favorite = 5;
+}
+
+message GemDuelItem {
+    uint32 item_id = 1;
+    int64 num = 2;
+}
+
+message GemDuelTeamData {
+    uint32 team_id = 1;
+    string team_name = 2;
+    repeated uint32 characters = 3;
+}
+
+message GemDuelGrid {
+    uint32 type_id = 1;
+    int32 x = 2;
+    int32 y = 3;
 }
 
 message GemDuelGameCharacter {
@@ -8551,10 +8583,12 @@ message GemDuelGamePlayer {
     uint32 index = 4;
 }
 
-message GemDuelGrid {
-    uint32 type_id = 1;
-    int32 x = 2;
-    int32 y = 3;
+message GemDuelGameData {
+    GemDuelGameType game_type = 1;
+    repeated GemDuelGamePlayer players = 2;
+    uint32 stage_id = 3;
+    repeated GemDuelGrid grids = 4;
+    uint32 round_player_index = 5;
 }
 
 message GemDuelSkillEffect {
@@ -8566,28 +8600,21 @@ message GemDuelSkillEffect {
     GemDuelActionType skill_action_type = 6;
 }
 
-message GemDuelActionMove {
-    int32 from_grid_index = 1;
-    int32 to_grid_index = 2;
-}
-
-message GemDuelCharacterData {
-    uint32 id = 1;
-    uint32 level = 2;
-    uint32 star = 3;
-    repeated uint32 unlock_passive_skill_index = 4;
-    bool is_favorite = 5;
-}
-
-message GemDuelItem {
-    uint32 item_id = 1;
-    int64 num = 2; // C# long 对应 proto int64
-}
-
-message GemDuelTeamData {
-    uint32 team_id = 1;
-    string team_name = 2;
-    repeated uint32 characters = 3;
+message GemDuelAction {
+    GemDuelActionType action_type = 1;
+    repeated int32 grid_index_list = 2;
+    repeated GemDuelActionMove move_list = 3;
+    repeated GemDuelGrid grid_list = 4;
+    uint32 player_index = 5;
+    uint32 skill_id = 6;
+    uint32 skill_target_index = 7;
+    uint32 total_damage = 8;
+    uint32 character_index = 9;
+    uint32 character_index2 = 10;
+    uint32 energy = 11;
+    GemDuelActionMove move = 12;
+    repeated GemDuelSkillEffect skill_effect_list = 13;
+    uint32 value = 15; // 注意：原字段编号14缺失，保留15
 }
 
 message GemDuelArenaPlayerData {
@@ -8615,32 +8642,6 @@ message GemDuelArenaData {
     uint32 win_game = 7;
 }
 
-message GemDuelGameData {
-    GemDuelGameType game_type = 1;
-    repeated GemDuelGamePlayer players = 2;
-    uint32 stage_id = 3;
-    repeated GemDuelGrid grids = 4;
-    uint32 round_player_index = 5;
-}
-
-message GemDuelAction {
-    GemDuelActionType action_type = 1;
-    repeated int32 grid_index_list = 2;
-    repeated GemDuelActionMove move_list = 3;
-    repeated GemDuelGrid grid_list = 4;
-    uint32 player_index = 5;
-    uint32 skill_id = 6;
-    uint32 skill_target_index = 7;
-    uint32 total_damage = 8;
-    uint32 character_index = 9;
-    uint32 character_index2 = 10;
-    uint32 energy = 11;
-    GemDuelActionMove move = 12;
-    repeated GemDuelSkillEffect skill_effect_list = 13;
-    // 字段14无定义，跳过
-    uint32 value = 15;
-}
-
 message GemDuelArenaRankPlayerInfo {
     uint32 player_id = 1;
     string name = 2;
@@ -8658,9 +8659,11 @@ message DungeonOpenFinalBoxNotice {
     uint32 dungeon_id = 2;
 }
 
-message GemDuelInfoReq {}
+message GemDuelInfoReq {
+}
 
 message GemDuelInfoRsp {
+    StatusCode status = 1;
     GemDuelGameData game_data = 2;
     repeated GemDuelCharacterData characters = 3;
     repeated GemDuelItem items = 4;
@@ -8677,6 +8680,7 @@ message GemDuelEnterMainDungeonReq {
 }
 
 message GemDuelEnterMainDungeonRsp {
+    StatusCode status = 1;
     GemDuelGameData game_data = 2;
     GemDuelActionMove recommend = 3;
 }
@@ -8690,6 +8694,7 @@ message GemDuelSetTeamCharacterReq {
 }
 
 message GemDuelSetTeamCharacterRsp {
+    StatusCode status = 1;
     GemDuelTeamData team = 2;
 }
 
@@ -8700,29 +8705,38 @@ message GemDuelActionReq {
     uint32 target_index = 4;
 }
 
-message GemDuelActionRsp {}
+message GemDuelActionRsp {
+    StatusCode status = 1;
+}
 
 message GemDuelActionNotice {
+    StatusCode status = 1;
     repeated GemDuelAction action_list = 2;
 }
 
 message GemDuelPackUpdateNotice {
+    StatusCode status = 1;
     repeated GemDuelItem items = 2;
 }
 
-message GemDuelDrawExtraStaminaReq {}
+message GemDuelDrawExtraStaminaReq {
+}
 
-message GemDuelDrawExtraStaminaRsp {}
+message GemDuelDrawExtraStaminaRsp {
+    StatusCode status = 1;
+}
 
 message GemDuelCharacterLevelUpReq {
     uint32 character_id = 1;
 }
 
 message GemDuelCharacterLevelUpRsp {
+    StatusCode status = 1;
     GemDuelCharacterData character = 2;
 }
 
 message GemDuelNewCharacterNotice {
+    StatusCode status = 1;
     GemDuelCharacterData character = 2;
 }
 
@@ -8732,6 +8746,7 @@ message GemDuelCharacterStarUpReq {
 }
 
 message GemDuelCharacterStarUpRsp {
+    StatusCode status = 1;
     GemDuelCharacterData character = 2;
 }
 
@@ -8742,12 +8757,15 @@ message GemDuelCharacterUnlockSkillReq {
 }
 
 message GemDuelCharacterUnlockSkillRsp {
+    StatusCode status = 1;
     GemDuelCharacterData character = 2;
 }
 
-message GemDuelBuyStaminaReq {}
+message GemDuelBuyStaminaReq {
+}
 
 message GemDuelBuyStaminaRsp {
+    StatusCode status = 1;
     uint32 buy_stamina_count = 2;
 }
 
@@ -8757,6 +8775,7 @@ message GemDuelSetCharacterFavoriteReq {
 }
 
 message GemDuelSetCharacterFavoriteRsp {
+    StatusCode status = 1;
     GemDuelCharacterData character = 2;
 }
 
@@ -8766,10 +8785,12 @@ message GemDuelSetTeamNameReq {
 }
 
 message GemDuelSetTeamNameRsp {
+    StatusCode status = 1;
     GemDuelTeamData team = 2;
 }
 
 message GemDuelMainDungeonEndNotice {
+    StatusCode status = 1;
     bool is_win = 2;
     repeated GemDuelItem rewards = 3;
 }
@@ -8781,25 +8802,31 @@ message GemDuelEnterArenaDungeonReq {
 }
 
 message GemDuelEnterArenaDungeonRsp {
+    StatusCode status = 1;
     GemDuelGameData game_data = 2;
     GemDuelActionMove recommend = 3;
 }
 
 message GemDuelArenaDungeonEndNotice {
+    StatusCode status = 1;
     bool is_win = 2;
     repeated GemDuelItem rewards = 3;
     GemDuelArenaData arena = 4;
 }
 
-message GemDuelArenaRefreshRivalReq {}
+message GemDuelArenaRefreshRivalReq {
+}
 
 message GemDuelArenaRefreshRivalRsp {
+    StatusCode status = 1;
     GemDuelArenaData arena = 2;
 }
 
-message GemDuelArenaRankReq {}
+message GemDuelArenaRankReq {
+}
 
 message GemDuelArenaRankRsp {
+    StatusCode status = 1;
     repeated GemDuelArenaRankPlayerInfo fight_power_top_rank = 2;
     repeated GemDuelArenaRankPlayerInfo point_top_rank = 3;
 }
@@ -8809,6 +8836,7 @@ message InheritCodeUseReq {
 }
 
 message InheritCodeUseRsp {
+    StatusCode status = 1;
     string code_str = 2;
     repeated ItemDetail rewards = 3;
 }

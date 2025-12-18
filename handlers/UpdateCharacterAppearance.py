@@ -20,7 +20,6 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         char_id = req.char_id
-
         characters = db.get_characters(session.player_id, char_id)
         if not characters:
             rsp = UpdateCharacterAppearanceRsp_pb2.UpdateCharacterAppearanceRsp()
@@ -43,6 +42,7 @@ class Handler(PacketHandler):
                 "mining_hammer_instance_id",
                 "collection_gloves_instance_id",
                 "fishing_rod_instance_id",
+                "vehicle_instance_id",
             ]
             for field_name in fields_to_check:
                 if getattr(appearance, field_name) != getattr(
@@ -73,6 +73,7 @@ class Handler(PacketHandler):
             req.appearance.collection_gloves_instance_id
         )
         rsp.appearance.fishing_rod_instance_id = req.appearance.fishing_rod_instance_id
+        rsp.appearance.vehicle_instance_id = req.appearance.vehicle_instance_id
 
         session.send(MsgId.UpdateCharacterAppearanceRsp, rsp, packet_id)
 
