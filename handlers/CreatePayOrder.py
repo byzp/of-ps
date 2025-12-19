@@ -85,5 +85,7 @@ class Handler(PacketHandler):
         if req.to_player_id:
             if target_session:
                 target_session.send(MsgId.PaySendGoodsNotice, rsp, 0)
+                target_session.send(MsgId.PackNotice, rsp1, 0)
         else:
             session.send(MsgId.PaySendGoodsNotice, rsp, 0)
+            session.send(MsgId.PackNotice, rsp1, 0)

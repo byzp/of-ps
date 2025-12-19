@@ -4,8 +4,9 @@ import logging
 
 import proto.OverField_pb2 as GetAchieveOneGroupRsp_pb2
 import proto.OverField_pb2 as GetAchieveOneGroupReq_pb2
+import proto.OverField_pb2 as OneGroupAchieveInfo_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-from utils.bin import bin
+import utils.db as db
 
 logger = logging.getLogger(__name__)
 
@@ -18,28 +19,9 @@ class Handler(PacketHandler):
 
         rsp = GetAchieveOneGroupRsp_pb2.GetAchieveOneGroupRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        # session.send(MsgId.GetAchieveOneGroupRsp, rsp) #1761,1762
+        achieve = db.get_achieve(session.player_id, req.group_id)
+        tmp = OneGroupAchieveInfo_pb2.OneGroupAchieveInfo()
+        tmp.ParseFromString(achieve)
+        rsp.current_group_achieve_info.CopyFrom(tmp)
 
-        i = req.group_id
-        if i == 60010000:
-            session.sbin(1762, bin["1762-1"], packet_id)
-        if i == 60020000:
-            session.sbin(1762, bin["1762-2"], packet_id)
-        if i == 60030000:
-            session.sbin(1762, bin["1762-3"], packet_id)
-        if i == 60040000:
-            session.sbin(1762, bin["1762-4"], packet_id)
-        if i == 60050000:
-            session.sbin(1762, bin["1762-5"], packet_id)
-        if i == 60060000:
-            session.sbin(1762, bin["1762-6"], packet_id)
-        if i == 60070000:
-            session.sbin(1762, bin["1762-7"], packet_id)
-        if i == 60080000:
-            session.sbin(1762, bin["1762-8"], packet_id)
-        if i == 60090000:
-            session.sbin(1762, bin["1762-9"], packet_id)
-        if i == 60100000:
-            session.sbin(1762, bin["1762-10"], packet_id)
-        if i == 60110000:
-            session.sbin(1762, bin["1762-11"], packet_id)
+        session.send(MsgId.GetAchieveOneGroupRsp, rsp, packet_id)  # 1761,1762, 成就

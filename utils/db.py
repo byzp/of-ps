@@ -14,76 +14,20 @@ import proto.OverField_pb2 as pb
 
 logger = logging.getLogger(__name__)
 
-conn = None
 db = None
 lock_db = threading.Lock()
 
 
-class RWLock:
-    # 多读，单写，写优先
-    def __init__(self):
-        self._lock = threading.Lock()
-        self._cond = threading.Condition(self._lock)
-        self._readers = 0
-        self._writers_waiting = 0
-        self._writing = False
-
-    @contextmanager
-    def read_lock(self):
-        with self._cond:
-            # 有写操作进行中 或 有写操作等待
-            while self._writing or self._writers_waiting > 0:
-                self._cond.wait()
-            self._readers += 1
-        try:
-            yield
-        finally:
-            with self._cond:
-                self._readers -= 1
-                if self._readers == 0:
-                    self._cond.notify_all()
-
-    @contextmanager
-    def write_lock(self):
-        with self._cond:
-            self._writers_waiting += 1
-            # 有读操作 或 有写操作进行中
-            while self._readers > 0 or self._writing:
-                self._cond.wait()
-            self._writers_waiting -= 1
-            self._writing = True
-        try:
-            yield
-        finally:
-            with self._cond:
-                self._writing = False
-                self._cond.notify_all()
-
-
 class db_warp:
-    __slots__ = ("_conn", "_rw_lock", "_write_patterns")
+    __slots__ = ("_conn", "_rw_lock")
 
     def __init__(self, conn):
         self._conn = conn
-        self._rw_lock = RWLock()
-        self._write_patterns = frozenset(
-            {"INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER"}
-        )
-
-    def _is_write_operation(self, sql: str) -> bool:
-        # 去除前导空白，取第一个词并大写
-        first_word = sql.strip().split(maxsplit=1)[0].upper()
-        return first_word in self._write_patterns
+        self._rw_lock = lock_db
 
     def execute(self, *args, **kwargs):
-        sql = args[0]
-
-        if self._is_write_operation(sql):
-            with self._rw_lock.write_lock():
-                return self._conn.execute(*args, **kwargs)
-        else:
-            with self._rw_lock.read_lock():
-                return self._conn.execute(*args, **kwargs)
+        with self._rw_lock:
+            return self._conn.execute(*args, **kwargs)
 
 
 def exit():
@@ -209,6 +153,15 @@ def init():
             PRIMARY KEY (player_id, friend_id),
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE,
             FOREIGN KEY(friend_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS achieve (
+            player_id INTEGER NOT NULL,
+            group_id INTEGER NOT NULL,
+            achieve_quest_blob BLOB NOT NULL,
+            PRIMARY KEY (player_id, group_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE,
+            FOREIGN KEY(group_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
 
         INSERT OR IGNORE INTO users (id, username, password, user_token) VALUES (1000000, "", "", "");
@@ -341,6 +294,21 @@ def init_player(player_id):
         "INSERT OR REPLACE INTO items (player_id, item_id, item_detail_blob) VALUES (?, ?, ?)",
         (player_id, 102, item.SerializeToString()),
     )
+
+    # 初始化成就列表
+    for group in res["AchieveQuest"]["achieve_quest_group"]["datas"]:
+        achive_quest = pb.OneGroupAchieveInfo()
+        achive_quest.group_id = group["i_d"]
+        for group_info in group["achieve_quest_group_info"]:
+            lst = achive_quest.achieve_lst.add()
+            lst.achieve_id = group_info["achieve_condition_i_d"]
+            # for achieve in res["Achieve"]["achieve"]["datas"]:
+            #     if achieve.get("i_d", 0) == group_info["achieve_condition_i_d"]:
+            #       if group["i_d"] in []:
+            #         lst.count = achieve[
+            #             "count_param"
+            #         ]
+        set_achieve(player_id, group["i_d"], achive_quest.SerializeToString())
 
 
 def verify_sdk_user_info(user_id, login_token):
@@ -755,4 +723,23 @@ def del_friend_info(
             player_id,
             friend_id,
         ),
+    )
+
+
+def get_achieve(player_id, group_id):
+    """成就列表"""
+    cur = db.execute(
+        "SELECT achieve_quest_blob FROM achieve WHERE player_id=? AND group_id=?",
+        (player_id, group_id),
+    )
+    row = cur.fetchone()
+    if row:
+        return row[0]
+    return None
+
+
+def set_achieve(player_id, group_id, achieve_quest_blob):
+    db.execute(
+        "INSERT OR REPLACE INTO achieve (player_id, group_id, achieve_quest_blob) VALUES (?, ?, ?)",
+        (player_id, group_id, achieve_quest_blob),
     )
