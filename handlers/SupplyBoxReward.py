@@ -1,17 +1,17 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
+import time
 
 import proto.OverField_pb2 as SupplyBoxRewardReq_pb2
 import proto.OverField_pb2 as SupplyBoxRewardRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-
+import proto.OverField_pb2 as ItemDetail
+import proto.OverField_pb2 as PackNotice_pb2
+import utils.db as db
+from utils.pb_create import make_item
 
 logger = logging.getLogger(__name__)
-
-"""
- #补给箱奖励 1893 1894 有问题不会弹出奖励
-"""
 
 
 @packet_handler(MsgId.SupplyBoxRewardReq)
@@ -23,55 +23,31 @@ class Handler(PacketHandler):
         rsp = SupplyBoxRewardRsp_pb2.SupplyBoxRewardRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
-        # Set fields from hardcoded test data
-        rsp.next_reward_time = TEST_DATA["next_reward_time"]
+        rsp1 = PackNotice_pb2.PackNotice()
+        rsp1.status = StatusCode_pb2.StatusCode_OK
+        item = db.get_item_detail(
+            session.player_id, 101
+        )  # TODO 暂时不知道具体奖励内容,先给1000个金币
+        tmp1 = ItemDetail.ItemDetail()
+        if not item:
+            item = make_item(
+                101,
+                0,
+                session.player_id,
+            )
+        tmp1.ParseFromString(item)
+        num_t = tmp1.main_item.base_item.num
+        tmp1.main_item.base_item.num = 1000
+        rsp.items.add().CopyFrom(tmp1)
+        tmp1.main_item.base_item.num = num_t + 1000
+        rsp1.items.add().CopyFrom(tmp1)
+        db.set_item_detail(
+            session.player_id,
+            tmp1.SerializeToString(),
+            101,
+            None,
+        )
+        rsp.next_reward_time = int(time.time()) + 600
 
-        for item_data in TEST_DATA["items"]:
-            item_detail = rsp.items.add()
-            item_detail.main_item.item_id = item_data["main_item"]["item_id"]
-            item_detail.main_item.item_tag = item_data["main_item"]["item_tag"]
-            item_detail.main_item.is_new = item_data["main_item"]["is_new"]
-            item_detail.main_item.temp_pack_index = item_data["main_item"][
-                "temp_pack_index"
-            ]
-
-            # Set base item for main item
-            item_detail.main_item.base_item.item_id = item_data["main_item"][
-                "base_item"
-            ]["item_id"]
-            item_detail.main_item.base_item.num = item_data["main_item"]["base_item"][
-                "num"
-            ]
-
-            item_detail.pack_type = item_data["pack_type"]
-
-        session.send(MsgId.SupplyBoxRewardRsp, rsp, packet_id)
-
-
-# Hardcoded test data
-TEST_DATA = {
-    "status": 1,
-    "next_reward_time": 1763353991,
-    "items": [
-        {
-            "main_item": {
-                "item_id": 101,
-                "item_tag": 9,
-                "is_new": False,
-                "temp_pack_index": 0,
-                "base_item": {"item_id": 101, "num": 304},
-            },  # 没用到的字段没有添加
-            "pack_type": 2,
-        },
-        {
-            "main_item": {
-                "item_id": 102,
-                "item_tag": 9,
-                "is_new": False,
-                "temp_pack_index": 0,
-                "base_item": {"item_id": 102, "num": 1},
-            },
-            "pack_type": 2,
-        },
-    ],
-}
+        session.send(MsgId.SupplyBoxRewardRsp, rsp, packet_id)  # 1893 1894
+        session.send(MsgId.PackNotice, rsp1, 0)

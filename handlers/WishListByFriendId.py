@@ -16,4 +16,3 @@ class Handler(PacketHandler):
         rsp.status = StatusCode_pb2.StatusCode_OK
         # TODO
         session.send(MsgId.WishListByFriendIdRsp, rsp, packet_id)  # 2685,2686
-        # session.sbin(2686, bin["2686"])

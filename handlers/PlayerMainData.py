@@ -8,7 +8,6 @@ import proto.OverField_pb2 as SceneDataNotice_pb2
 import proto.OverField_pb2 as ChatMsgRecordInitNotice_pb2
 import proto.OverField_pb2 as ActivitySignInDataNotice_pb2
 import proto.OverField_pb2 as ChangeChatChannelRsp_pb2
-
 import proto.OverField_pb2 as pb
 import utils.db as db
 from utils.bin import bin

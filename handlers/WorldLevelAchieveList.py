@@ -24,4 +24,3 @@ class Handler(PacketHandler):
                             tmp.count = 6
 
         session.send(MsgId.WorldLevelAchieveListRsp, rsp, packet_id)  # 1523,1524
-        # session.sbin(1524, bin["1524"])

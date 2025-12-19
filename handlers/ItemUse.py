@@ -76,5 +76,7 @@ class Handler(PacketHandler):
                                 item["item_i_d"],
                                 None,
                             )
-        session.send(MsgId.ItemUseRsp, rsp, packet_id)
+        session.send(
+            MsgId.ItemUseRsp, rsp, packet_id
+        )  # 一些测试物品可能没有奖励池,不能放到循环内
         session.send(MsgId.PackNotice, rsp1, 0)
