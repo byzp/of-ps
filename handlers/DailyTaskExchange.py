@@ -5,13 +5,12 @@ import logging
 import proto.OverField_pb2 as DailyTaskExchangeReq_pb2
 import proto.OverField_pb2 as DailyTaskExchangeRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-
+import proto.OverField_pb2 as ItemDetail
+import proto.OverField_pb2 as PackNotice_pb2
+import utils.db as db
+from utils.pb_create import make_item
 
 logger = logging.getLogger(__name__)
-
-"""
- #每日任务兑换 2602 2603
-"""
 
 
 @packet_handler(MsgId.DailyTaskExchangeReq)
@@ -23,44 +22,44 @@ class Handler(PacketHandler):
         rsp = DailyTaskExchangeRsp_pb2.DailyTaskExchangeRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
-        # Set fields from hardcoded test data
-        rsp.today_converted = TEST_DATA["today_converted"]
-        rsp.exchange_times_left = TEST_DATA["exchange_times_left"]
+        item = db.get_item_detail(session.player_id, 124)  # 祈愿石碎片
+        if not item:
+            rsp.status = StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+            session.send(MsgId.DailyTaskExchangeRsp, rsp, packet_id)
+            return
+        else:
+            item_use = ItemDetail.ItemDetail()
+            item_use.ParseFromString(item)
+            if item_use.main_item.base_item.num >= 50:  # TODO 兑换比例
+                exc_num = int(item_use.main_item.base_item.num / 50)
+                item_use.main_item.base_item.num -= exc_num * 50
+                rsp1 = PackNotice_pb2.PackNotice()
+                rsp1.status = StatusCode_pb2.StatusCode_OK
+                rsp1.items.add().CopyFrom(item_use)
+                db.set_item_detail(
+                    session.player_id, item_use.SerializeToString(), 124, None
+                )
+            else:
+                rsp.status = StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+                session.send(MsgId.ItemUseRsp, rsp, packet_id)
+                return
 
-        for reward_data in TEST_DATA["rewards"]:
-            reward_detail = rsp.rewards.add()
-            reward_detail.main_item.item_id = reward_data["main_item"]["item_id"]
-            reward_detail.main_item.item_tag = reward_data["main_item"]["item_tag"]
-            reward_detail.main_item.is_new = reward_data["main_item"]["is_new"]
-            reward_detail.main_item.temp_pack_index = reward_data["main_item"][
-                "temp_pack_index"
-            ]
-
-            # Set base item for main item
-            reward_detail.main_item.base_item.item_id = reward_data["main_item"][
-                "base_item"
-            ]["item_id"]
-            reward_detail.main_item.base_item.num = reward_data["main_item"][
-                "base_item"
-            ]["num"]
-
+        rsp1.items.add().CopyFrom(item_use)
+        tmp = db.get_item_detail(session.player_id, 125)  # 祈愿石
+        tmp1 = ItemDetail.ItemDetail()
+        if not tmp:
+            tmp = make_item(125, 0, session.player_id)
+        tmp1.ParseFromString(tmp)
+        num_t = tmp1.main_item.base_item.num
+        tmp1.main_item.base_item.num = exc_num
+        rsp.rewards.add().CopyFrom(tmp1)
+        tmp1.main_item.base_item.num = num_t + exc_num
+        rsp1.items.add().CopyFrom(tmp1)
+        db.set_item_detail(
+            session.player_id,
+            tmp1.SerializeToString(),
+            125,
+            None,
+        )
         session.send(MsgId.DailyTaskExchangeRsp, rsp, packet_id)
-
-
-# Hardcoded test data
-TEST_DATA = {
-    "status": 1,
-    "rewards": [
-        {
-            "main_item": {
-                "item_id": 125,
-                "item_tag": 9,
-                "is_new": False,
-                "temp_pack_index": 0,
-                "base_item": {"item_id": 125, "num": 1},
-            }
-        }
-    ],
-    "today_converted": 3,
-    "exchange_times_left": 0,
-}
+        session.send(MsgId.PackNotice, rsp1, 0)

@@ -8,6 +8,7 @@ import proto.OverField_pb2 as SceneDataNotice_pb2
 import proto.OverField_pb2 as ChatMsgRecordInitNotice_pb2
 import proto.OverField_pb2 as ActivitySignInDataNotice_pb2
 import proto.OverField_pb2 as ChangeChatChannelRsp_pb2
+import proto.OverField_pb2 as Quest_pb2
 import proto.OverField_pb2 as pb
 import utils.db as db
 from utils.bin import bin
@@ -21,8 +22,8 @@ class Handler(PacketHandler):
         player_id = session.player_id
 
         rsp = PlayerMainDataRsp_pb2.PlayerMainDataRsp()
-        with open(bin["1006"], "rb") as f:
-            rsp.ParseFromString(f.read())
+        # with open(bin["1006"], "rb") as f:
+        #     rsp.ParseFromString(f.read())
 
         rsp.status = StatusCode_pb2.StatusCode_OK
         rsp.player_id = session.player_id
@@ -55,8 +56,22 @@ class Handler(PacketHandler):
         rsp.scene_id = session.scene_id
         rsp.channel_id = session.channel_id
 
-        # TODO 任务
+        rsp.ClearField("quest_detail")
+        for chapter in db.get_chapter(session.player_id):
+            tmp = pb.Chapter()
+            tmp.ParseFromString(chapter)
+            rsp.quest_detail.chapters.add().CopyFrom(tmp)
+        rsp.quest_detail.random_quest_bonus_left.CopyFrom(pb.RandomQuestBonus())
+        for quest in db.get_quest(session.player_id):
+            tmp = Quest_pb2.Quest()
+            tmp.ParseFromString(quest)
+            rsp.quest_detail.quests.add().CopyFrom(tmp)
 
+        rsp.player_buffs.add().system_type = pb.PlayerBuff.BuffSystemType_GLOBAL
+        rsp.un_save_outfit_dye_scheme.CopyFrom(pb.UnSaveOutfitDyeScheme())
+        rsp.player_drop_rate_info.kill_drop_rate = 1000
+        rsp.player_drop_rate_info.treasure_drop_rate = 1000
+        rsp.questionnaire_info.CopyFrom(pb.PlayerQuestionnaireInfo())
         rsp.player_label = player_id
         rsp.channel_label = player_id
         rsp.month_card_over_due_time = db.get_month_card_over_due_time(player_id)
@@ -65,6 +80,12 @@ class Handler(PacketHandler):
         rsp.birthday = db.get_players_info(player_id, "birthday")
         rsp.is_hide_birthday = db.get_players_info(player_id, "is_hide_birthday")
         rsp.account_type = db.get_players_info(player_id, "account_type")
+        rsp.daily_task.tasks[1] = 521004  # TODO 随机生成每日月亮任务
+        rsp.daily_task.tasks[2] = 521005
+        rsp.daily_task.tasks[3] = 521006
+        rsp.daily_task.tasks[4] = 521007
+        rsp.daily_task.exchange_times_left = 0
+        rsp.appearance.CopyFrom(pb.PlayerAppearance())
 
         session.send(MsgId.PlayerMainDataRsp, rsp, packet_id)  # 1005,1006
 

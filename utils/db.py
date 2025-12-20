@@ -125,6 +125,22 @@ def init():
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
         
+        CREATE TABLE IF NOT EXISTS quests (
+            player_id INTEGER NOT NULL,
+            quest_id INTEGER NOT NULL,
+            quest_blob BLOB NOT NULL,
+            PRIMARY KEY (player_id, quest_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
+        
+        CREATE TABLE IF NOT EXISTS chapters (
+            player_id INTEGER NOT NULL,
+            chapter_id INTEGER NOT NULL,
+            chapter_blob BLOB NOT NULL,
+            PRIMARY KEY (player_id, chapter_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
+        
         CREATE TABLE IF NOT EXISTS month_card (
             player_id INTEGER PRIMARY KEY,
             over_due_time INTEGER DEFAULT 0,
@@ -309,6 +325,36 @@ def init_player(player_id):
             #             "count_param"
             #         ]
         set_achieve(player_id, group["i_d"], achive_quest.SerializeToString())
+
+    # 初始化任务
+    for quest in res["Quest"]["quest"]["datas"]:
+        tmp = pb.Quest()
+        tmp.quest_id = quest["i_d"]
+        if quest.get("condition_set_group_i_d", 0):
+            for condition in res["Quest"]["condition_set_group"]["datas"]:
+                if condition["i_d"] == quest["condition_set_group_i_d"]:
+                    for condition_set in condition["quest_condition_set"]:
+                        for achieve_condition_id in condition_set[
+                            "achieve_condition_i_d"
+                        ]:
+                            tmp1 = tmp.conditions.add()
+                            tmp1.condition_id = achieve_condition_id
+                            for achieve in res["Achieve"]["achieve"]["datas"]:
+                                if achieve["i_d"] == achieve_condition_id:
+                                    tmp1.progress = achieve.get("count_param", 0)
+                                    break
+                            tmp1.status = pb.QuestStatus_Finish
+                    break
+        tmp.status = pb.QuestStatus_Finish
+        tmp.bonus_times = 1
+        set_quest(player_id, quest["i_d"], tmp.SerializeToString())
+    # 初始化任务章节
+    for chapter in res["Story"]["story_chapter"]["datas"]:
+        tmp = pb.Chapter()
+        tmp.chapter_id = chapter["i_d"]
+        for story in chapter["story_list"]:
+            tmp.rewarded_story_ids.append(story)
+        set_chapter(player_id, chapter["i_d"], tmp.SerializeToString())
 
 
 def verify_sdk_user_info(user_id, login_token):
@@ -687,8 +733,9 @@ def get_friend_info(player_id, friend_id=None, info_name="*"):
         )
         friends = []
         rows = cur.fetchall()
-        for row in rows:
-            friends.append(row)
+        if rows:
+            for row in rows:
+                friends.append(row)
         return friends
 
 
@@ -742,4 +789,64 @@ def set_achieve(player_id, group_id, achieve_quest_blob):
     db.execute(
         "INSERT OR REPLACE INTO achieve (player_id, group_id, achieve_quest_blob) VALUES (?, ?, ?)",
         (player_id, group_id, achieve_quest_blob),
+    )
+
+
+def get_quest(player_id, quest_id=None):
+    if quest_id:
+        cur = db.execute(
+            "SELECT quest_blob FROM quests WHERE player_id=? AND quest_id=?",
+            (player_id, quest_id),
+        )
+        row = cur.fetchone()
+        if row:
+            return row[0]
+        return None
+    else:
+        quests = []
+        cur = db.execute(
+            "SELECT quest_blob FROM quests WHERE player_id=?",
+            (player_id,),
+        )
+        rows = cur.fetchall()
+        if rows:
+            for row in rows:
+                quests.append(row[0])
+        return quests
+
+
+def set_quest(player_id, quest_id, quest_blob):
+    db.execute(
+        "INSERT OR REPLACE INTO quests (player_id, quest_id, quest_blob) VALUES (?, ?, ?)",
+        (player_id, quest_id, quest_blob),
+    )
+
+
+def get_chapter(player_id, chapter_id=None):
+    if chapter_id:
+        cur = db.execute(
+            "SELECT quest_blob FROM chapter WHERE player_id=? AND chapter_id=?",
+            (player_id, chapter_id),
+        )
+        row = cur.fetchone()
+        if row:
+            return row[0]
+        return None
+    else:
+        chapters = []
+        cur = db.execute(
+            "SELECT chapter_blob FROM chapters WHERE player_id=?",
+            (player_id,),
+        )
+        rows = cur.fetchall()
+        if rows:
+            for row in rows:
+                chapters.append(row[0])
+        return chapters
+
+
+def set_chapter(player_id, chapter_id, chapter_blob):
+    db.execute(
+        "INSERT OR REPLACE INTO chapters (player_id, chapter_id, chapter_blob) VALUES (?, ?, ?)",
+        (player_id, chapter_id, chapter_blob),
     )

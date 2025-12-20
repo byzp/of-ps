@@ -34,6 +34,9 @@ class Handler(PacketHandler):
             item_use.ParseFromString(item)
             if item_use.main_item.base_item.num >= req.num:  # TODO 尚未考虑打折
                 item_use.main_item.base_item.num -= req.num
+                rsp1 = PackNotice_pb2.PackNotice()
+                rsp1.status = StatusCode_pb2.StatusCode_OK
+                rsp1.items.add().CopyFrom(item_use)
                 db.set_item_detail(
                     session.player_id, item_use.SerializeToString(), req.item_id, None
                 )
@@ -42,8 +45,6 @@ class Handler(PacketHandler):
                 session.send(MsgId.ItemUseRsp, rsp, packet_id)
                 return
 
-        rsp1 = PackNotice_pb2.PackNotice()
-        rsp1.status = StatusCode_pb2.StatusCode_OK
         for data in res.get("Reward", {}).get("reward_pool", {}).get("datas", []):
             if data["i_d"] == req.item_id:  # TODO 如果含有武器, 可能引起严重错误
                 rp = []
