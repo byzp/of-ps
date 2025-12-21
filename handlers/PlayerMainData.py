@@ -11,7 +11,6 @@ import proto.OverField_pb2 as ChangeChatChannelRsp_pb2
 import proto.OverField_pb2 as Quest_pb2
 import proto.OverField_pb2 as pb
 import utils.db as db
-from utils.bin import bin
 from utils.res_loader import res
 import server.scene_data as scene_data
 
@@ -22,9 +21,6 @@ class Handler(PacketHandler):
         player_id = session.player_id
 
         rsp = PlayerMainDataRsp_pb2.PlayerMainDataRsp()
-        # with open(bin["1006"], "rb") as f:
-        #     rsp.ParseFromString(f.read())
-
         rsp.status = StatusCode_pb2.StatusCode_OK
         rsp.player_id = session.player_id
         rsp.player_name = session.player_name
@@ -43,7 +39,6 @@ class Handler(PacketHandler):
         rsp.phone_background = db.get_players_info(player_id, "phone_background")
         rsp.create_time = db.get_players_info(player_id, "create_time")
 
-        rsp.ClearField("characters")
         chrp = pb.Character()
         for chr in db.get_characters(player_id):
             chrp.ParseFromString(chr)
@@ -56,7 +51,6 @@ class Handler(PacketHandler):
         rsp.scene_id = session.scene_id
         rsp.channel_id = session.channel_id
 
-        rsp.ClearField("quest_detail")
         for chapter in db.get_chapter(session.player_id):
             tmp = pb.Chapter()
             tmp.ParseFromString(chapter)

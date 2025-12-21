@@ -5,8 +5,6 @@ import logging
 import proto.OverField_pb2 as GenericSceneBReq_pb2
 import proto.OverField_pb2 as GenericSceneBRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-from utils.bin import bin
-import utils.db as db
 
 logger = logging.getLogger(__name__)
 
@@ -22,4 +20,3 @@ class Handler(PacketHandler):
         rsp.generic_msg_id = req.generic_msg_id  # TODO
 
         session.send(MsgId.GenericSceneBRsp, rsp, packet_id)  # 2307,2308
-        # session.sbin(1758, bin["1758"],  packet_id)

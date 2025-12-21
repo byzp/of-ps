@@ -4,7 +4,6 @@ import logging
 
 import proto.OverField_pb2 as GetArchiveInfoRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-from utils.bin import bin
 
 logger = logging.getLogger(__name__)
 

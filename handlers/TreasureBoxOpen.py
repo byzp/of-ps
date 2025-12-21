@@ -6,7 +6,10 @@ import time
 import proto.OverField_pb2 as TreasureBoxOpenReq_pb2
 import proto.OverField_pb2 as TreasureBoxOpenRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
+import proto.OverField_pb2 as ItemDetail
 
+import utils.db as db
+from utils.pb_create import make_treasure_box_item
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +23,14 @@ class Handler(PacketHandler):
         rsp = TreasureBoxOpenRsp_pb2.TreasureBoxOpenRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
 
-        # TODO 随机物品生成
+        for item in make_treasure_box_item(
+            session.player_id,
+            db.get_players_info(session.player_id, "world_level"),
+            session.instance_id,
+        ):
+            item_t = ItemDetail.ItemDetail()
+            item_t.ParseFromString(item)
+            rsp.items.add().CopyFrom(item_t)
+        rsp.next_refresh_time = int(time.time()) + 600
 
-        session.send(MsgId.TreasureBoxOpenRsp, rsp, 0)
+        session.send(MsgId.TreasureBoxOpenRsp, rsp, packet_id)

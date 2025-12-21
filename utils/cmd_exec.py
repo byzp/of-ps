@@ -55,7 +55,7 @@ def give(cmds: list):
     for session in target_session:
         rsp = pb.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        instance_id = db.get_instance_id(session.player_id)
+        instance_id = session.instance_id[0]
         for i in res["Item"]["item"]["datas"]:
             if i["i_d"] == cmds[2] or cmds[2] == "all":
                 item = pb.ItemDetail()

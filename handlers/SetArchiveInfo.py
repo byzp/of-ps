@@ -3,7 +3,6 @@ from network.msg_id import MsgId
 
 import proto.OverField_pb2 as SetArchiveInfoRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-from utils.bin import bin
 
 
 @packet_handler(MsgId.SetArchiveInfoReq)

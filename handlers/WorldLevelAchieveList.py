@@ -2,7 +2,6 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import proto.OverField_pb2 as WorldLevelAchieveList_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-from utils.bin import bin
 from utils.res_loader import res
 
 

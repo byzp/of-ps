@@ -5,7 +5,6 @@ import logging
 import proto.OverField_pb2 as GetCharacterAchievementListReq_pb2
 import proto.OverField_pb2 as GetCharacterAchievementListRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-from utils.bin import bin
 import utils.db as db
 
 logger = logging.getLogger(__name__)
@@ -20,10 +19,9 @@ class Handler(PacketHandler):
 
         rsp = GetCharacterAchievementListRsp_pb2.GetCharacterAchievementListRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        for i in db.get_character_achievement_lst(session.player_id, chr_id):
+        for i in db.get_character_achievement_lst(session.player_id, chr_id):  # TODO
             tmp = rsp.character_achievement_lst.add()
             tmp.achieve_id = 8
             tmp.count = 6
         rsp.character_id = chr_id
         session.send(MsgId.GetCharacterAchievementListRsp, rsp, packet_id)  # 1479,1480
-        # session.sbin(1758, bin["1758"],  packet_id)

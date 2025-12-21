@@ -64,6 +64,7 @@ class PacketFactory:
         else:
             logger.warning(f"No handler found for msg_id: {msg_id}")
             cls._log_unknown_packet(msg_id, data)
+            session.send(msg_id + 1, b"\x08\x02", packet_id, True)
 
     @classmethod
     def _handle_packet(cls, handler, session, data: bytes, packet_id: int, msg_id: int):

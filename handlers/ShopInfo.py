@@ -5,7 +5,6 @@ import logging
 import proto.OverField_pb2 as ShopInfoReq_pb2
 import proto.OverField_pb2 as ShopInfoRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-from utils.bin import bin
 from utils.res_loader import res
 
 logger = logging.getLogger(__name__)

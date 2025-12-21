@@ -2,6 +2,7 @@ import proto.OverField_pb2 as pb
 import utils.db as db
 from datetime import datetime
 from utils.res_loader import res
+import random
 
 
 def make_ScenePlayer(session):
@@ -197,8 +198,7 @@ def make_SceneCharacterOutfitPreset(session, outfit):
     return sc.SerializeToString()
 
 
-def make_item(item_id, num=1, player_id=0) -> list:
-    instance_id = db.get_instance_id(player_id)
+def make_item(item_id, num=1, player_id=0, instance_id=0) -> list:
     for i in res["Item"]["item"]["datas"]:
         if i["i_d"] == item_id:
             items = None
@@ -220,7 +220,8 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     weapon = tmp.weapon
                     weapon.weapon_id = i["i_d"]
-                    weapon.instance_id = instance_id
+                    weapon.instance_id = instance_id[0]
+                    instance_id[0] += 1
                     weapon.attack = 35
                     weapon.damage_balance = 0
                     weapon.critical_ratio = 0
@@ -252,7 +253,8 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.num = 1
                     armor = tmp.armor
                     armor.armor_id = i["i_d"]
-                    armor.instance_id = instance_id
+                    armor.instance_id = instance_id[0]
+                    instance_id[0] += 1
                     armor.main_property_type = pb.EPropertyType_DamageBalance
                     # if armor_data:
                     #     armor.main_property_type = armor_property_mapping.get(
@@ -286,7 +288,8 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     poster = tmp.poster
                     poster.poster_id = i["i_d"]
-                    poster.instance_id = instance_id
+                    poster.instance_id = instance_id[0]
+                    instance_id[0] += 1
                     poster.star = 5
 
                     # 将海报数据序列化并更新到 items 数据库
@@ -686,3 +689,115 @@ def make_item(item_id, num=1, player_id=0) -> list:
 
                     items = item_detail.SerializeToString()
             return items
+
+
+def make_treasure_box_item(
+    player_id,
+    world_level,
+    instance_id,
+    num=0,
+) -> list:  # TODO 仅生成武器和防具, 未考虑未解锁的武器, 未实现根据世界等级调整概率
+    if not num:
+        num = random.randint(3, 15)
+    wp_num = random.randint(0, num)
+    armor_num = num - wp_num
+    items = []
+    wp_len = len(res["Weapon"]["weapon"]["datas"])
+    while wp_num > 0:
+        weapon_i = res["Weapon"]["weapon"]["datas"][random.randint(0, wp_len - 1)]
+        item_detail = pb.ItemDetail()
+        tmp = item_detail.main_item
+        if not weapon_i.get("item_i_d"):
+            continue
+        tmp.item_id = weapon_i["item_i_d"]
+        tmp.item_tag = pb.EBagItemTag_Weapon
+        weapon = tmp.weapon
+        weapon.weapon_id = weapon_i["item_i_d"]
+        weapon.instance_id = instance_id[0]
+        instance_id[0] += 1
+        for prop in res["Weapon"]["weapon_property"]["datas"]:
+            if weapon_i["weapon_property_i_d"] == prop["i_d"]:
+                weapon.property_index = random.randint(
+                    1, len(prop["weapon_property_group_info"])
+                )
+                group_s = prop["weapon_property_group_info"][weapon.property_index - 1]
+                if not group_s.get("min_attack"):
+                    continue
+                weapon.attack = int(
+                    random.uniform(group_s["min_attack"], group_s["max_attack"])
+                )
+                weapon.damage_balance = int(
+                    random.uniform(
+                        group_s["min_damage_balance"], group_s["max_damage_balance"]
+                    )
+                )
+                weapon.critical_ratio = int(
+                    random.uniform(
+                        group_s["min_critical_ratio"], group_s["max_critical_ratio"]
+                    )
+                )
+                weapon.level = random.randint(
+                    group_s["min_level"], group_s["max_level"]
+                )
+                weapon.star = 1
+                items.append(item_detail.SerializeToString())
+                wp_num -= 1
+    armor_len = len(res["Armor"]["armor"]["datas"])
+    while armor_num > 0:
+        armor_i = res["Armor"]["armor"]["datas"][random.randint(0, armor_len - 1)]
+        item_detail = pb.ItemDetail()
+        tmp = item_detail.main_item
+        tmp.item_id = armor_i["i_d"]
+        tmp.item_tag = pb.EBagItemTag_Armor
+        # tmp.is_new = False
+        armor = tmp.armor
+        armor.armor_id = armor_i["i_d"]
+        armor.instance_id = instance_id[0]
+        instance_id[0] += 1
+        for prop in res["Armor"]["armor_property"]["datas"]:
+            if armor_i["armor_property_i_d"] == prop["i_d"]:
+                armor.property_index = random.randint(
+                    1, len(prop["armor_property_group_info"])
+                )
+                group_s = prop["armor_property_group_info"][armor.property_index - 1]
+                prop_group = {
+                    pb.EPropertyType_ExtHp: ["min_ext_hp", "max_ext_hp"],
+                    pb.EPropertyType_MaxHPPercent: ["min_hp_percent", "max_hp_percent"],
+                    pb.EPropertyType_ExtAttack: ["min_ext_attack", "max_ext_attack"],
+                    pb.EPropertyType_AttackPercent: [
+                        "min_attack_percent",
+                        "max_attack_percent",
+                    ],
+                    pb.EPropertyType_ExtDefense: ["min_ext_defense", "max_ext_defense"],
+                    pb.EPropertyType_DefensePercent: [
+                        "min_defense_percent",
+                        "max_defense_percent",
+                    ],
+                    pb.EPropertyType_CriticalRatio: [
+                        "min_critical_ratio",
+                        "max_critical_ratio",
+                    ],
+                    pb.EPropertyType_CriticalDamagePercent: [
+                        "min_critical_damage_percent",
+                        "max_critical_damage_percent",
+                    ],
+                    pb.EPropertyType_RecoverPercent: [
+                        "min_recover_percent",
+                        "max_recover_percent",
+                    ],
+                }
+                armor.main_property_type = random.choice(list(prop_group.keys()))
+                armor.main_property_val = 0
+                random.uniform(
+                    group_s[prop_group[armor.main_property_type][0]],
+                    group_s[prop_group[armor.main_property_type][1]],
+                )
+                armor.wearer_id = 0
+                armor.level = random.randint(group_s["min_level"], group_s["max_level"])
+                # armor.strength_level = 5
+                # armor.strength_exp = 0
+                # armor.property_index = 0
+                # armor.is_lock = False
+                items.append(item_detail.SerializeToString())
+                armor_num -= 1
+    return items
