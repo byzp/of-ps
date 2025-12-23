@@ -5,7 +5,12 @@ import logging
 import proto.OverField_pb2 as TreasureBoxPickupReq_pb2
 import proto.OverField_pb2 as TreasureBoxPickupRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
+import proto.OverField_pb2 as TreasureBoxData_pb2
+import proto.OverField_pb2 as PackNotice_pb2
+import proto.OverField_pb2 as StatusCode_pb2
+import proto.OverField_pb2 as pb
 
+import utils.db as db
 
 logger = logging.getLogger(__name__)
 
@@ -18,108 +23,56 @@ class Handler(PacketHandler):
 
         rsp = TreasureBoxPickupRsp_pb2.TreasureBoxPickupRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
-
-        # Set fields from hardcoded test data
-        for item_data in TEST_DATA["items"]:
-            item_detail = rsp.items.add()
-            item_detail.main_item.item_id = item_data["main_item"]["item_id"]
-            item_detail.main_item.item_tag = item_data["main_item"]["item_tag"]
-            item_detail.main_item.is_new = item_data["main_item"]["is_new"]
-            item_detail.main_item.temp_pack_index = item_data["main_item"][
-                "temp_pack_index"
-            ]
-
-            # Set base item for main item
-            item_detail.main_item.base_item.item_id = item_data["main_item"][
-                "base_item"
-            ]["item_id"]
-            item_detail.main_item.base_item.num = item_data["main_item"]["base_item"][
-                "num"
-            ]
-
-            # Set armor if available
-            if "armor" in item_data["main_item"]:
-                armor_data = item_data["main_item"]["armor"]
-                item_detail.main_item.armor.armor_id = armor_data["armor_id"]
-                item_detail.main_item.armor.instance_id = armor_data["instance_id"]
-                item_detail.main_item.armor.main_property_type = armor_data[
-                    "main_property_type"
-                ]
-                item_detail.main_item.armor.main_property_val = armor_data[
-                    "main_property_val"
-                ]
-                item_detail.main_item.armor.wearer_id = armor_data["wearer_id"]
-                item_detail.main_item.armor.level = armor_data["level"]
-                item_detail.main_item.armor.strength_level = armor_data[
-                    "strength_level"
-                ]
-                item_detail.main_item.armor.strength_exp = armor_data["strength_exp"]
-                item_detail.main_item.armor.property_index = armor_data[
-                    "property_index"
-                ]
-                item_detail.main_item.armor.is_lock = armor_data["is_lock"]
-
-            item_detail.pack_type = item_data["pack_type"]
-            item_detail.extra_quality = item_data["extra_quality"]
+        tb = TreasureBoxData_pb2.TreasureBoxData()
+        tb_b = db.get_treasure_box(session.player_id, req.box_index)
+        tb.ParseFromString(tb_b)  # 正常不会遇到为空的情况
+        rsp1 = PackNotice_pb2.PackNotice()
+        rsp1.status = StatusCode_pb2.StatusCode_OK
+        if req.pick_index == -1:
+            for item in tb.rewards:
+                tmp_i = len(session.temp_pack)
+                if tmp_i < 30:  # TODO 动态背包大小限制
+                    if item.main_item.item_tag == pb.EBagItemTag_Weapon:
+                        instance_id = item.main_item.weapon.instance_id
+                    if item.main_item.item_tag == pb.EBagItemTag_Armor:
+                        instance_id = item.main_item.armor.instance_id
+                    item.pack_type = pb.ItemDetail.PackType.PackType_Inventory
+                    db.set_item_detail(
+                        session.player_id, item.SerializeToString(), None, instance_id
+                    )
+                    item.pack_type = pb.ItemDetail.PackType.PackType_TempPack
+                    item.main_item.temp_pack_index = tmp_i + 1
+                    rsp.items.add().CopyFrom(item)
+                    rsp1.items.add().CopyFrom(item)
+                    session.temp_pack.append([instance_id, item.SerializeToString()])
+                else:
+                    rsp.status = StatusCode_pb2.StatusCode_TEMP_PACK_IS_FULL
+                    session.send(MsgId.TreasureBoxPickupRsp, rsp, packet_id)
+                    return
+            tb.ClearField("rewards")
+        else:
+            item = tb.rewards[req.pick_index - 1]
+            tmp_i = len(session.temp_pack)
+            if tmp_i < 30:  # TODO 动态背包大小限制
+                if item.main_item.item_tag == pb.EBagItemTag_Weapon:
+                    instance_id = item.main_item.weapon.instance_id
+                if item.main_item.item_tag == pb.EBagItemTag_Armor:
+                    instance_id = item.main_item.armor.instance_id
+                item.pack_type = pb.ItemDetail.PackType.PackType_Inventory
+                db.set_item_detail(
+                    session.player_id, item.SerializeToString(), None, instance_id
+                )
+                item.pack_type = pb.ItemDetail.PackType.PackType_TempPack
+                item.main_item.temp_pack_index = tmp_i + 1
+                rsp.items.add().CopyFrom(item)
+                rsp1.items.add().CopyFrom(item)
+                session.temp_pack.append([instance_id, item.SerializeToString()])
+            else:
+                rsp.status = StatusCode_pb2.StatusCode_TEMP_PACK_IS_FULL
+                session.send(MsgId.TreasureBoxPickupRsp, rsp, packet_id)
+                return
+            del tb.rewards[req.pick_index - 1]
+        db.set_treasure_box(session.player_id, tb.box_id, tb.SerializeToString())
 
         session.send(MsgId.TreasureBoxPickupRsp, rsp, packet_id)
-
-
-# Hardcoded test data from TreasureBoxPickupRsp.json
-TEST_DATA = {
-    "status": 1,
-    "items": [
-        {
-            "main_item": {
-                "item_id": 101,
-                "item_tag": 9,
-                "is_new": False,
-                "temp_pack_index": 0,
-                "base_item": {"item_id": 101, "num": 90},
-            },  # 没用到的字段没有添加
-            "transformed_item": [],
-            "extras": [],
-            "pack_type": 2,
-            "extra_quality": 0,
-        },
-        {
-            "main_item": {
-                "item_id": 2311007,
-                "item_tag": 3,
-                "is_new": False,
-                "temp_pack_index": 0,
-                "base_item": {"item_id": 0, "num": 0},
-                "armor": {
-                    "armor_id": 2311007,
-                    "instance_id": 25304,
-                    "main_property_type": 41,
-                    "main_property_val": 3,
-                    "random_property": [],
-                    "wearer_id": 0,
-                    "level": 92,
-                    "strength_level": 0,
-                    "strength_exp": 0,
-                    "property_index": 10,
-                    "is_lock": False,
-                },
-            },
-            "transformed_item": [],
-            "extras": [],
-            "pack_type": 2,
-            "extra_quality": 0,
-        },
-        {
-            "main_item": {
-                "item_id": 3006,
-                "item_tag": 8,
-                "is_new": False,
-                "temp_pack_index": 0,
-                "base_item": {"item_id": 3006, "num": 1},
-            },
-            "transformed_item": [],
-            "extras": [],
-            "pack_type": 2,
-            "extra_quality": 0,
-        },
-    ],
-}
+        session.send(MsgId.PackNotice, rsp1, 0)

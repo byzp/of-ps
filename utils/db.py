@@ -140,6 +140,14 @@ def init():
             PRIMARY KEY (player_id, chapter_id),
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS treasure_box (
+            player_id INTEGER NOT NULL,
+            box_id INTEGER NOT NULL,
+            box_blob BLOB NOT NULL,
+            PRIMARY KEY (player_id, box_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
         
         CREATE TABLE IF NOT EXISTS month_card (
             player_id INTEGER PRIMARY KEY,
@@ -605,7 +613,7 @@ def get_item_detail(player_id, item_id=None, instance_id=None, table=None) -> li
         return items
 
 
-def set_item_detail(player_id, item_detail_blob: list, item_id=None, instance_id=None):
+def set_item_detail(player_id, item_detail_blob, item_id=None, instance_id=None):
     if item_id:
         db.execute(
             "INSERT OR REPLACE INTO items (player_id, item_id, item_detail_blob) VALUES (?, ?, ?)",
@@ -849,4 +857,33 @@ def set_chapter(player_id, chapter_id, chapter_blob):
     db.execute(
         "INSERT OR REPLACE INTO chapters (player_id, chapter_id, chapter_blob) VALUES (?, ?, ?)",
         (player_id, chapter_id, chapter_blob),
+    )
+
+
+def get_treasure_box(player_id, box_id=None):
+    if box_id:
+        cur = db.execute(
+            "SELECT box_blob FROM treasure_box WHERE player_id=? AND box_id=?",
+            (player_id, box_id),
+        )
+        row = cur.fetchone()
+        if row:
+            return row[0]
+    else:
+        boxs = []
+        cur = db.execute(
+            "SELECT box_blob FROM treasure_box WHERE player_id=?",
+            (player_id,),
+        )
+        rows = cur.fetchall()
+        if rows:
+            for row in rows:
+                boxs.append(row[0])
+        return boxs
+
+
+def set_treasure_box(player_id, box_id, box_blob):
+    db.execute(
+        "INSERT OR REPLACE INTO treasure_box (player_id, box_id, box_blob) VALUES (?, ?, ?)",
+        (player_id, box_id, box_blob),
     )

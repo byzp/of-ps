@@ -99,8 +99,11 @@ class Handler(PacketHandler):
                 rsp = PackNotice_pb2.PackNotice()
                 rsp.status = StatusCode_pb2.StatusCode_OK
                 for item_blob in items_in_tag:
-                    item = rsp.items.add()
-                    item.ParseFromString(item_blob)
+                    item_t = pb.ItemDetail()
+                    item_t.ParseFromString(item_blob)
+                    if item_t.main_item.temp_pack_index:  # TODO 临时物品发到邮件
+                        continue
+                    item = rsp.items.add().CopyFrom(item_t)
                 session.send(
                     MsgId.PackNotice, rsp, 0
                 )  # 按物品类型分组发送items物品数据

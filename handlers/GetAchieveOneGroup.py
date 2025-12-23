@@ -20,6 +20,10 @@ class Handler(PacketHandler):
         rsp = GetAchieveOneGroupRsp_pb2.GetAchieveOneGroupRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
         achieve = db.get_achieve(session.player_id, req.group_id)
+        if not achieve:
+            rsp.status = StatusCode_pb2.StatusCode_FAIL
+            session.send(MsgId.GetAchieveOneGroupRsp, rsp, packet_id)
+            return
         tmp = OneGroupAchieveInfo_pb2.OneGroupAchieveInfo()
         tmp.ParseFromString(achieve)
         rsp.current_group_achieve_info.CopyFrom(tmp)

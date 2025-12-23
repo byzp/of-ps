@@ -12,6 +12,6 @@ class Handler(PacketHandler):
 
         rsp = GetMailsRsp_pb2.GetMailsRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
+        # TODO
 
-        # session.send(MsgId.GetMailsRsp, rsp) #1121,1122
-        session.sbin(1122, bin["1122"], packet_id)
+        session.send(MsgId.GetMailsRsp, rsp, packet_id)  # 1121,1122

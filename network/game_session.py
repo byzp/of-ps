@@ -57,6 +57,7 @@ class GameSession:
         "badge_id",
         "scene_player",
         "instance_id",
+        "temp_pack",
         "running",
         "verified",
         "logged_in",
@@ -96,6 +97,7 @@ class GameSession:
         self.badge_id = 0
         self.scene_player = OverField_pb2.ScenePlayer()
         self.instance_id = [0]
+        self.temp_pack = []
 
         self.running = True
         self.verified = False

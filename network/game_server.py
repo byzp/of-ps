@@ -37,6 +37,7 @@ class GameServer:
             self.server_socket.listen(1024)
             self.server_socket.setblocking(True)
             logger.info(f"Game server started on port {self.port}")
+            logger.info('For help, type "help"')
             notice_sync.init()
 
             while self.running:

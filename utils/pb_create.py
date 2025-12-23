@@ -198,7 +198,7 @@ def make_SceneCharacterOutfitPreset(session, outfit):
     return sc.SerializeToString()
 
 
-def make_item(item_id, num=1, player_id=0, instance_id=0) -> list:
+def make_item(item_id, num=1, player_id=0, instance_id=[0]) -> list:
     for i in res["Item"]["item"]["datas"]:
         if i["i_d"] == item_id:
             items = None
@@ -696,7 +696,7 @@ def make_treasure_box_item(
     world_level,
     instance_id,
     num=0,
-) -> list:  # TODO 仅生成武器和防具, 未考虑未解锁的武器, 未实现根据世界等级调整概率
+) -> list:  # TODO 仅生成武器和防具, 未考虑未解锁的武器, 未实现根据世界等级调整概率,
     if not num:
         num = random.randint(3, 15)
     wp_num = random.randint(0, num)
@@ -706,6 +706,7 @@ def make_treasure_box_item(
     while wp_num > 0:
         weapon_i = res["Weapon"]["weapon"]["datas"][random.randint(0, wp_len - 1)]
         item_detail = pb.ItemDetail()
+        item_detail.pack_type = pb.ItemDetail.PackType.PackType_TempStorageArea
         tmp = item_detail.main_item
         if not weapon_i.get("item_i_d"):
             continue

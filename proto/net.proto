@@ -2176,7 +2176,7 @@ enum StatusCode {
     StatusCode_IGNORE = 25;
     StatusCode_MODULE_CLOSE = 30;
     StatusCode_CLIENT_VERSION_ERR = 31;
-    StatusCode_SERVERUNDERMAINTENANCE = 205;
+    StatusCode_SERVER_UNDER_MAINTENANCE = 205;
     StatusCode_REPEAT_GET_REWARD = 207;
     StatusCode_MUTED_PLAYER_CHAT_FAIL = 210;
     StatusCode_FRIEND_SEARCH_FAIL = 211;
@@ -3503,6 +3503,8 @@ message GardenBaseInfo {
     uint32 furniture_num = 3;
     uint32 furniture_limit_num = 4;
     bool is_open = 5;
+    string password = 6;
+    int64 password_expire_time = 7;
 }
 
 message GatherLimit {
@@ -3656,7 +3658,7 @@ message ScenePlayer {
     bool is_birthday = 7;
     uint32 avatar_frame = 8;
     uint32 musical_item_id = 9;
-    MusicalItemSource source = 10;
+    MusicalItemSource musical_item_source = 10;
     int64 musical_item_instance_id = 11;
     uint32 abyss_rank = 12;
     PlayingMusicNote playing_music_note = 13;
@@ -4932,6 +4934,7 @@ message DungeonEnterRsp {
 }
 
 message DungeonExitReq {
+    bool is_force_exit = 1;
 }
 
 message DungeonExitRsp {
@@ -6609,6 +6612,7 @@ message SendActionNotice {
     string from_player_name = 4;
     bool is_study = 5;
     int64 end_time = 6;
+    uint32 multiple_need_count = 8;
 }
 
 message SendActionStudyNotice {

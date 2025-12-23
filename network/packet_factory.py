@@ -73,6 +73,8 @@ class PacketFactory:
         except Exception:
             exception_traceback = traceback.format_exc()
             logger.error(f"Error processing {msg_id} packet: \n{exception_traceback}")
+            cls._log_unknown_packet(msg_id, data)
+            session.send(msg_id + 1, b"\x08\x02", packet_id, True)
 
     @classmethod
     def _log_unknown_packet(cls, msg_id: int, data: bytes):
