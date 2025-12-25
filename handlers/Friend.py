@@ -67,4 +67,3 @@ class Handler(PacketHandler):
                 other_info.avatar_frame = db.get_players_info(player_id, "avatar_frame")
 
         session.send(MsgId.FriendRsp, rsp, packet_id)  # 1739,1740
-        # session.sbin(MsgId.FriendRsp, "tmp\\bin\\packet_66_1740_servertoclient_body.bin")

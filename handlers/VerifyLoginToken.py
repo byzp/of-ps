@@ -26,7 +26,6 @@ class Handler(PacketHandler):
         session.verified = True
         session.player_id = db.get_player_id(user_id)
         session.player_name = db.get_players_info(session.player_id, "player_name")
-        session.instance_id[0] = db.get_instance_id(session.player_id)
         logger.info(f"Player login: {session.player_name}({session.player_id})")
         rsp.user_id = user_id
         rsp.account_type = req.account_type

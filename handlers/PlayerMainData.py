@@ -101,8 +101,7 @@ class Handler(PacketHandler):
                 for item_blob in items_in_tag:
                     item_t = pb.ItemDetail()
                     item_t.ParseFromString(item_blob)
-                    if item_t.main_item.temp_pack_index:  # TODO 临时物品发到邮件
-                        continue
+                    # TODO 临时物品发到邮件
                     item = rsp.items.add().CopyFrom(item_t)
                 session.send(
                     MsgId.PackNotice, rsp, 0

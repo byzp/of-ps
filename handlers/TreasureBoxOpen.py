@@ -43,7 +43,6 @@ class Handler(PacketHandler):
             for item in make_treasure_box_item(
                 session.player_id,
                 db.get_players_info(session.player_id, "world_level"),
-                session.instance_id,
             ):
                 item_t = ItemDetail.ItemDetail()
                 item_t.ParseFromString(item)

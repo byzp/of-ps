@@ -7,6 +7,7 @@ import proto.OverField_pb2 as ChangeSceneChannelRsp_pb2
 import proto.OverField_pb2 as SceneDataNotice_pb2
 import proto.OverField_pb2 as ServerSceneSyncDataNotice_pb2
 import proto.OverField_pb2 as StatusCode_pb2
+import proto.OverField_pb2 as PackNotice_pb2
 import proto.OverField_pb2 as pb
 
 import server.scene_data as scene_data
@@ -61,6 +62,14 @@ class Handler(PacketHandler):
         data.tod_time = int(notice_sync.tod_time)
         data.channel_label = session.channel_id
         session.send(MsgId.SceneDataNotice, rsp, 0)
+
+        # 回花园时将临时背包物品更新到仓库
+        if req.scene_id == 9999:
+            rsp = PackNotice_pb2.PackNotice()
+            rsp.status = StatusCode_pb2.StatusCode_OK
+            rsp.is_clear_temp_pack = True
+            session.send(MsgId.PackNotice, rsp, 0)
+            session.temp_pack.clear()
 
         # 广播加入消息
         notice = pb.ServerSceneSyncDataNotice()

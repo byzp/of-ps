@@ -5,7 +5,8 @@ import logging
 import proto.OverField_pb2 as GetLifeInfoReq_pb2
 import proto.OverField_pb2 as GetLifeInfoRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-from utils.bin import bin
+
+import utils.db as db
 
 logger = logging.getLogger(__name__)
 
@@ -18,18 +19,11 @@ class Handler(PacketHandler):
 
         rsp = GetLifeInfoRsp_pb2.GetLifeInfoRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        # session.send(MsgId.GetLifeInfoRsp, rsp) #1369,1370
 
-        i = req.life_type
-        if i == 1:
-            session.sbin(1370, bin["1370-1"], packet_id)
-        if i == 2:
-            session.sbin(1370, bin["1370-2"], packet_id)
-        if i == 3:
-            session.sbin(1370, bin["1370-3"], packet_id)
-        if i == 4:
-            session.sbin(1370, bin["1370-4"], packet_id)
-        if i == 5:
-            session.sbin(1370, bin["1370-5"], packet_id)
-        if i == 6:
-            session.sbin(1370, bin["1370-6"], packet_id)
+        rsp.life_skill.life_type = req.life_type
+        rsp.life_achieve.life_type = req.life_type  # TODO
+        rsp.life_base_info.ParseFromString(
+            db.get_life(session.player_id, req.life_type)
+        )
+
+        session.send(MsgId.GetLifeInfoRsp, rsp, packet_id)  # 1369,1370

@@ -26,4 +26,3 @@ class Handler(PacketHandler):
         rsp = SendActionRsp_pb2.SendActionRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK  # TODO
         session.send(MsgId.SendActionRsp, rsp, packet_id)  # 1967,1968 ->1970
-        # session.sbin(MsgId.FriendRsp, "tmp\\bin\\packet_66_1740_servertoclient_body.bin")

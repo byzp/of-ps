@@ -198,7 +198,7 @@ def make_SceneCharacterOutfitPreset(session, outfit):
     return sc.SerializeToString()
 
 
-def make_item(item_id, num=1, player_id=0, instance_id=[0]) -> list:
+def make_item(item_id, num=1, player_id=0) -> list:
     for i in res["Item"]["item"]["datas"]:
         if i["i_d"] == item_id:
             items = None
@@ -220,8 +220,7 @@ def make_item(item_id, num=1, player_id=0, instance_id=[0]) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     weapon = tmp.weapon
                     weapon.weapon_id = i["i_d"]
-                    weapon.instance_id = instance_id[0]
-                    instance_id[0] += 1
+                    weapon.instance_id = db.get_instance_id(player_id)
                     weapon.attack = 35
                     weapon.damage_balance = 0
                     weapon.critical_ratio = 0
@@ -253,8 +252,7 @@ def make_item(item_id, num=1, player_id=0, instance_id=[0]) -> list:
                     tmp.base_item.num = 1
                     armor = tmp.armor
                     armor.armor_id = i["i_d"]
-                    armor.instance_id = instance_id[0]
-                    instance_id[0] += 1
+                    armor.instance_id = db.get_instance_id(player_id)
                     armor.main_property_type = pb.EPropertyType_DamageBalance
                     # if armor_data:
                     #     armor.main_property_type = armor_property_mapping.get(
@@ -288,8 +286,7 @@ def make_item(item_id, num=1, player_id=0, instance_id=[0]) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     poster = tmp.poster
                     poster.poster_id = i["i_d"]
-                    poster.instance_id = instance_id[0]
-                    instance_id[0] += 1
+                    poster.instance_id = db.get_instance_id(player_id)
                     poster.star = 5
 
                     # 将海报数据序列化并更新到 items 数据库
@@ -694,7 +691,6 @@ def make_item(item_id, num=1, player_id=0, instance_id=[0]) -> list:
 def make_treasure_box_item(
     player_id,
     world_level,
-    instance_id,
     num=0,
 ) -> list:  # TODO 仅生成武器和防具, 未考虑未解锁的武器, 未实现根据世界等级调整概率,
     if not num:
@@ -714,8 +710,7 @@ def make_treasure_box_item(
         tmp.item_tag = pb.EBagItemTag_Weapon
         weapon = tmp.weapon
         weapon.weapon_id = weapon_i["item_i_d"]
-        weapon.instance_id = instance_id[0]
-        instance_id[0] += 1
+        weapon.instance_id = db.get_instance_id(player_id)
         for prop in res["Weapon"]["weapon_property"]["datas"]:
             if weapon_i["weapon_property_i_d"] == prop["i_d"]:
                 weapon.property_index = random.randint(
@@ -753,8 +748,7 @@ def make_treasure_box_item(
         # tmp.is_new = False
         armor = tmp.armor
         armor.armor_id = armor_i["i_d"]
-        armor.instance_id = instance_id[0]
-        instance_id[0] += 1
+        armor.instance_id = db.get_instance_id(player_id)
         for prop in res["Armor"]["armor_property"]["datas"]:
             if armor_i["armor_property_i_d"] == prop["i_d"]:
                 armor.property_index = random.randint(

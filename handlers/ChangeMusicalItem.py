@@ -35,7 +35,7 @@ class Handler(PacketHandler):
         server_data_entry.action_type = pb.SceneActionType_UPDATE_MUSICAL_ITEM
         session.scene_player.musical_item_id = req.musical_item_instance_id
         session.scene_player.musical_item_instance_id = req.musical_item_instance_id
-        session.scene_player.source = req.source
+        session.scene_player.musical_item_source = req.source
         server_data_entry.player.CopyFrom(session.scene_player)
         up_scene_action(
             session.scene_id, session.channel_id, notice.SerializeToString()

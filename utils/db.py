@@ -166,6 +166,20 @@ def init():
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS life_info (
+            player_id INTEGER PRIMARY KEY,
+            life_blob BLOB NOT NULL,
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS mail (
+            player_id INTEGER NOT NULL,
+            mail_id INTEGER NOT NULL,
+            mail_blob BLOB NOT NULL,
+            PRIMARY KEY (player_id, mail_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
+
         CREATE TABLE IF NOT EXISTS friend (
             player_id INTEGER NOT NULL,
             friend_id INTEGER NOT NULL,
@@ -181,11 +195,18 @@ def init():
 
         CREATE TABLE IF NOT EXISTS achieve (
             player_id INTEGER NOT NULL,
-            group_id INTEGER NOT NULL,
-            achieve_quest_blob BLOB NOT NULL,
-            PRIMARY KEY (player_id, group_id),
+            achieve_id INTEGER NOT NULL,
+            achieve_blob BLOB NOT NULL,
+            PRIMARY KEY (player_id, achieve_id),
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE,
-            FOREIGN KEY(group_id) REFERENCES players(player_id) ON DELETE CASCADE
+            FOREIGN KEY(achieve_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS instance (
+            player_id INTEGER NOT NULL,
+            instance_id INTEGER NOT NULL,
+            PRIMARY KEY (player_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
 
         INSERT OR IGNORE INTO users (id, username, password, user_token) VALUES (1000000, "", "", "");
@@ -319,20 +340,12 @@ def init_player(player_id):
         (player_id, 102, item.SerializeToString()),
     )
 
-    # 初始化成就列表
-    for group in res["AchieveQuest"]["achieve_quest_group"]["datas"]:
-        achive_quest = pb.OneGroupAchieveInfo()
-        achive_quest.group_id = group["i_d"]
-        for group_info in group["achieve_quest_group_info"]:
-            lst = achive_quest.achieve_lst.add()
-            lst.achieve_id = group_info["achieve_condition_i_d"]
-            # for achieve in res["Achieve"]["achieve"]["datas"]:
-            #     if achieve.get("i_d", 0) == group_info["achieve_condition_i_d"]:
-            #       if group["i_d"] in []:
-            #         lst.count = achieve[
-            #             "count_param"
-            #         ]
-        set_achieve(player_id, group["i_d"], achive_quest.SerializeToString())
+    # 初始化 Achieve
+    for achieve in res["Achieve"]["achieve"]["datas"]:
+        if achieve.get("i_d", 0):
+            tmp = pb.Achieve()
+            tmp.achieve_id = achieve["i_d"]
+            set_achieve(player_id, achieve["i_d"], tmp.SerializeToString())
 
     # 初始化任务
     for quest in res["Quest"]["quest"]["datas"]:
@@ -363,6 +376,30 @@ def init_player(player_id):
         for story in chapter["story_list"]:
             tmp.rewarded_story_ids.append(story)
         set_chapter(player_id, chapter["i_d"], tmp.SerializeToString())
+    # 初始化生活信息
+    life_list = {}
+    for i in range(1, 7):
+        tmp = pb.LifeBaseInfo()
+        tmp.life_type = pb.LIFE_TYPE_Cooking
+        tmp.level = 0
+        life_list[i] = tmp.SerializeToString()
+    db.execute(
+        f"INSERT OR REPLACE INTO life_info (player_id, life_blob) VALUES (?, ?)",
+        (player_id, pickle.dumps(life_list)),
+    )
+    # 一封欢迎邮件
+    mail = pb.MailBriefData()
+    mail.mail_id = 1
+    mail.sender = "aac"
+    mail.content_type = pb.MailContentType_TEXT
+    mail.send_time = int(time.time())
+    mail.title = "of-ps"
+    mail.content = "此项目以AGPL开源, 仓库地址<color=#66ccff><b>https://github.com/byzp/of-ps</b></color>, 觉得有用点个star吧\n\n"
+    mail.overdue_day = 3650
+    tmp = mail.items.add()
+    tmp.item_id = 108
+    tmp.num = 1488891
+    set_mail(player_id, 1, mail.SerializeToString())
 
 
 def verify_sdk_user_info(user_id, login_token):
@@ -781,11 +818,11 @@ def del_friend_info(
     )
 
 
-def get_achieve(player_id, group_id):
+def get_achieve(player_id, achieve_id):
     """成就列表"""
     cur = db.execute(
-        "SELECT achieve_quest_blob FROM achieve WHERE player_id=? AND group_id=?",
-        (player_id, group_id),
+        "SELECT achieve_blob FROM achieve WHERE player_id=? AND achieve_id=?",
+        (player_id, achieve_id),
     )
     row = cur.fetchone()
     if row:
@@ -793,10 +830,10 @@ def get_achieve(player_id, group_id):
     return None
 
 
-def set_achieve(player_id, group_id, achieve_quest_blob):
+def set_achieve(player_id, achieve_id, achieve_blob):
     db.execute(
-        "INSERT OR REPLACE INTO achieve (player_id, group_id, achieve_quest_blob) VALUES (?, ?, ?)",
-        (player_id, group_id, achieve_quest_blob),
+        "INSERT OR REPLACE INTO achieve (player_id, achieve_id, achieve_blob) VALUES (?, ?, ?)",
+        (player_id, achieve_id, achieve_blob),
     )
 
 
@@ -887,3 +924,84 @@ def set_treasure_box(player_id, box_id, box_blob):
         "INSERT OR REPLACE INTO treasure_box (player_id, box_id, box_blob) VALUES (?, ?, ?)",
         (player_id, box_id, box_blob),
     )
+
+
+def get_life(player_id, life_index=None):
+    cur = db.execute(
+        "SELECT life_blob FROM life_info WHERE player_id=?",
+        (player_id,),
+    )
+    row = cur.fetchone()
+    if row:
+        if life_index:
+            return pickle.loads(row[0])[life_index]
+        else:
+            return pickle.loads(row[0])
+
+
+def set_life(player_id, life_index, life_blob):
+    life_list = get_life(player_id)
+    life_list[life_index] = life_blob
+    db.execute(
+        f"INSERT OR REPLACE INTO life_info (player_id, life_blob) VALUES (?, ?)",
+        (player_id, pickle.dumps(life_list)),
+    )
+
+
+def get_mail(player_id, mail_id=None):
+    if mail_id:
+        cur = db.execute(
+            "SELECT mail_blob FROM mail WHERE player_id=? AND mail_id=?",
+            (player_id, mail_id),
+        )
+        row = cur.fetchone()
+        if row:
+            return row[0]
+    else:
+        cur = db.execute(
+            "SELECT mail_blob FROM mail WHERE player_id=?",
+            (player_id,),
+        )
+        rows = cur.fetchall()
+        mails = []
+        if rows:
+            for row in rows:
+                mails.append(row[0])
+        return mails
+
+
+def set_mail(player_id, mail_id, mail_blob):
+    db.execute(
+        "INSERT OR REPLACE INTO mail (player_id, mail_id, mail_blob) VALUES (?, ?, ?)",
+        (player_id, mail_id, mail_blob),
+    )
+
+
+def del_mail(
+    player_id,
+    mail_id,
+):
+    db.execute(
+        "DELETE FROM mail WHERE player_id=? AND mail_id=?",
+        (
+            player_id,
+            mail_id,
+        ),
+    )
+
+
+def get_instance_id(player_id):
+    cur = db.execute(
+        "SELECT instance_id FROM instance WHERE player_id=?",
+        (player_id,),
+    )
+    row = cur.fetchone()
+    if row:
+        instance_id = row[0] + 1
+    else:
+        instance_id = 1
+    db.execute(
+        f"INSERT OR REPLACE INTO instance (player_id, instance_id) VALUES (?, ?)",
+        (player_id, instance_id),
+    )
+    return instance_id

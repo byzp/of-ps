@@ -4,9 +4,9 @@ import logging
 
 import proto.OverField_pb2 as GetAchieveOneGroupRsp_pb2
 import proto.OverField_pb2 as GetAchieveOneGroupReq_pb2
-import proto.OverField_pb2 as OneGroupAchieveInfo_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 import utils.db as db
+from utils.res_loader import res
 
 logger = logging.getLogger(__name__)
 
@@ -19,13 +19,16 @@ class Handler(PacketHandler):
 
         rsp = GetAchieveOneGroupRsp_pb2.GetAchieveOneGroupRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        achieve = db.get_achieve(session.player_id, req.group_id)
-        if not achieve:
-            rsp.status = StatusCode_pb2.StatusCode_FAIL
-            session.send(MsgId.GetAchieveOneGroupRsp, rsp, packet_id)
-            return
-        tmp = OneGroupAchieveInfo_pb2.OneGroupAchieveInfo()
-        tmp.ParseFromString(achieve)
-        rsp.current_group_achieve_info.CopyFrom(tmp)
+        rsp.current_group_achieve_info.group_id = req.group_id
+        for group in res["AchieveQuest"]["achieve_quest_group"]["datas"]:
+            if group["i_d"] == req.group_id:
+                for group_info in group["achieve_quest_group_info"]:
+                    lst = rsp.current_group_achieve_info.achieve_lst.add()
+                    achieve = db.get_achieve(
+                        session.player_id, group_info["achieve_condition_i_d"]
+                    )
+                    if not achieve:
+                        continue
+                    lst.ParseFromString(achieve)
 
         session.send(MsgId.GetAchieveOneGroupRsp, rsp, packet_id)  # 1761,1762, 成就

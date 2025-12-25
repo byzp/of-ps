@@ -46,18 +46,60 @@ class Handler(PacketHandler):
                                             session.player_id, currency["currency_i_d"]
                                         )
                                         if not cur_t:
-                                            rsp.status = (
-                                                StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+                                            cur_t = make_item(
+                                                currency["currency_i_d"],
+                                                0,
+                                                session.player_id,
                                             )
-                                            session.send(
-                                                MsgId.ShopBuyRsp, rsp, packet_id
-                                            )
-                                            return
                                         cur_item = ItemDetail.ItemDetail()
                                         cur_item.ParseFromString(cur_t)
+                                        num = cur_item.main_item.base_item.num
+                                        if (
+                                            num < currency["price"]
+                                            and currency["currency_i_d"] == 102
+                                        ):  # 使用菱石补齐星石
+                                            cur_t = db.get_item_detail(
+                                                session.player_id, 108
+                                            )
+                                            if not cur_t:
+                                                rsp.status = (
+                                                    StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+                                                )
+                                                session.send(
+                                                    MsgId.ShopBuyRsp, rsp, packet_id
+                                                )
+                                                return
+                                            else:
+                                                item_t = ItemDetail.ItemDetail()
+                                                item_t.ParseFromString(cur_t)
+                                                if (
+                                                    item_t.main_item.base_item.num + num
+                                                    < currency["price"]
+                                                ):
+                                                    rsp.status = (
+                                                        StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+                                                    )
+                                                    session.send(
+                                                        MsgId.ShopBuyRsp, rsp, packet_id
+                                                    )
+                                                    return
+                                                else:
+                                                    item_t.main_item.base_item.num -= (
+                                                        currency["price"] - num
+                                                    )
+                                                    db.set_item_detail(
+                                                        session.player_id,
+                                                        item_t.SerializeToString(),
+                                                        108,
+                                                    )
+                                                    cur_item.main_item.base_item.num = (
+                                                        currency["price"]
+                                                    )
+                                                    rsp1.items.add().CopyFrom(item_t)
+
                                         if (
                                             cur_item.main_item.base_item.num
-                                            <= currency["price"]
+                                            < currency["price"]
                                         ):
                                             rsp.status = (
                                                 StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH

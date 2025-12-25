@@ -56,7 +56,6 @@ class GameSession:
         "avatar_id",
         "badge_id",
         "scene_player",
-        "instance_id",
         "temp_pack",
         "running",
         "verified",
@@ -96,7 +95,6 @@ class GameSession:
         self.avatar_id = 41101
         self.badge_id = 0
         self.scene_player = OverField_pb2.ScenePlayer()
-        self.instance_id = [0]
         self.temp_pack = []
 
         self.running = True
@@ -182,13 +180,6 @@ class GameSession:
             # 队列之前为空时才设置事件, 减少syscall
             if len(self._send_queue) == 1:
                 self._send_event.set()
-
-    def sbin(self, msg_id: int, path: str, packet_id: int):
-        try:
-            with open(path, "rb") as f:
-                self.send(msg_id, f.read(), packet_id, is_bin=True)
-        except FileNotFoundError:
-            logger.error(f"File not found: {path}")
 
     def _send_loop(self):
         sock = self.socket

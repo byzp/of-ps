@@ -28,6 +28,8 @@ def cmd_exec(cmd: str):
             set_time(cmds)  # time 1-86400
         case "tp":
             changeScenechannel(cmds)  # tp player_id/all scene_id [channel_id]
+        case "kick":
+            kick(cmds)  # kick player_id/all
         case _:
             logger.warning("Unknow command.")
 
@@ -55,7 +57,6 @@ def give(cmds: list):
     for session in target_session:
         rsp = pb.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        instance_id = session.instance_id[0]
         for i in res["Item"]["item"]["datas"]:
             if i["i_d"] == cmds[2] or cmds[2] == "all":
                 item = pb.ItemDetail()
@@ -172,3 +173,31 @@ def changeScenechannel(cmds):
         sd.player.CopyFrom(session.scene_player)
         res = notice.SerializeToString()
         scene_data.up_scene_action(session.scene_id, session.channel_id, res)
+
+
+def kick(cmds: list):
+    match = False
+    target_session = []
+    if len(cmds) < 2:
+        logger.warning("kick player_id/all")
+        return
+    else:
+        cmds = list(map(lambda x: int(x) if x.lstrip("+-").isdigit() else x, cmds))
+    for session in get_session():
+        if cmds[1] == "all":
+            target_session.append(session)
+            match = True
+        else:
+            if session.player_id == cmds[1]:
+                target_session.append(session)
+                match = True
+                break
+    if not match:
+        logger.warning("No matching players found.")
+        return
+    for session in target_session:
+        rsp = pb.PlayerOfflineRsp()
+        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp.reason = pb.PlayerOfflineReason_KICK
+        session.send(MsgId.PlayerOfflineRsp, rsp, 0)
+        # session.close()  # 不能主动断开连接,不然客户端会先提示重连

@@ -29,6 +29,10 @@ class Handler(PacketHandler):
         rsp1 = PackNotice_pb2.PackNotice()
         rsp1.status = StatusCode_pb2.StatusCode_OK
         if req.pick_index == -1:
+            if len(session.temp_pack) >= 30:
+                rsp.status = StatusCode_pb2.StatusCode_TEMP_PACK_IS_FULL
+                session.send(MsgId.TreasureBoxPickupRsp, rsp, packet_id)
+                return
             for item in tb.rewards:
                 tmp_i = len(session.temp_pack)
                 if tmp_i < 30:  # TODO 动态背包大小限制
@@ -44,10 +48,10 @@ class Handler(PacketHandler):
                     item.main_item.temp_pack_index = tmp_i + 1
                     rsp.items.add().CopyFrom(item)
                     rsp1.items.add().CopyFrom(item)
-                    session.temp_pack.append([instance_id, item.SerializeToString()])
+                    session.temp_pack.append((instance_id, item.SerializeToString()))
                 else:
-                    rsp.status = StatusCode_pb2.StatusCode_TEMP_PACK_IS_FULL
                     session.send(MsgId.TreasureBoxPickupRsp, rsp, packet_id)
+                    session.send(MsgId.PackNotice, rsp1, 0)
                     return
             tb.ClearField("rewards")
         else:
@@ -66,7 +70,7 @@ class Handler(PacketHandler):
                 item.main_item.temp_pack_index = tmp_i + 1
                 rsp.items.add().CopyFrom(item)
                 rsp1.items.add().CopyFrom(item)
-                session.temp_pack.append([instance_id, item.SerializeToString()])
+                session.temp_pack.append((instance_id, item.SerializeToString()))
             else:
                 rsp.status = StatusCode_pb2.StatusCode_TEMP_PACK_IS_FULL
                 session.send(MsgId.TreasureBoxPickupRsp, rsp, packet_id)
