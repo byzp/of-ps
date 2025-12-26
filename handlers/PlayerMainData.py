@@ -123,8 +123,7 @@ class Handler(PacketHandler):
 
         tmp = pb.ScenePlayer()
         for i in scene_data.get_scene_player(session.scene_id, session.channel_id):
-            tmp.ParseFromString(i)
-            data.players.add().CopyFrom(tmp)
+            data.players.add().CopyFrom(i)
 
         data.channel_id = session.channel_id
         data.tod_time = 0

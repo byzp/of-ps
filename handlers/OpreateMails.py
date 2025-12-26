@@ -59,10 +59,11 @@ class Handler(PacketHandler):
                                 )
                                 tmp = rsp1.items.add()
                                 if not item_b:
-                                    item_b = make_item(
-                                        item.item_id, 0, session.player_id
+                                    tmp.CopyFrom(
+                                        make_item(item.item_id, 0, session.player_id)
                                     )
-                                tmp.ParseFromString(item_b)
+                                else:
+                                    tmp.ParseFromString(item_b)
                                 num_t = tmp.main_item.base_item.num
                                 tmp.main_item.base_item.num = item.num
                                 rsp.claim_result.add().CopyFrom(tmp)

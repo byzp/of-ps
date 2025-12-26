@@ -25,15 +25,20 @@ def make_ScenePlayer(session):
         player.is_birthday = False  # 判断生日
 
     char_ids = db.get_players_info(session.player_id, "team")
+    player.team.CopyFrom(make_SceneTeam(session.player_id, char_ids))
+
+
+def make_SceneTeam(player_id, char_ids):
+    team = pb.SceneTeam()
     if char_ids[0]:
-        char_1 = player.team.char_1
+        char_1 = team.char_1
         char_1.char_id = char_ids[0]
 
         chr = pb.Character()
-        chr.ParseFromString(db.get_characters(session.player_id, char_ids[0])[0])
-        char_1.outfit_preset.ParseFromString(
+        chr.ParseFromString(db.get_characters(player_id, char_ids[0])[0])
+        char_1.outfit_preset.CopyFrom(
             make_SceneCharacterOutfitPreset(
-                session, chr.outfit_presets[chr.in_use_outfit_preset_index]
+                player_id, chr.outfit_presets[chr.in_use_outfit_preset_index]
             )
         )
 
@@ -51,14 +56,14 @@ def make_ScenePlayer(session):
         char_1.pos.y = 908
         char_1.rot.CopyFrom(pb.Vector3())
     if char_ids[1]:
-        char_2 = player.team.char_2
+        char_2 = team.char_2
         char_2.char_id = char_ids[1]
 
         chr = pb.Character()
-        chr.ParseFromString(db.get_characters(session.player_id, char_ids[1])[0])
-        char_2.outfit_preset.ParseFromString(
+        chr.ParseFromString(db.get_characters(player_id, char_ids[1])[0])
+        char_2.outfit_preset.CopyFrom(
             make_SceneCharacterOutfitPreset(
-                session, chr.outfit_presets[chr.in_use_outfit_preset_index]
+                player_id, chr.outfit_presets[chr.in_use_outfit_preset_index]
             )
         )
 
@@ -75,14 +80,14 @@ def make_ScenePlayer(session):
         char_2.pos.y = 908
         char_2.rot.CopyFrom(pb.Vector3())
     if char_ids[2]:
-        char_3 = player.team.char_3
+        char_3 = team.char_3
         char_3.char_id = char_ids[2]
 
         chr = pb.Character()
-        chr.ParseFromString(db.get_characters(session.player_id, char_ids[2])[0])
-        char_3.outfit_preset.ParseFromString(
+        chr.ParseFromString(db.get_characters(player_id, char_ids[2])[0])
+        char_3.outfit_preset.CopyFrom(
             make_SceneCharacterOutfitPreset(
-                session, chr.outfit_presets[chr.in_use_outfit_preset_index]
+                player_id, chr.outfit_presets[chr.in_use_outfit_preset_index]
             )
         )
 
@@ -98,31 +103,32 @@ def make_ScenePlayer(session):
         char_3.pos.x = 2394
         char_3.pos.y = 908
         char_3.rot.CopyFrom(pb.Vector3())
+    return team
 
 
-def make_SceneCharacterOutfitPreset(session, outfit):
+def make_SceneCharacterOutfitPreset(player_id, outfit):
     sc = pb.SceneCharacterOutfitPreset()
     item = pb.ItemDetail()
     if outfit.hat > 0:
-        item.ParseFromString(db.get_item_detail(session.player_id, outfit.hat))
+        item.ParseFromString(db.get_item_detail(player_id, outfit.hat))
         sc.hat = outfit.hat
         sc.hat_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.hat_dye_scheme_index]
         )
     if outfit.hair > 0:
-        item.ParseFromString(db.get_item_detail(session.player_id, outfit.hair))
+        item.ParseFromString(db.get_item_detail(player_id, outfit.hair))
         sc.hair = outfit.hair
         sc.hair_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.hair_dye_scheme_index]
         )
     if outfit.clothes > 0:
-        item.ParseFromString(db.get_item_detail(session.player_id, outfit.clothes))
+        item.ParseFromString(db.get_item_detail(player_id, outfit.clothes))
         sc.clothes = outfit.clothes
         sc.cloth_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.clothes_dye_scheme_index]
         )
     if outfit.ornament > 0:
-        item.ParseFromString(db.get_item_detail(session.player_id, outfit.ornament))
+        item.ParseFromString(db.get_item_detail(player_id, outfit.ornament))
         sc.ornament = outfit.ornament
         sc.orn_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.ornament_dye_scheme_index]
@@ -131,71 +137,61 @@ def make_SceneCharacterOutfitPreset(session, outfit):
     sc.hide_info.CopyFrom(outfit.outfit_hide_info)
 
     if outfit.pend_top > 0:
-        item.ParseFromString(db.get_item_detail(session.player_id, outfit.pend_top))
+        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_top))
         sc.pend_top = outfit.pend_top
         sc.pend_top_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.pend_top_dye_scheme_index]
         )
     if outfit.pend_chest > 0:
-        item.ParseFromString(db.get_item_detail(session.player_id, outfit.pend_chest))
+        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_chest))
         sc.pend_chest = outfit.pend_chest
         sc.pend_chest_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.pend_chest_dye_scheme_index]
         )
     if outfit.pend_pelvis > 0:
-        item.ParseFromString(db.get_item_detail(session.player_id, outfit.pend_pelvis))
+        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_pelvis))
         sc.pend_pelvis = outfit.pend_pelvis
         sc.pend_pelvis_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.pend_pelvis_dye_scheme_index]
         )
     if outfit.pend_up_face > 0:
-        item.ParseFromString(db.get_item_detail(session.player_id, outfit.pend_up_face))
+        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_up_face))
         sc.pend_up_face = outfit.pend_up_face
         sc.pend_up_face_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.pend_up_face_dye_scheme_index]
         )
     if outfit.pend_down_face > 0:
-        item.ParseFromString(
-            db.get_item_detail(session.player_id, outfit.pend_down_face)
-        )
+        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_down_face))
         sc.pend_down_face = outfit.pend_down_face
         sc.pend_down_face_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.pend_down_face_dye_scheme_index]
         )
     if outfit.pend_left_hand > 0:
-        item.ParseFromString(
-            db.get_item_detail(session.player_id, outfit.pend_left_hand)
-        )
+        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_left_hand))
         sc.pend_left_hand = outfit.pend_left_hand
         sc.pend_left_hand_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.pend_left_hand_dye_scheme_index]
         )
     if outfit.pend_right_hand > 0:
-        item.ParseFromString(
-            db.get_item_detail(session.player_id, outfit.pend_right_hand)
-        )
+        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_right_hand))
         sc.pend_right_hand = outfit.pend_right_hand
         sc.pend_right_hand_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.pend_right_hand_dye_scheme_index]
         )
     if outfit.pend_left_foot > 0:
-        item.ParseFromString(
-            db.get_item_detail(session.player_id, outfit.pend_left_foot)
-        )
+        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_left_foot))
         sc.pend_left_foot = outfit.pend_left_foot
         sc.pend_left_foot_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.pend_left_foot_dye_scheme_index]
         )
     if outfit.pend_right_foot > 0:
-        item.ParseFromString(
-            db.get_item_detail(session.player_id, outfit.pend_right_foot)
-        )
+        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_right_foot))
         sc.pend_right_foot = outfit.pend_right_foot
         sc.pend_right_foot_dye_scheme.CopyFrom(
             item.main_item.outfit.dye_schemes[outfit.pend_right_foot_dye_scheme_index]
         )
 
-    return sc.SerializeToString()
+    return sc
 
 
 def make_item(item_id, num=1, player_id=0) -> list:
@@ -210,8 +206,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_Weapon:  # 武器 tag:2
                     item_detail = pb.ItemDetail()
@@ -229,8 +223,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     weapon.property_index = 1
 
                     # 将武器数据序列化并更新到 items 数据库
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_Armor:  # 防具 tag:3
                     # # 1100=0, 1200=2, 1300=5, 1400=7, 1500=8
                     # armor_property_mapping = {1100: 0, 1200: 2, 1300: 5, 1400: 7, 1500: 8}
@@ -267,8 +259,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     armor.is_lock = False
 
                     # 将护甲数据序列化并更新到 items 数据库
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_Fragment:  # 角色碎片 tag:4
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -276,8 +266,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_Poster:  # 映像 tag:5
                     item_detail = pb.ItemDetail()
@@ -290,8 +278,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     poster.star = 5
 
                     # 将海报数据序列化并更新到 items 数据库
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_Collection:  # 收藏品 tag:6
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -299,8 +285,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_Card:  # 收藏卡 tag:7
                     item_detail = pb.ItemDetail()
@@ -310,8 +294,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.character.character_id = i["i_d"]
                     # 这个好像是多余的角色碎片转换成星辰后，删除角色碎片的通知
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_Material:  # 材料 tag:8
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -319,8 +301,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_Currency:  # 货币 tag:9
                     item_detail = pb.ItemDetail()
@@ -330,8 +310,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_Food:  # 食物 tag:10
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -339,8 +317,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_Item:  # 普通道具 tag:12
                     item_detail = pb.ItemDetail()
@@ -350,8 +326,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_Fish:  # 鱼产 tag:13
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -359,8 +333,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_Baitbox:  # 鱼饵箱 tag:15
                     item_detail = pb.ItemDetail()
@@ -370,8 +342,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_Inscription:  # 铭文 tag:17
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -379,8 +349,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.inscription.inscription_id = i["i_d"]
                     tmp.inscription.level = 5
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_StrengthStone:  # 强化石 tag:18
                     item_detail = pb.ItemDetail()
@@ -390,8 +358,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_ExpBook:  # 经验书 能量饮料 tag:19
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -400,8 +366,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_Head:  # 头像 tag:20
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -409,8 +373,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = 1
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_Fashion:  # 时装 tag:21
                     item_detail = pb.ItemDetail()
@@ -422,8 +384,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     dye_scheme = outfit.dye_schemes.add()
                     dye_scheme.is_un_lock = True
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_UnlockItem:  # 解锁道具 tag:22
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -431,8 +391,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = 2  # 1/2
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_AbilityItem:  # 能力道具 tag:23
                     item_detail = pb.ItemDetail()
@@ -442,8 +400,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_UnlockAbilityItem:  # 解锁能力道具 tag:24
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -451,8 +407,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = 1
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_CharacterBadge:  # 角色徽章 tag:25
                     item_detail = pb.ItemDetail()
@@ -462,8 +416,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = 8
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_DyeStuff:  # 染料 tag:26
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -471,8 +423,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_Agentia:  # 特殊道具 女装之魂 蔷薇之心 等 tag:29
                     item_detail = pb.ItemDetail()
@@ -482,8 +432,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_MoonStone:  # 月石 技能材料 tag:30
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -491,8 +439,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_Umbrella:  # 伞 tag:31
                     item_detail = pb.ItemDetail()
@@ -502,8 +448,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = 1
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_Vitality:  # 体力药剂 tag:32
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -511,8 +455,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_Badge:  # 头衔 tag:33
                     item_detail = pb.ItemDetail()
@@ -522,8 +464,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = 1
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_Furniture:  # 家具 tag:34
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -531,8 +471,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_Energy:  # 精力药水 tag:35
                     item_detail = pb.ItemDetail()
@@ -542,8 +480,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_TeleportKey:  # 采集空间钥匙 tag:38
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -552,8 +488,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_WallPaper:  # 壁纸 tag:39
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -561,8 +495,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = 1
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_Expression:  # 表情 tag:40
                     item_detail = pb.ItemDetail()
@@ -573,8 +505,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.num = 1
                     item_detail.extra_quality = i["quality"]
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_MoonCard:  # 月卡通知也许 未发现实际内容 tag:41
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -584,8 +514,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.num = num
                     item_detail.extra_quality = i["quality"]
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_PhoneCase:  # 手机壁纸 tag:42
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -593,8 +521,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = 1
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_Pendant:  # 挂件 tag:43
                     item_detail = pb.ItemDetail()
@@ -604,8 +530,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = 1
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_AvatarFrame:  # 头像框 tag:44
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -613,8 +537,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = 1
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_IntimacyGift:  # 亲密度礼物 tag:45
                     item_detail = pb.ItemDetail()
@@ -624,8 +546,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_MusicNote:  # 音乐册 tag:46
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -633,8 +553,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_MonthlyCard:  # 月度卡 未知 tag:47
                     item_detail = pb.ItemDetail()
@@ -644,8 +562,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_BattlePassCard:  # 战斗通行证 未知 tag:48
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -653,8 +569,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
-
-                    items = item_detail.SerializeToString()
 
                 case pb.EBagItemTag_MonthlyGiftCard:  # 月度礼物卡 tag:49
                     item_detail = pb.ItemDetail()
@@ -664,8 +578,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_BattlePassGiftCard:  # 战斗通行证礼物卡 tag:50
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -674,8 +586,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
 
-                    items = item_detail.SerializeToString()
-
                 case pb.EBagItemTag_SeasonalMiniGamesItem:  # 小游戏道具 tag:51
                     item_detail = pb.ItemDetail()
                     tmp = item_detail.main_item
@@ -683,9 +593,7 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
-
-                    items = item_detail.SerializeToString()
-            return items
+            return item_detail
 
 
 def make_treasure_box_item(
@@ -736,8 +644,9 @@ def make_treasure_box_item(
                     group_s["min_level"], group_s["max_level"]
                 )
                 weapon.star = 1
-                items.append(item_detail.SerializeToString())
+                items.append(item_detail)
                 wp_num -= 1
+                break
     armor_len = len(res["Armor"]["armor"]["datas"])
     while armor_num > 0:
         armor_i = res["Armor"]["armor"]["datas"][random.randint(0, armor_len - 1)]
@@ -793,6 +702,7 @@ def make_treasure_box_item(
                 # armor.strength_exp = 0
                 # armor.property_index = 0
                 # armor.is_lock = False
-                items.append(item_detail.SerializeToString())
+                items.append(item_detail)
                 armor_num -= 1
+                break
     return items

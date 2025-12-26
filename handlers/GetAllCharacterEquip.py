@@ -26,4 +26,4 @@ class Handler(PacketHandler):
 
         session.send(
             MsgId.GetAllCharacterEquipRsp, rsp, packet_id
-        )  # 打开探险员界面响应全部装备
+        )  # 打开探索员界面响应全部装备

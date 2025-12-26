@@ -45,14 +45,17 @@ class Handler(PacketHandler):
                                         cur_t = db.get_item_detail(
                                             session.player_id, currency["currency_i_d"]
                                         )
-                                        if not cur_t:
-                                            cur_t = make_item(
-                                                currency["currency_i_d"],
-                                                0,
-                                                session.player_id,
-                                            )
                                         cur_item = ItemDetail.ItemDetail()
-                                        cur_item.ParseFromString(cur_t)
+                                        if not cur_t:
+                                            cur_item.CopyFrom(
+                                                make_item(
+                                                    currency["currency_i_d"],
+                                                    0,
+                                                    session.player_id,
+                                                )
+                                            )
+                                        else:
+                                            cur_item.ParseFromString(cur_t)
                                         num = cur_item.main_item.base_item.num
                                         if (
                                             num < currency["price"]
@@ -125,10 +128,15 @@ class Handler(PacketHandler):
                                     )
                                     tmp1 = ItemDetail.ItemDetail()
                                     if not item:
-                                        item = make_item(
-                                            item_pool["item_i_d"], 0, session.player_id
+                                        tmp1.CopyFrom(
+                                            make_item(
+                                                item_pool["item_i_d"],
+                                                0,
+                                                session.player_id,
+                                            )
                                         )
-                                    tmp1.ParseFromString(item)
+                                    else:
+                                        tmp1.ParseFromString(item)
                                     num_t = tmp1.main_item.base_item.num
                                     tmp1.main_item.base_item.num = item_pool["item_num"]
                                     rsp.items.add().CopyFrom(tmp1)

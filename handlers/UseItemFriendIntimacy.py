@@ -56,7 +56,6 @@ class Handler(PacketHandler):
         # 数量更新通知
         rsp = PackNotice_pb2.PackNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK
-        item_notify = rsp.items.add()
-        item_notify.ParseFromString(item.SerializeToString())
+        rsp.items.add().CopyFrom(item)
 
         session.send(MsgId.PackNotice, rsp, packet_id)

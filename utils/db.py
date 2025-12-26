@@ -251,8 +251,8 @@ def init_player(player_id):
         c.character_id = i["i_d"]
         c.level = 1
         c.max_level = 20
-        c.exp = 200
-        c.star = 2
+        c.exp = 0
+        c.star = 0
         c.gather_weapon = 0
 
         t1 = c.equipment_presets.add()

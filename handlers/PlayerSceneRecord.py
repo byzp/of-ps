@@ -15,12 +15,11 @@ class Handler(PacketHandler):
         req = PlayerSceneRecordReq_pb2.PlayerSceneRecordReq()
         req.ParseFromString(data)
 
-        rec = req.data.SerializeToString()
         up_recorder(
             session.scene_id,
             session.channel_id,
             session.player_id,
-            rec,
+            req.data,
         )
 
         # 更新动作和角度

@@ -170,7 +170,7 @@ def notice_sync_loop():
                         for k, v in scene[scene_id][channel_id].items():
                             tmp = rsp.data.add()
                             tmp.player_id = k
-                            tmp.data.add().ParseFromString(v)
+                            tmp.data.add().CopyFrom(v)
                         scene[scene_id][channel_id].clear()
                         for session in session_list:
                             if (

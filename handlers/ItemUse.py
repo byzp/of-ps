@@ -61,8 +61,11 @@ class Handler(PacketHandler):
                             )
                             tmp1 = ItemDetail.ItemDetail()
                             if not tmp:
-                                tmp = make_item(item["item_i_d"], 0, session.player_id)
-                            tmp1.ParseFromString(tmp)
+                                tmp1.CopyFrom(
+                                    make_item(item["item_i_d"], 0, session.player_id)
+                                )
+                            else:
+                                tmp1.ParseFromString(tmp)
                             num_t = tmp1.main_item.base_item.num
                             r_num = random.randint(
                                 item["item_min_count"], item["item_max_count"]

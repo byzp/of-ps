@@ -107,8 +107,5 @@ def get_scene_player(scene_id, channel_id):
                 continue
             if session.scene_id == scene_id and session.channel_id == channel_id:
                 # 获取所有同场景玩家
-                pl = pb.ScenePlayer()
-                pl.CopyFrom(session.scene_player)
-                res = pl.SerializeToString()
-                players.append(res)
+                players.append(session.scene_player)
         return players

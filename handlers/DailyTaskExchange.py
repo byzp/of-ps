@@ -48,8 +48,9 @@ class Handler(PacketHandler):
         tmp = db.get_item_detail(session.player_id, 125)  # 祈愿石
         tmp1 = ItemDetail.ItemDetail()
         if not tmp:
-            tmp = make_item(125, 0, session.player_id)
-        tmp1.ParseFromString(tmp)
+            tmp1.CopyFrom(make_item(125, 0, session.player_id))
+        else:
+            tmp1.ParseFromString(tmp)
         num_t = tmp1.main_item.base_item.num
         tmp1.main_item.base_item.num = exc_num
         rsp.rewards.add().CopyFrom(tmp1)

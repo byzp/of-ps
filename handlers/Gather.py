@@ -51,12 +51,15 @@ class Handler(PacketHandler):
                             )
                             tmp1 = ItemDetail.ItemDetail()
                             if not item:
-                                item = make_item(
-                                    item_t["item_i_d"],
-                                    0,
-                                    session.player_id,
+                                tmp1.CopyFrom(
+                                    make_item(
+                                        item_t["item_i_d"],
+                                        0,
+                                        session.player_id,
+                                    )
                                 )
-                            tmp1.ParseFromString(item)
+                            else:
+                                tmp1.ParseFromString(item)
                             num_t = tmp1.main_item.base_item.num
                             tmp1.main_item.base_item.num = item_t["count"]
                             rsp.items.add().CopyFrom(tmp1)
