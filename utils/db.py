@@ -209,6 +209,14 @@ def init():
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS bless_tree (
+            player_id INTEGER NOT NULL,
+            def_id INTEGER NOT NULL,
+            tree_blob BLOB NOT NULL,
+            PRIMARY KEY (player_id, def_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
+
         INSERT OR IGNORE INTO users (id, username, password, user_token) VALUES (1000000, "", "", "");
 
     """
@@ -387,6 +395,11 @@ def init_player(player_id):
         f"INSERT OR REPLACE INTO life_info (player_id, life_blob) VALUES (?, ?)",
         (player_id, pickle.dumps(life_list)),
     )
+    # 初始化祈愿树
+    for tree in res["BlessingTree"]["blessing_tree_info"]["datas"]:
+        tree_id = []
+        set_bless_tree(player_id, tree["i_d"], tree_id)
+
     # 一封欢迎邮件
     mail = pb.MailBriefData()
     mail.mail_id = 1
@@ -1005,3 +1018,32 @@ def get_instance_id(player_id):
         (player_id, instance_id),
     )
     return instance_id
+
+
+def get_bless_tree(player_id, def_id=0):
+    if def_id:
+        cur = db.execute(
+            "SELECT tree_blob FROM bless_tree WHERE player_id=? AND def_id=?",
+            (player_id, def_id),
+        )
+        row = cur.fetchone()
+        if row:
+            return pickle.loads(row[0])
+    else:
+        cur = db.execute(
+            "SELECT def_id,tree_blob FROM bless_tree WHERE player_id=? ",
+            (player_id,),
+        )
+        rows = cur.fetchall()
+        trees = {}
+        if rows:
+            for row in rows:
+                trees[row[0]] = pickle.loads(row[1])
+        return trees
+
+
+def set_bless_tree(player_id, def_id, tree_ids: list):
+    db.execute(
+        "INSERT OR REPLACE INTO bless_tree (player_id, def_id, tree_blob) VALUES (?, ?, ?)",
+        (player_id, def_id, pickle.dumps(tree_ids)),
+    )

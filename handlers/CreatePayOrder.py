@@ -6,7 +6,7 @@ import logging
 import proto.OverField_pb2 as CreatePayOrderReq_pb2
 import proto.OverField_pb2 as CreatePayOrderRsp_pb2
 import proto.OverField_pb2 as PaySendGoodsNotice_pb2
-import proto.OverField_pb2 as ItemDetail
+import proto.OverField_pb2 as ItemDetail_pb2
 import proto.OverField_pb2 as PackNotice_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 import utils.db as db
@@ -59,7 +59,7 @@ class Handler(PacketHandler):
                                     item = db.get_item_detail(
                                         target_player_id, item_pool["item_i_d"]
                                     )
-                                    tmp1 = ItemDetail.ItemDetail()
+                                    tmp1 = ItemDetail_pb2.ItemDetail()
                                     if not item:
                                         tmp1.CopyFrom(
                                             make_item(

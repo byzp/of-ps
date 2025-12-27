@@ -5,7 +5,7 @@ import logging
 import proto.OverField_pb2 as DailyTaskExchangeReq_pb2
 import proto.OverField_pb2 as DailyTaskExchangeRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as ItemDetail
+import proto.OverField_pb2 as ItemDetail_pb2
 import proto.OverField_pb2 as PackNotice_pb2
 import utils.db as db
 from utils.pb_create import make_item
@@ -28,7 +28,7 @@ class Handler(PacketHandler):
             session.send(MsgId.DailyTaskExchangeRsp, rsp, packet_id)
             return
         else:
-            item_use = ItemDetail.ItemDetail()
+            item_use = ItemDetail_pb2.ItemDetail()
             item_use.ParseFromString(item)
             if item_use.main_item.base_item.num >= 50:  # TODO 兑换比例
                 exc_num = int(item_use.main_item.base_item.num / 50)
@@ -46,7 +46,7 @@ class Handler(PacketHandler):
 
         rsp1.items.add().CopyFrom(item_use)
         tmp = db.get_item_detail(session.player_id, 125)  # 祈愿石
-        tmp1 = ItemDetail.ItemDetail()
+        tmp1 = ItemDetail_pb2.ItemDetail()
         if not tmp:
             tmp1.CopyFrom(make_item(125, 0, session.player_id))
         else:

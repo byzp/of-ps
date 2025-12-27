@@ -5,7 +5,7 @@ import random
 
 import proto.OverField_pb2 as ItemUseReq_pb2
 import proto.OverField_pb2 as ItemUseRsp_pb2
-import proto.OverField_pb2 as ItemDetail
+import proto.OverField_pb2 as ItemDetail_pb2
 import proto.OverField_pb2 as PackNotice_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 import utils.db as db
@@ -30,7 +30,7 @@ class Handler(PacketHandler):
             session.send(MsgId.ItemUseRsp, rsp, packet_id)
             return
         else:
-            item_use = ItemDetail.ItemDetail()
+            item_use = ItemDetail_pb2.ItemDetail()
             item_use.ParseFromString(item)
             if item_use.main_item.base_item.num >= req.num:  # TODO 尚未考虑打折
                 item_use.main_item.base_item.num -= req.num
@@ -59,7 +59,7 @@ class Handler(PacketHandler):
                             tmp = db.get_item_detail(
                                 session.player_id, item["item_i_d"]
                             )
-                            tmp1 = ItemDetail.ItemDetail()
+                            tmp1 = ItemDetail_pb2.ItemDetail()
                             if not tmp:
                                 tmp1.CopyFrom(
                                     make_item(item["item_i_d"], 0, session.player_id)

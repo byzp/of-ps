@@ -8,6 +8,7 @@ import proto.OverField_pb2 as SceneDataNotice_pb2
 import proto.OverField_pb2 as ChatMsgRecordInitNotice_pb2
 import proto.OverField_pb2 as ActivitySignInDataNotice_pb2
 import proto.OverField_pb2 as ChangeChatChannelRsp_pb2
+import proto.OverField_pb2 as BlessTreeNotice_pb2
 import proto.OverField_pb2 as Quest_pb2
 import proto.OverField_pb2 as pb
 import utils.db as db
@@ -114,6 +115,12 @@ class Handler(PacketHandler):
                 tmp = rsp.info.add()
                 tmp.activity_id = activity["i_d"]
         session.send(MsgId.ActivitySignInDataNotice, rsp, 0)  # TODO
+
+        rsp = BlessTreeNotice_pb2.BlessTreeNotice()
+        rsp.status = StatusCode_pb2.StatusCode_OK
+        for k, v in db.get_bless_tree(session.player_id).items():
+            rsp.trees[k].tree_ids.extend(v)
+        session.send(MsgId.BlessTreeNotice, rsp, 0)
 
         rsp = SceneDataNotice_pb2.SceneDataNotice()
         rsp.status = StatusCode_pb2.StatusCode_OK

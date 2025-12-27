@@ -4,9 +4,10 @@ import logging
 
 import proto.OverField_pb2 as ShopBuyReq_pb2
 import proto.OverField_pb2 as ShopBuyRsp_pb2
-import proto.OverField_pb2 as ItemDetail
+import proto.OverField_pb2 as ItemDetail_pb2
 import proto.OverField_pb2 as PackNotice_pb2
 import proto.OverField_pb2 as StatusCode_pb2
+
 import utils.db as db
 from utils.res_loader import res
 from utils.pb_create import make_item
@@ -45,7 +46,7 @@ class Handler(PacketHandler):
                                         cur_t = db.get_item_detail(
                                             session.player_id, currency["currency_i_d"]
                                         )
-                                        cur_item = ItemDetail.ItemDetail()
+                                        cur_item = ItemDetail_pb2.ItemDetail()
                                         if not cur_t:
                                             cur_item.CopyFrom(
                                                 make_item(
@@ -73,7 +74,7 @@ class Handler(PacketHandler):
                                                 )
                                                 return
                                             else:
-                                                item_t = ItemDetail.ItemDetail()
+                                                item_t = ItemDetail_pb2.ItemDetail()
                                                 item_t.ParseFromString(cur_t)
                                                 if (
                                                     item_t.main_item.base_item.num + num
@@ -126,7 +127,7 @@ class Handler(PacketHandler):
                                     item = db.get_item_detail(
                                         session.player_id, item_pool["item_i_d"]
                                     )
-                                    tmp1 = ItemDetail.ItemDetail()
+                                    tmp1 = ItemDetail_pb2.ItemDetail()
                                     if not item:
                                         tmp1.CopyFrom(
                                             make_item(

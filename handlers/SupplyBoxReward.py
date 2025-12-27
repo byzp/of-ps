@@ -6,7 +6,7 @@ import time
 import proto.OverField_pb2 as SupplyBoxRewardReq_pb2
 import proto.OverField_pb2 as SupplyBoxRewardRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as ItemDetail
+import proto.OverField_pb2 as ItemDetail_pb2
 import proto.OverField_pb2 as PackNotice_pb2
 import utils.db as db
 from utils.pb_create import make_item
@@ -28,7 +28,7 @@ class Handler(PacketHandler):
         item = db.get_item_detail(
             session.player_id, 101
         )  # TODO 暂时不知道具体奖励内容,先给1000个金币
-        tmp1 = ItemDetail.ItemDetail()
+        tmp1 = ItemDetail_pb2.ItemDetail()
         if not item:
             tmp1.CopyFrom(
                 make_item(

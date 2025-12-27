@@ -5,7 +5,7 @@ import logging
 import proto.OverField_pb2 as GatherReq_pb2
 import proto.OverField_pb2 as GatherRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as ItemDetail
+import proto.OverField_pb2 as ItemDetail_pb2
 import proto.OverField_pb2 as PackNotice_pb2
 import utils.db as db
 from utils.res_loader import res
@@ -49,7 +49,7 @@ class Handler(PacketHandler):
                             item = db.get_item_detail(
                                 session.player_id, item_t["item_i_d"]
                             )
-                            tmp1 = ItemDetail.ItemDetail()
+                            tmp1 = ItemDetail_pb2.ItemDetail()
                             if not item:
                                 tmp1.CopyFrom(
                                     make_item(
