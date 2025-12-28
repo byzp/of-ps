@@ -13,7 +13,7 @@ import proto.OverField_pb2 as Quest_pb2
 import proto.OverField_pb2 as pb
 import utils.db as db
 from utils.res_loader import res
-import server.scene_data as scene_data
+from utils.pb_create import make_SceneDataNotice
 
 
 @packet_handler(MsgId.PlayerMainDataReq)
@@ -123,18 +123,7 @@ class Handler(PacketHandler):
         session.send(MsgId.BlessTreeNotice, rsp, 0)
 
         rsp = SceneDataNotice_pb2.SceneDataNotice()
-        rsp.status = StatusCode_pb2.StatusCode_OK
-        data = rsp.data
-        data.scene_id = session.scene_id
-        data.players.add().CopyFrom(session.scene_player)
-
-        tmp = pb.ScenePlayer()
-        for i in scene_data.get_scene_player(session.scene_id, session.channel_id):
-            data.players.add().CopyFrom(i)
-
-        data.channel_id = session.channel_id
-        data.tod_time = 0
-        data.channel_label = session.channel_id
+        rsp.CopyFrom(make_SceneDataNotice(session))
         session.send(MsgId.SceneDataNotice, rsp, 0)
 
         rsp = ChangeChatChannelRsp_pb2.ChangeChatChannelRsp()

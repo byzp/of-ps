@@ -3,6 +3,8 @@ import utils.db as db
 from datetime import datetime
 from utils.res_loader import res
 import random
+import server.scene_data as scene_data
+import server.notice_sync as notice_sync
 
 
 def make_ScenePlayer(session):
@@ -602,7 +604,7 @@ def make_treasure_box_item(
     num=0,
 ) -> list:  # TODO 仅生成武器和防具, 未考虑未解锁的武器, 未实现根据世界等级调整概率,
     if not num:
-        num = random.randint(3, 15)
+        num = random.randint(2, 7)
     wp_num = random.randint(0, num)
     armor_num = num - wp_num
     items = []
@@ -706,3 +708,25 @@ def make_treasure_box_item(
                 armor_num -= 1
                 break
     return items
+
+
+def make_SceneDataNotice(session):
+    rsp = pb.SceneDataNotice()
+    rsp.status = pb.StatusCode_OK
+    data = rsp.data
+    data.scene_id = session.scene_id
+    data.players.add().CopyFrom(session.scene_player)
+    for i in range(0, 12):
+        tmp = data.collections.add()
+        tmp.type = i
+    for i in db.get_collection(session.player_id):
+        crd = pb.PBCollectionRewardData()
+        crd.ParseFromString(i[1])
+        data.collections[i[0]].item_map[crd.item_id].CopyFrom(crd)
+
+    for i in scene_data.get_scene_player(session.scene_id, session.channel_id):
+        data.players.add().CopyFrom(i)
+    data.channel_id = session.channel_id
+    data.tod_time = int(notice_sync.tod_time)
+    data.channel_label = session.channel_id
+    return rsp

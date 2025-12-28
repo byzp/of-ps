@@ -11,7 +11,7 @@ import proto.OverField_pb2 as PackNotice_pb2
 import proto.OverField_pb2 as pb
 
 import server.scene_data as scene_data
-import server.notice_sync as notice_sync
+from utils.pb_create import make_SceneDataNotice
 
 logger = logging.getLogger(__name__)
 
@@ -49,18 +49,7 @@ class Handler(PacketHandler):
 
         # 更新场景
         rsp = SceneDataNotice_pb2.SceneDataNotice()
-        rsp.status = StatusCode_pb2.StatusCode_OK
-        data = rsp.data
-        data.scene_id = session.scene_id
-        data.players.add().CopyFrom(session.scene_player)
-
-        tmp = pb.ScenePlayer()
-        for i in scene_data.get_scene_player(session.scene_id, session.channel_id):
-            tmp.CopyFrom(i)
-            data.players.add().CopyFrom(tmp)
-        data.channel_id = session.channel_id
-        data.tod_time = int(notice_sync.tod_time)
-        data.channel_label = session.channel_id
+        rsp.CopyFrom(make_SceneDataNotice(session))
         session.send(MsgId.SceneDataNotice, rsp, 0)
 
         # 回花园时将临时背包物品更新到仓库

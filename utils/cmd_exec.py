@@ -12,6 +12,7 @@ import server.scene_data as scene_data
 import server.notice_sync as notice_sync
 import utils.db as db
 from utils.pb_create import make_item
+from utils.pb_create import make_SceneDataNotice
 
 logger = logging.getLogger(__name__)
 
@@ -151,21 +152,9 @@ def changeScenechannel(cmds):
             session.scene_id, session.channel_id, notice.SerializeToString()
         )
 
-        tmp = pb.SceneDataNotice()
-        tmp.status = StatusCode_pb2.StatusCode_OK
-        data = tmp.data
-        data.scene_id = session.scene_id
-        data.players.add().CopyFrom(session.scene_player)
-
-        tmp1 = pb.ScenePlayer()
-        for i in scene_data.get_scene_player(session.scene_id, session.channel_id):
-            tmp1.CopyFrom(i)
-            data.players.add().CopyFrom(tmp1)
-
-        data.channel_id = session.channel_id
-        data.tod_time = 0
-        data.channel_label = session.channel_id
-        session.send(MsgId.SceneDataNotice, tmp, 0)
+        rsp = pb.SceneDataNotice()
+        rsp.CopyFrom(make_SceneDataNotice(session))
+        session.send(MsgId.SceneDataNotice, rsp, 0)
 
         notice = pb.ServerSceneSyncDataNotice()
         notice.status = pb.StatusCode_OK

@@ -18,6 +18,7 @@ class Config:
     COMPRESS_THRESHOLD = 1200
 
     REJECT_PAYMENT = False  # CreatePayOrderReq
+    SKIP_QUESTS = True
 
     # database
     DB_PATH = "./player.db"

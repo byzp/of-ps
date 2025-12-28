@@ -217,6 +217,15 @@ def init():
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS collections (
+            player_id INTEGER NOT NULL,
+            item_id INTEGER NOT NULL,
+            collection_type INTEGER NOT NULL,
+            item_blob BLOB NOT NULL,
+            PRIMARY KEY (player_id, item_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
+
         INSERT OR IGNORE INTO users (id, username, password, user_token) VALUES (1000000, "", "", "");
 
     """
@@ -388,7 +397,7 @@ def init_player(player_id):
     life_list = {}
     for i in range(1, 7):
         tmp = pb.LifeBaseInfo()
-        tmp.life_type = pb.LIFE_TYPE_Cooking
+        tmp.life_type = i
         tmp.level = 0
         life_list[i] = tmp.SerializeToString()
     db.execute(
@@ -399,6 +408,11 @@ def init_player(player_id):
     for tree in res["BlessingTree"]["blessing_tree_info"]["datas"]:
         tree_id = []
         set_bless_tree(player_id, tree["i_d"], tree_id)
+    # 初始化空间收集物, 没有就是未收集
+    # for collection_t in res["CollectionItem"]["collection_item"]["datas"]:
+    #     collection=pb.PBCollectionRewardData()
+    #     collection.item_id=collection_t["i_d"]
+    #     set_collection(player_id,collection_t["i_d"],collection_t["new_collection_type"],collection.SerializeToString())
 
     # 一封欢迎邮件
     mail = pb.MailBriefData()
@@ -911,7 +925,7 @@ def set_chapter(player_id, chapter_id, chapter_blob):
 
 
 def get_treasure_box(player_id, box_id=None):
-    if box_id:
+    if box_id or box_id == 0:  # 瓶中小径的宝箱为0
         cur = db.execute(
             "SELECT box_blob FROM treasure_box WHERE player_id=? AND box_id=?",
             (player_id, box_id),
@@ -1047,3 +1061,32 @@ def set_bless_tree(player_id, def_id, tree_ids: list):
         "INSERT OR REPLACE INTO bless_tree (player_id, def_id, tree_blob) VALUES (?, ?, ?)",
         (player_id, def_id, pickle.dumps(tree_ids)),
     )
+
+
+def set_collection(player_id, item_id, collection_type, item_blob):
+    db.execute(
+        "INSERT OR REPLACE INTO collections (player_id, item_id, collection_type, item_blob) VALUES (?, ?, ?, ?)",
+        (player_id, item_id, collection_type, item_blob),
+    )
+
+
+def get_collection(player_id, item_id=None):
+    if item_id:
+        cur = db.execute(
+            "SELECT collection_type,item_blob FROM collections WHERE player_id=? AND item_id=?",
+            (player_id, item_id),
+        )
+        row = cur.fetchone()
+        if row:
+            return row
+    else:
+        cur = db.execute(
+            "SELECT collection_type,item_blob FROM collections WHERE player_id=?",
+            (player_id,),
+        )
+        rows = cur.fetchall()
+        collections = []
+        if rows:
+            for row in rows:
+                collections.append(row)
+        return collections
