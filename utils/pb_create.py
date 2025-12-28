@@ -33,78 +33,78 @@ def make_ScenePlayer(session):
 def make_SceneTeam(player_id, char_ids):
     team = pb.SceneTeam()
     if char_ids[0]:
-        char_1 = team.char_1
-        char_1.char_id = char_ids[0]
+        char1 = team.char1
+        char1.char_id = char_ids[0]
 
         chr = pb.Character()
         chr.ParseFromString(db.get_characters(player_id, char_ids[0])[0])
-        char_1.outfit_preset.CopyFrom(
+        char1.outfit_preset.CopyFrom(
             make_SceneCharacterOutfitPreset(
                 player_id, chr.outfit_presets[chr.in_use_outfit_preset_index]
             )
         )
 
-        char_1.character_appearance.CopyFrom(chr.character_appearance)
-        char_1.char_lv = chr.level
-        char_1.char_star = chr.star
-        char_1.char_break_lv = chr.max_level
-        char_1.weapon_id = chr.equipment_presets[0].weapon
-        char_1.gather_weapon = chr.gather_weapon  # 设置采集武器
+        char1.character_appearance.CopyFrom(chr.character_appearance)
+        char1.char_lv = chr.level
+        char1.char_star = chr.star
+        char1.char_break_lv = chr.max_level
+        char1.weapon_id = chr.equipment_presets[0].weapon
+        char1.gather_weapon = chr.gather_weapon  # 设置采集武器
         # TODO: 铭文id 铭文等级 防具列表 映像列表
 
-        # char_1.pos.CopyFrom(pb.Vector3())
-        # char_1.rot.CopyFrom(pb.Vector3())
-        char_1.pos.x = 2394
-        char_1.pos.y = 908
-        char_1.rot.CopyFrom(pb.Vector3())
+        # char1.pos.CopyFrom(pb.Vector3())
+        # char1.rot.CopyFrom(pb.Vector3())
+        char1.pos.x = 2394
+        char1.pos.y = 908
+        char1.rot.CopyFrom(pb.Vector3())
     if char_ids[1]:
-        char_2 = team.char_2
-        char_2.char_id = char_ids[1]
+        char2 = team.char2
+        char2.char_id = char_ids[1]
 
         chr = pb.Character()
         chr.ParseFromString(db.get_characters(player_id, char_ids[1])[0])
-        char_2.outfit_preset.CopyFrom(
+        char2.outfit_preset.CopyFrom(
             make_SceneCharacterOutfitPreset(
                 player_id, chr.outfit_presets[chr.in_use_outfit_preset_index]
             )
         )
 
-        char_2.character_appearance.CopyFrom(chr.character_appearance)
-        char_2.char_lv = chr.level
-        char_2.char_star = chr.star
-        char_2.char_break_lv = chr.max_level
+        char2.character_appearance.CopyFrom(chr.character_appearance)
+        char2.char_lv = chr.level
+        char2.char_star = chr.star
+        char2.char_break_lv = chr.max_level
         # 从equipment_presets中获取武器ID
-        char_2.weapon_id = chr.equipment_presets[0].weapon
-        char_2.gather_weapon = chr.gather_weapon  # 设置采集武器
+        char2.weapon_id = chr.equipment_presets[0].weapon
+        char2.gather_weapon = chr.gather_weapon  # 设置采集武器
         # TODO: 铭文id 铭文等级 防具列表 映像列表
 
-        char_2.pos.x = 2394
-        char_2.pos.y = 908
-        char_2.rot.CopyFrom(pb.Vector3())
+        char2.pos.x = 2394
+        char2.pos.y = 908
+        char2.rot.CopyFrom(pb.Vector3())
     if char_ids[2]:
-        char_3 = team.char_3
-        char_3.char_id = char_ids[2]
+        char3 = team.char3
+        char3.char_id = char_ids[2]
 
         chr = pb.Character()
         chr.ParseFromString(db.get_characters(player_id, char_ids[2])[0])
-        char_3.outfit_preset.CopyFrom(
+        char3.outfit_preset.CopyFrom(
             make_SceneCharacterOutfitPreset(
                 player_id, chr.outfit_presets[chr.in_use_outfit_preset_index]
             )
         )
 
-        char_3.character_appearance.CopyFrom(chr.character_appearance)
-        char_3.char_lv = chr.level
-        char_3.char_star = chr.star
-        char_3.char_break_lv = chr.max_level
+        char3.character_appearance.CopyFrom(chr.character_appearance)
+        char3.char_lv = chr.level
+        char3.char_star = chr.star
+        char3.char_break_lv = chr.max_level
         # 从equipment_presets中获取武器ID
-        char_3.weapon_id = chr.equipment_presets[0].weapon
-        char_3.gather_weapon = chr.gather_weapon  # 设置采集武器
+        char3.weapon_id = chr.equipment_presets[0].weapon
+        char3.gather_weapon = chr.gather_weapon  # 设置采集武器
         # TODO: 铭文id 铭文等级 防具列表 映像列表
 
-        char_3.pos.x = 2394
-        char_3.pos.y = 908
-        char_3.rot.CopyFrom(pb.Vector3())
+        char3.pos.x = 2394
+        char3.pos.y = 908
+        char3.rot.CopyFrom(pb.Vector3())
     return team
 
 

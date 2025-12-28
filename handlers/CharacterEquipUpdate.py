@@ -38,7 +38,7 @@ class Handler(PacketHandler):
                     item.ParseFromString(
                         db.get_item_detail(session.player_id, None, ep.weapon)
                     )
-                    session.scene_player.team.char_1.weapon_id = (
+                    session.scene_player.team.char1.weapon_id = (
                         item.main_item.item_id
                     )  # 更新场景数据
                     item.main_item.weapon.wearer_id = req.char_id

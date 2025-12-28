@@ -25,15 +25,15 @@ class Handler(PacketHandler):
         rsp = DungeonEnterRsp_pb2.DungeonEnterRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
         char_ids = []
-        char_ids.append(req.char_1)
-        char_ids.append(req.char_2)
-        char_ids.append(req.char_3)
+        char_ids.append(req.char1)
+        char_ids.append(req.char2)
+        char_ids.append(req.char3)
         rsp.team.CopyFrom(make_SceneTeam(session.player_id, char_ids))
         rsp.dungeon_data.dungeon_id = req.dungeon_id
         rsp.dungeon_data.enter_times = 1
-        rsp.dungeon_data.char_1 = req.char_1
-        rsp.dungeon_data.char_2 = req.char_2
-        rsp.dungeon_data.char_3 = req.char_3
+        rsp.dungeon_data.char1 = req.char1
+        rsp.dungeon_data.char2 = req.char2
+        rsp.dungeon_data.char3 = req.char3
         rsp.dungeon_data.last_enter_time = int(time.time())
         rsp.dungeon_data.pos.CopyFrom(req.pos)
         rsp.dungeon_data.rot.CopyFrom(req.rot)

@@ -92,7 +92,7 @@ class Handler(PacketHandler):
 
         # 发送场景同步通知
         if char_id in db.get_players_info(session.player_id, "team"):
-            session.scene_player.team.char_1.character_appearance.CopyFrom(
+            session.scene_player.team.char1.character_appearance.CopyFrom(
                 req.appearance
             )
             notice = pb.ServerSceneSyncDataNotice()

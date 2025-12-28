@@ -24,12 +24,12 @@ class Handler(PacketHandler):
         rsp.status = StatusCode_pb2.StatusCode_OK
 
         db.set_players_info(
-            session.player_id, "team", (req.char_1, req.char_2, req.char_3)
+            session.player_id, "team", (req.char1, req.char2, req.char3)
         )
         session.send(MsgId.UpdateTeamRsp, rsp, packet_id)
 
         # 修改玩家 队长徽章ID
-        characters = db.get_characters(session.player_id, req.char_1)
+        characters = db.get_characters(session.player_id, req.char1)
         if characters:
             character = pb.Character()
             character.ParseFromString(characters[0])
@@ -39,7 +39,7 @@ class Handler(PacketHandler):
                 character.character_appearance.badge,
             )
         # 修改玩家 队长角色ID
-        db.set_players_info(session.player_id, "character_id", req.char_1)
+        db.set_players_info(session.player_id, "character_id", req.char1)
 
         # 发送场景同步通知
         pb_create.make_ScenePlayer(session)

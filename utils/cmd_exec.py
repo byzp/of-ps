@@ -194,9 +194,9 @@ def DungeonEnter(cmds):
         rsp.team.CopyFrom(session.scene_player.team)
         rsp.dungeon_data.dungeon_id = cmds[2]
         rsp.dungeon_data.enter_times = 1
-        rsp.dungeon_data.char_1 = session.scene_player.team.char_1.char_id
-        rsp.dungeon_data.char_2 = session.scene_player.team.char_2.char_id
-        rsp.dungeon_data.char_3 = session.scene_player.team.char_3.char_id
+        rsp.dungeon_data.char1 = session.scene_player.team.char1.char_id
+        rsp.dungeon_data.char2 = session.scene_player.team.char2.char_id
+        rsp.dungeon_data.char3 = session.scene_player.team.char3.char_id
         rsp.dungeon_data.last_enter_time = int(time.time())
         session.send(MsgId.DungeonEnterRsp, rsp, 0)
 

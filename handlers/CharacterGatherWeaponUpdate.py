@@ -37,7 +37,7 @@ class Handler(PacketHandler):
 
         # 场景同步
         if character_id in db.get_players_info(session.player_id, "team"):
-            session.scene_player.team.char_1.gather_weapon = weapon_id
+            session.scene_player.team.char1.gather_weapon = weapon_id
 
             sy = pb.ServerSceneSyncDataNotice()
             sy.status = StatusCode_pb2.StatusCode_OK

@@ -46,7 +46,7 @@ class Handler(PacketHandler):
             tmp = rsp.characters.add()
             tmp.CopyFrom(chrp)
 
-        rsp.team.char_1, rsp.team.char_2, rsp.team.char_3 = db.get_players_info(
+        rsp.team.char1, rsp.team.char2, rsp.team.char3 = db.get_players_info(
             player_id, "team"
         )
         rsp.scene_id = session.scene_id

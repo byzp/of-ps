@@ -27,5 +27,5 @@ class Handler(PacketHandler):
         if rec:
             rec = rec[0]
             if rec.pos.x != 0:
-                session.scene_player.team.char_1.pos.CopyFrom(rec.pos)
-                session.scene_player.team.char_1.rot.CopyFrom(rec.rot)
+                session.scene_player.team.char1.pos.CopyFrom(rec.pos)
+                session.scene_player.team.char1.rot.CopyFrom(rec.rot)
