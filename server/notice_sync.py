@@ -184,7 +184,7 @@ def notice_sync_loop():
 
         use_time = time.time() - start_t
         wait_time = 1.0 / max_tps - use_time
-        if use_time > 0.001:
+        if use_time > 0.01:
             logger.debug(f"notice sync time: {use_time}")
         if wait_time < 0:
             continue

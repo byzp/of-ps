@@ -9,7 +9,7 @@ import utils.cmd as cmd
 import utils.db as db
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     # filename='a.log',
     # filemode='w' # a

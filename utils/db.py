@@ -690,17 +690,6 @@ def set_item_detail(player_id, item_detail_blob, item_id=None, instance_id=None)
         )
 
 
-def get_instance_id(player_id):
-    cur = db.execute(
-        "SELECT MAX(instance_id) AS max_instance_id FROM items_s WHERE player_id=?",
-        (player_id,),
-    )
-    row = cur.fetchone()
-    if row[0]:
-        return row[0]
-    return 1
-
-
 def get_month_card_over_due_time(player_id):
     cur = db.execute(
         "SELECT over_due_time FROM month_card WHERE player_id=?", (player_id,)
@@ -1017,13 +1006,15 @@ def del_mail(
     )
 
 
-def get_instance_id(player_id):
+def get_instance_id(player_id, no_change=False):
     cur = db.execute(
         "SELECT instance_id FROM instance WHERE player_id=?",
         (player_id,),
     )
     row = cur.fetchone()
     if row:
+        if no_change:
+            return row[0] + 1
         instance_id = row[0] + 1
     else:
         instance_id = 1

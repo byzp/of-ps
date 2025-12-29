@@ -20,7 +20,7 @@ class Handler(PacketHandler):
         req = TreasureBoxOpenReq_pb2.TreasureBoxOpenReq()
         req.ParseFromString(data)
 
-        rsp = TreasureBoxOpenRsp_pb2.TreasureBoxOpenRsp()
+        rsp = TreasureBoxOpenRsp_pb2.TreasureBoxOpenRsp()  # TODO 宝箱种类需要区分
         rsp.status = StatusCode_pb2.StatusCode_OK
 
         tb = TreasureBoxData_pb2.TreasureBoxData()

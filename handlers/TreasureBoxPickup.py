@@ -7,7 +7,6 @@ import proto.OverField_pb2 as TreasureBoxPickupRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 import proto.OverField_pb2 as TreasureBoxData_pb2
 import proto.OverField_pb2 as PackNotice_pb2
-import proto.OverField_pb2 as StatusCode_pb2
 import proto.OverField_pb2 as pb
 
 import utils.db as db

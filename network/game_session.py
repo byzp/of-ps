@@ -57,6 +57,8 @@ class GameSession:
         "badge_id",
         "scene_player",
         "temp_pack",
+        "pos",
+        "drop_items",
         "running",
         "verified",
         "logged_in",
@@ -96,6 +98,8 @@ class GameSession:
         self.badge_id = 0
         self.scene_player = OverField_pb2.ScenePlayer()
         self.temp_pack = []
+        self.pos = {}
+        self.drop_items = {}
 
         self.running = True
         self.verified = False
@@ -140,7 +144,8 @@ class GameSession:
             head.ParseFromString(bytes(self._recv_mv[pos + 2 : hend]))
 
             msg_id = head.msg_id
-            logger.debug(f"Received message: {msg_id}")
+            if msg_id not in Config.DEBUG_PACKET_PASS:
+                logger.debug(f"Received message: {msg_id}")
             # 阻止未授权访问
             if not self.verified and msg_id not in _UNAUTH_CMDS:
                 self.close()
@@ -164,7 +169,8 @@ class GameSession:
             self._recv_len = rem
 
     def send(self, msg_id: int, message: Message, packet_id: int, is_bin: bool = False):
-        logger.debug(f"Sending message: {msg_id}")
+        if msg_id not in Config.DEBUG_PACKET_PASS:
+            logger.debug(f"Sending message: {msg_id}")
         if not self.running:
             return
 

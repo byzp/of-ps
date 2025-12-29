@@ -852,6 +852,19 @@ enum MoonSpotOperateType {
     OperateType_Move = 3;
 }
 
+enum MPPlayRoomEventType {
+    MPPlayRoomEvent_None = 0;
+    MPPlayRoomEvent_GameStart = 1;
+    MPPlayRoomEvent_GameEnd = 2;
+    MPPlayRoomEvent_DestroyObject = 3;
+    MPPlayRoomEvent_EnterPlatform = 4;
+    MPPlayRoomEvent_LeavePlatform = 5;
+    MPPlayRoomEvent_EnterMagicArea = 6;
+    MPPlayRoomEvent_LeaveMagicArea = 7;
+    MPPlayRoomEvent_ShowPlatform = 8;
+    MPPlayRoomEvent_HidePlatform = 9;
+}
+
 message PacketHead {
     uint32 packet_id = 1;
     uint32 msg_id = 2;
@@ -1137,10 +1150,9 @@ message PlayerAbility {
 }
 
 message CharacterLevelInfo {
-    int32 level = 1;
-    int32 need_player_level = 2;
-    int32 need_exp = 3;
-    float exp_to_coin = 4;
+    uint32 character_id = 1;
+    uint32 level = 2;
+    uint32 exp = 3;
 }
 
 message GachaInfo {
@@ -1419,11 +1431,14 @@ message DropItem {
 }
 
 message AreaData {
-    int32 area_i_d = 1;
-    int32 unlock_pool_i_d = 2;
-    int32 relevance_pool_i_d = 3;
-    int32 text_i_d = 4;
-    int32 area_level_i_d = 5;
+    enum AreaState {
+        Close = 0;
+        Unlock = 1;
+    }
+    uint32 area_id = 1;
+    AreaData.AreaState area_state = 2;
+    uint32 level = 3;
+    repeated BaseItem items = 4;
 }
 
 message CollectionData {
@@ -5361,11 +5376,11 @@ message MPPlayRoomEventReq {
 }
 
 message MPPlayRoomEvent {
-    int32 event_type = 1;
+    MPPlayRoomEventType event_type = 1;
     int32 id = 2;
     int64 time = 3;
     uint32 player_id = 4;
-    int32 play_mode = 5;
+    EMultiplayerPlayMode play_mode = 5;
     int64 game_start_time = 6;
     GenericParam generic_param = 7;
     int32 star = 8;
