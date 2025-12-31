@@ -21,7 +21,7 @@
     python -m venv venv
     .\venv\Scripts\Activate.ps1
     pip install -r requirements-server.txt
-    pip install -r requirements-server.txt
+    pip install -r requirements-client.txt
     ```
 - (此步骤可省略) 项目仅存在一个不支持自由线程的依赖(python-snappy的依赖cramjam), 如果你使用python3.14t+，可以尝试这个[修改版snappy](https://github.com/byzp/snappy-py)
 - 启动程序
