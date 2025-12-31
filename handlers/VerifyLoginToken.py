@@ -5,6 +5,7 @@ import proto.OverField_pb2 as VerifyLoginTokenReq_pb2
 import proto.OverField_pb2 as VerifyLoginTokenRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 import utils.db as db
+from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,9 @@ class Handler(PacketHandler):
         rsp = VerifyLoginTokenRsp_pb2.VerifyLoginTokenRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK
         user_id = int(db.get_user_id(req.sdk_uid))
-        if not db.verify_sdk_user_info(user_id, req.login_token):
+        if Config.VERIFY_TOKEN and not db.verify_sdk_user_info(
+            user_id, req.login_token
+        ):
             rsp.status = StatusCode_pb2.StatusCode_FAIL
             session.send(MsgId.VerifyLoginTokenRsp, rsp, packet_id)
             return

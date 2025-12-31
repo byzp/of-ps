@@ -32,5 +32,7 @@
     ```
     mitmdump --mode local -s .\Redirect.py
     ```
-- 启动客户端 (仅在taptap版pc客户端经过测试，不保证其他端可用)
+- 安装mitmproxy证书：浏览器访问[mitm.it](http://mitm.it)，下载[证书](https://mitm.it/cert/p12)然后点击安装(仅需做一次)
+
+- 启动客户端 (请从安装目录直接启动本体，不要从启动器启动，仅在taptap版pc客户端经过测试，不保证其他端可用)
 

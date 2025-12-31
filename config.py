@@ -18,6 +18,7 @@ class Config:
     COMPRESS_THRESHOLD = 1200
     DEBUG_PACKET_PASS = [1007, 1008, 1203, 1206, 2201, 2202]
 
+    VERIFY_TOKEN = False
     REJECT_PAYMENT = False  # CreatePayOrderReq
     SKIP_QUESTS = True
 
