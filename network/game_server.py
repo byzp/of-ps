@@ -7,6 +7,7 @@ from network.game_session import GameSession
 from network.packet_factory import PacketFactory
 from server.scene_data import _session_list as session_list, lock_session
 import server.notice_sync as notice_sync
+from network.remote_link import sync_player
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,7 @@ class GameServer:
 
                     with lock_session:
                         session_list.append(session)
+                    sync_player(session)
                     self._session_pool.submit(session.run)
                 except OSError:
                     if self.running:

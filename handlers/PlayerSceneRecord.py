@@ -29,3 +29,4 @@ class Handler(PacketHandler):
             if rec.pos.x != 0:
                 session.scene_player.team.char1.pos.CopyFrom(rec.pos)
                 session.scene_player.team.char1.rot.CopyFrom(rec.rot)
+                session.pos[session.scene_id] = rec.pos

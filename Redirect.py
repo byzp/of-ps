@@ -1,6 +1,6 @@
 from mitmproxy import http
 
-ip = "localhost"
+ip = "192.168.10.122"
 port = 21000
 rd_res = False
 

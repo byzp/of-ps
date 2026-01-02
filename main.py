@@ -4,6 +4,7 @@ import sys
 
 import http_server.server as http_server
 from network.game_server import GameServer
+import network.remote_link as remote_link
 import utils.res_loader as res_loader
 import utils.cmd as cmd
 import utils.db as db
@@ -37,6 +38,8 @@ def main():
     game_server = GameServer()
     game_server_thread = threading.Thread(target=game_server.start, daemon=True)
     game_server_thread.start()
+
+    remote_link.init()
 
     try:
         while not stop_event.is_set():

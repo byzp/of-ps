@@ -11,6 +11,7 @@ import proto.OverField_pb2 as ServerSceneSyncDataNotice_pb2
 import proto.OverField_pb2 as StatusCode_pb2
 import proto.OverField_pb2 as pb
 from network.msg_id import MsgId
+from network.remote_link import rsend
 from server.scene_data import (
     _chat_msg as chat_msg,
     lock_chat_msg,
@@ -94,9 +95,7 @@ def notice_sync_loop():
                     d.player_id = session.player_id
                     sd = d.server_data.add()
                     sd.action_type = pb.SceneActionType_LEAVE
-                    up_scene_action(
-                        session.scene_id, session.channel_id, notice.SerializeToString()
-                    )
+                    up_scene_action(session.scene_id, session.channel_id, notice)
 
             session_list[:] = [
                 s for s in session_list if getattr(s, "running", False)
@@ -107,17 +106,18 @@ def notice_sync_loop():
                 tod_time = (tod_time + elapsed_real * SPEED_MULTIPLIER) % 86400.0
                 _rel_time = now
             with lock_action:
-                for session in session_list:
-                    # 1970 玩家动作广播
-                    for k, v in action.items():
+                # 1970 玩家动作广播
+                for k, v in action.items():
+                    rsp = SendActionNotice_pb2.SendActionNotice()
+                    rsp.status = StatusCode_pb2.StatusCode_OK
+                    rsp.action_id = v[2]
+                    rsp.from_player_id = k
+                    rsp.from_player_name = v[3]
+                    rsend(k, v[0], v[1], MsgId.SendActionNotice, rsp)
+                    for session in session_list:
                         if session.player_id == k:
                             continue
                         if session.scene_id == v[0] and session.channel_id == v[1]:
-                            rsp = SendActionNotice_pb2.SendActionNotice()
-                            rsp.status = StatusCode_pb2.StatusCode_OK
-                            rsp.action_id = v[2]
-                            rsp.from_player_id = k
-                            rsp.from_player_name = v[3]
                             session.send(MsgId.SendActionNotice, rsp, 0)
                 action.clear()
             with lock_scene_action:
@@ -137,8 +137,13 @@ def notice_sync_loop():
                         session.send(MsgId.ServerSceneSyncDataNotice, rsp, 0)
                     # 1208 其他事件
                     for i in scene_action[session.scene_id][session.channel_id]:
-                        # 消除额外操作以节省性能
-                        session.send(MsgId.ServerSceneSyncDataNotice, i, 0, True)
+                        session.send(MsgId.ServerSceneSyncDataNotice, i, 0)
+                for scene_id, scene_t in scene_action.items():
+                    for channel_id, channel in scene_t.items():
+                        for i in channel:
+                            for data in i.data:
+                                if data.player_id < 1010000:
+                                    rsend(0, scene_id, channel_id, 1208, i)
                 scene_action.clear()
             with lock_chat_msg:
                 for session in session_list:
@@ -160,6 +165,23 @@ def notice_sync_loop():
                             rsp.msg.expression = msg[2]
                         rsp.msg.send_time = int(time.time() * 1000)
                         session.send(MsgId.ChatMsgNotice, rsp, 0)
+                for scene_id, scene_t in chat_msg["default"].items():
+                    for channel_id, channel in scene_t.items():
+                        for msg in channel:
+                            rsp = pb.ChatMsgNotice()
+                            rsp.status = StatusCode_pb2.StatusCode_OK
+                            rsp.msg.player_id = msg[1]
+                            rsp.msg.head = session.avatar_id
+                            rsp.msg.badge = session.badge_id
+                            rsp.msg.name = session.player_name or ""
+                            if msg[0]:
+                                rsp.msg.text = msg[2]
+                            else:
+                                rsp.msg.expression = msg[2]
+                            rsp.msg.send_time = int(time.time() * 1000)
+                            rsend(
+                                msg[1], scene_id, channel_id, MsgId.ChatMsgNotice, rsp
+                            )
                 chat_msg.clear()
             with lock_scene:
                 with lock_rec_list:
@@ -167,11 +189,21 @@ def notice_sync_loop():
                     for scene_id, channel_id in rec_list:
                         rsp = OverField_pb2.PlayerSceneSyncDataNotice()
                         rsp.status = StatusCode_pb2.StatusCode_OK
+                        oth_notice = []
                         for k, v in scene[scene_id][channel_id].items():
+                            if k < 1010000:
+                                tmp = rsp.data.add()
+                                tmp.player_id = k
+                                tmp.data.add().CopyFrom(v)
+                            else:
+                                oth_notice.append((k, v))
+                        rsend(0, scene_id, channel_id, 1206, rsp)  # 排除其他服务器的
+                        for k, v in oth_notice:
                             tmp = rsp.data.add()
                             tmp.player_id = k
                             tmp.data.add().CopyFrom(v)
                         scene[scene_id][channel_id].clear()
+                        # rsend(0, scene_id, channel_id, 1206, rsp)
                         for session in session_list:
                             if (
                                 session.scene_id == scene_id
@@ -184,7 +216,7 @@ def notice_sync_loop():
 
         use_time = time.time() - start_t
         wait_time = 1.0 / max_tps - use_time
-        if use_time > 0.01:
+        if use_time > 1:
             logger.debug(f"notice sync time: {use_time}")
         if wait_time < 0:
             continue

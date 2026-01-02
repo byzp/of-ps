@@ -1,7 +1,6 @@
 import threading
 from collections import defaultdict
 from typing import Any, Dict, Optional, List
-import proto.OverField_pb2 as pb
 
 _scene: Dict[int, Dict[int, Dict[int, Any]]] = defaultdict(lambda: defaultdict(dict))
 _action: Dict[int, list] = {}
@@ -22,7 +21,7 @@ def get_session():
     session_tmp = []
     with lock_session:
         for session in _session_list:
-            if session.logged_in and session.running:
+            if session.logged_in and session.running and not session.remote:
                 session_tmp.append(session)
         return session_tmp
 

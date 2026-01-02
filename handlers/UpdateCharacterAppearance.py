@@ -102,6 +102,4 @@ class Handler(PacketHandler):
             server_data_entry = data_entry.server_data.add()
             server_data_entry.action_type = pb.SceneActionType_UPDATE_APPEARANCE
             server_data_entry.player.CopyFrom(session.scene_player)
-            up_scene_action(
-                session.scene_id, session.channel_id, notice.SerializeToString()
-            )
+            up_scene_action(session.scene_id, session.channel_id, notice)
