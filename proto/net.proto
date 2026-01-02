@@ -6398,3 +6398,44 @@ message InheritCodeUseRsp {
     string code_str = 2;
     repeated ItemDetail rewards = 3;
 }
+
+///////////互联模块定义的msg，不属于游戏本身
+message LinkMessage {
+    enum Type {
+        HEARTBEAT = 0;
+        SERVERS = 1;
+        PLAYER = 2;
+        DATA = 3;
+        NAME_CONFLICT = 4;
+    }
+    
+    string id = 1;
+    string origin = 2;
+    Type type = 3;
+    
+    repeated LinkServerAddr addrs = 10;
+    LinkPlayerInfo player_info = 11;
+    
+    int32 player_id = 20;
+    int32 scene_id = 21;
+    int32 channel_id = 22;
+    int32 msg_id = 23;
+    bytes payload = 24;
+}
+
+message LinkServerAddr {
+    string host = 1;
+    int32 port = 2;
+}
+
+message LinkPlayerInfo {
+    int32 player_id = 1;
+    string player_name = 2;
+    int32 scene_id = 3;
+    int32 channel_id = 4;
+    int32 chat_channel_id = 5;
+    int32 avatar_id = 6;
+    int32 badge_id = 7;
+    bytes scene_player = 8;
+}
+//////////////////////

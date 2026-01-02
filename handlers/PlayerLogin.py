@@ -10,6 +10,7 @@ import proto.OverField_pb2 as StatusCode_pb2
 import utils.db as db
 import server.scene_data as scene_data
 import utils.pb_create as pb_create
+from network.remote_link import sync_player
 
 
 @packet_handler(MsgId.PlayerLoginReq)
@@ -45,3 +46,5 @@ class Handler(PacketHandler):
         pb_create.make_ScenePlayer(session)
 
         session.send(MsgId.PlayerLoginRsp, rsp, packet_id)  # 1003,1004
+
+        sync_player(session)

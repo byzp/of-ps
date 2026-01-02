@@ -26,7 +26,7 @@ class Config:
     LINK_OTHER_SERVER = True
     SERVER_NAME = "aac"
     LINK_LISTEN = ("0.0.0.0", 11000)
-    SELF_ADDR = ("139.196.113.128", 11000)
+    SELF_ADDR = ("0.0.0.0", 11000)
     LINK_POOL = [
         ("139.196.113.128", 11000),
     ]

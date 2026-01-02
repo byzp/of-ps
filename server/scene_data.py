@@ -21,7 +21,7 @@ def get_session():
     session_tmp = []
     with lock_session:
         for session in _session_list:
-            if session.logged_in and session.running and not session.remote:
+            if session.logged_in and session.running:
                 session_tmp.append(session)
         return session_tmp
 
