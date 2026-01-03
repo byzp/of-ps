@@ -18,6 +18,7 @@ from server.scene_data import (
     _session_list as session_list,
     lock_session,
 )
+from utils.kcp import KCPManager, get_conv, OVERHEAD
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +32,17 @@ _socket_ready = threading.Event()
 _server_name = Config.SERVER_NAME
 _name_lock = threading.Lock()
 
+_kcp_manager = None
+_addr_to_conv = {}
+_conv_to_addr = {}
+_conv_created_at = {}  # Track when each conv was created for pending timeout
+_next_conv = 1
+_conv_lock = threading.Lock()
+
 _MSG_TTL = 60
 _HEARTBEAT_INTERVAL = 3
 _SERVER_TIMEOUT = 10
+_PENDING_TIMEOUT = 30  # Timeout for pending connections that never established
 
 
 def _get_name():
@@ -64,10 +73,90 @@ def _add_server(name, addr):
     return is_new
 
 
+def _cleanup_kcp_for_addr(addr):
+    """Clean up KCP connection and conv/addr mappings for an address."""
+    addr_tuple = tuple(addr) if not isinstance(addr, tuple) else addr
+    conv = None
+    with _conv_lock:
+        conv = _addr_to_conv.pop(addr_tuple, None)
+        if conv is not None:
+            _conv_to_addr.pop(conv, None)
+            _conv_created_at.pop(conv, None)
+
+    if conv is not None and _kcp_manager:
+        _kcp_manager.remove(conv)
+        logger.debug(f"Cleaned up KCP session {conv} for {addr_tuple}")
+
+
 def _remove_server(name):
     with _lock:
-        _remote_servers.pop(name, None)
+        addr = _remote_servers.pop(name, None)
         _last_seen.pop(name, None)
+
+    # Clean up KCP connection for this server
+    if addr:
+        _cleanup_kcp_for_addr(addr)
+
+
+def _cleanup_orphaned_connections():
+    """Clean up KCP sessions for addresses that failed to establish connection."""
+    with _lock:
+        known_addrs = set(
+            tuple(a) if not isinstance(a, tuple) else a
+            for a in _remote_servers.values()
+        )
+
+    now = time.time()
+    orphaned = []
+    with _conv_lock:
+        for addr, conv in list(_addr_to_conv.items()):
+            if addr not in known_addrs:
+                created_at = _conv_created_at.get(conv, 0)
+                if now - created_at > _PENDING_TIMEOUT:
+                    orphaned.append((addr, conv))
+
+    for addr, conv in orphaned:
+        with _conv_lock:
+            _addr_to_conv.pop(addr, None)
+            _conv_to_addr.pop(conv, None)
+            _conv_created_at.pop(conv, None)
+        if _kcp_manager:
+            _kcp_manager.remove(conv)
+            logger.debug(f"Cleaned up orphaned KCP session {conv} (connection timeout)")
+
+
+def _get_or_assign_conv(addr):
+    global _next_conv
+    addr_tuple = tuple(addr) if not isinstance(addr, tuple) else addr
+    with _conv_lock:
+        if addr_tuple in _addr_to_conv:
+            return _addr_to_conv[addr_tuple]
+        conv = _next_conv
+        _next_conv += 1
+        _addr_to_conv[addr_tuple] = conv
+        _conv_to_addr[conv] = addr_tuple
+        _conv_created_at[conv] = time.time()  # Track creation time
+        return conv
+
+
+def _register_conv_addr(conv, addr):
+    addr_tuple = tuple(addr) if not isinstance(addr, tuple) else addr
+    with _conv_lock:
+        if conv not in _conv_to_addr:
+            _conv_to_addr[conv] = addr_tuple
+            _addr_to_conv[addr_tuple] = conv
+            if conv not in _conv_created_at:
+                _conv_created_at[conv] = time.time()
+
+
+def _output_factory(conv):
+    def output(data):
+        with _conv_lock:
+            addr = _conv_to_addr.get(conv)
+        if addr and _socket:
+            _socket.sendto(data, addr)
+
+    return output
 
 
 def _make_msg(msg_type):
@@ -90,15 +179,19 @@ def _unpack(data):
 
 
 def _send_to(msg, addr):
-    _socket.sendto(_pack(msg), addr)
+    conv = _get_or_assign_conv(addr)
+    session = _kcp_manager.get_or_create(conv)
+    session.send(_pack(msg))
 
 
 def _broadcast(msg, exclude=None):
     data = _pack(msg)
     with _lock:
-        targets = [a for n, a in _remote_servers.items() if n != exclude]
-    for addr in targets:
-        _socket.sendto(data, addr)
+        targets = [(n, a) for n, a in _remote_servers.items() if n != exclude]
+    for name, addr in targets:
+        conv = _get_or_assign_conv(addr)
+        session = _kcp_manager.get_or_create(conv)
+        session.send(data)
 
 
 def _is_seen(msg_id):
@@ -216,6 +309,96 @@ def _on_new_server(name, addr):
     _save_cache()
 
 
+def _process_message(data, addr):
+    try:
+        msg = _unpack(data)
+    except Exception:
+        return
+
+    origin = msg.origin
+
+    if not msg.id or _is_seen(msg.id):
+        return
+
+    if msg.type == pb.LinkMessage.NAME_CONFLICT:
+        logger.warning(
+            f"Received name conflict notification from {addr}, need to change name"
+        )
+        new_name = _resolve_name_conflict()
+        logger.info(f"Reconnecting with new name: {new_name}")
+        retry_msg = _make_msg(pb.LinkMessage.HEARTBEAT)
+        _send_to(retry_msg, addr)
+        return
+
+    if origin == _get_name():
+        logger.warning(
+            f"Name conflict detected! Remote server {addr} has same name '{origin}'"
+        )
+        logger.warning(f"Sending NAME_CONFLICT to {addr}, requesting rename")
+        conflict_msg = _make_msg(pb.LinkMessage.NAME_CONFLICT)
+        _send_to(conflict_msg, addr)
+        return
+
+    is_new = _add_server(origin, addr)
+    if is_new:
+        threading.Thread(
+            target=_on_new_server, args=(origin, addr), daemon=True
+        ).start()
+
+    if msg.type == pb.LinkMessage.SERVERS:
+        for sa in msg.addrs:
+            sa_tuple = (sa.host, sa.port)
+            if sa_tuple == tuple(Config.SELF_ADDR):
+                continue
+            with _lock:
+                known = sa_tuple in _remote_servers.values()
+            if not known:
+                hello_msg = _make_msg(pb.LinkMessage.HEARTBEAT)
+                _send_to(hello_msg, sa_tuple)
+        _broadcast(msg, exclude=origin)
+
+    elif msg.type == pb.LinkMessage.PLAYER:
+        info = msg.player_info
+        session = RemoteSession(origin, info)
+        for session_t in get_session():
+            pid = _trans_player_id(origin, session_t.player_id)
+            if session_t.player_id == pid:
+                continue
+        with lock_session:
+            session_list.append(session)
+        logger.info(
+            f"Remote player {session.player_name}({session.player_id}) from {origin}"
+        )
+
+    elif msg.type == pb.LinkMessage.DATA:
+        _handle_data(
+            origin,
+            msg.player_id,
+            msg.scene_id,
+            msg.channel_id,
+            msg.msg_id,
+            msg.payload,
+        )
+        _broadcast(msg, exclude=origin)
+
+
+def _on_kcp_recv(conv, data):
+    with _conv_lock:
+        addr = _conv_to_addr.get(conv)
+    if addr:
+        _process_message(data, addr)
+
+
+def _on_kcp_dead(conv):
+    # This callback may never be triggered, but keep it for completeness
+    with _conv_lock:
+        addr = _conv_to_addr.pop(conv, None)
+        if addr:
+            _addr_to_conv.pop(addr, None)
+        _conv_created_at.pop(conv, None)
+    logger.error(f"KCP session {conv} died")
+
+
 def _heartbeat():
     while True:
         time.sleep(_HEARTBEAT_INTERVAL)
@@ -225,7 +408,7 @@ def _heartbeat():
         with _lock:
             expired = [n for n, t in _last_seen.items() if now - t > _SERVER_TIMEOUT]
         for name in expired:
-            _remove_server(name)
+            _remove_server(name)  # This now also cleans up KCP
             logger.warning(f"Server {name} timed out")
             for s in session_list:
                 if (
@@ -235,6 +418,8 @@ def _heartbeat():
                     s.running = False
         if expired:
             _save_cache()
+        # Clean up orphaned connections (failed to establish)
+        _cleanup_orphaned_connections()
         _cleanup()
 
 
@@ -248,80 +433,29 @@ def _listen():
             data, addr = _socket.recvfrom(65535)
         except Exception:
             continue
-        msg = _unpack(data)
-        origin = msg.origin
 
-        if not msg.id or _is_seen(msg.id):
+        if len(data) < OVERHEAD:
             continue
 
-        if msg.type == pb.LinkMessage.NAME_CONFLICT:
-            logger.warning(
-                f"Received name conflict notification from {addr}, need to change name"
-            )
-            new_name = _resolve_name_conflict()
-            logger.info(f"Reconnecting with new name: {new_name}")
-            retry_msg = _make_msg(pb.LinkMessage.HEARTBEAT)
-            _send_to(retry_msg, addr)
-            continue
-
-        # 通知对方更改名称
-        if origin == _get_name():
-            logger.warning(
-                f"Name conflict detected! Remote server {addr} has same name '{origin}'"
-            )
-            logger.warning(f"Sending NAME_CONFLICT to {addr}, requesting rename")
-            conflict_msg = _make_msg(pb.LinkMessage.NAME_CONFLICT)
-            _send_to(conflict_msg, addr)
-            continue
-
-        is_new = _add_server(origin, addr)
-        if is_new:
-            threading.Thread(
-                target=_on_new_server, args=(origin, addr), daemon=True
-            ).start()
-
-        if msg.type == pb.LinkMessage.SERVERS:
-            for sa in msg.addrs:
-                sa_tuple = (sa.host, sa.port)
-                if sa_tuple == tuple(Config.SELF_ADDR):
-                    continue
-                with _lock:
-                    known = sa_tuple in _remote_servers.values()
-                if not known:
-                    _socket.sendto(_pack(_make_msg(pb.LinkMessage.HEARTBEAT)), sa_tuple)
-            _broadcast(msg, exclude=origin)
-
-        elif msg.type == pb.LinkMessage.PLAYER:
-            info = msg.player_info
-            session = RemoteSession(origin, info)
-            for session_t in get_session():
-                pid = _trans_player_id(origin, session_t.player_id)
-                if session_t.player_id == pid:
-                    continue
-            with lock_session:
-                session_list.append(session)
-            logger.info(
-                f"Remote player {session.player_name}({session.player_id}) from {origin}"
-            )
-
-        elif msg.type == pb.LinkMessage.DATA:
-            _handle_data(
-                origin,
-                msg.player_id,
-                msg.scene_id,
-                msg.channel_id,
-                msg.msg_id,
-                msg.payload,
-            )
-            _broadcast(msg, exclude=origin)
+        conv = get_conv(data)
+        _register_conv_addr(conv, addr)
+        _kcp_manager.input(data)
 
 
 def init():
     if not Config.LINK_OTHER_SERVER:
         return
-    global _socket
+    global _socket, _kcp_manager
     _socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     _socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    _kcp_manager = KCPManager(
+        output_factory=_output_factory,
+        on_recv=_on_kcp_recv,
+        on_dead=_on_kcp_dead,
+    )
+    _kcp_manager.start_update_loop(interval_ms=10)
+
     threading.Thread(target=_listen, daemon=True).start()
     _socket_ready.wait()
 
@@ -329,10 +463,9 @@ def init():
     servers.update(tuple(s) for s in Config.LINK_POOL)
     servers.discard(tuple(Config.SELF_ADDR))
 
-    msg = _make_msg(pb.LinkMessage.HEARTBEAT)
-    data = _pack(msg)
     for addr in servers:
-        _socket.sendto(data, addr)
+        msg = _make_msg(pb.LinkMessage.HEARTBEAT)
+        _send_to(msg, addr)
 
     threading.Thread(target=_heartbeat, daemon=True).start()
     time.sleep(1)

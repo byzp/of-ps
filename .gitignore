@@ -1,5 +1,8 @@
 __pycache__/
 *.pyc
+*.so
+*.pyd
+build
 /tmp
 /proto/OverField_pb2.py
 /proto/cfg_pb2.py
@@ -14,7 +17,6 @@ __pycache__/
 /.vscode
 /venv
 /star.bat
-/build
 /dist
 /main.spec
 /server.spec
