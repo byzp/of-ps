@@ -107,18 +107,14 @@ def notice_sync_loop():
                 _rel_time = now
             with lock_action:
                 # 1970 玩家动作广播
-                for k, v in action.items():
-                    rsp = SendActionNotice_pb2.SendActionNotice()
-                    rsp.status = StatusCode_pb2.StatusCode_OK
-                    rsp.action_id = v[2]
-                    rsp.from_player_id = k
-                    rsp.from_player_name = v[3]
-                    rsend(k, v[0], v[1], MsgId.SendActionNotice, rsp)
+                for ac in action:
+                    if ac[2].from_player_id < 1010000:
+                        rsend(MsgId.SendActionNotice, ac[2], [ac[0], ac[1]])
                     for session in session_list:
-                        if session.player_id == k:
-                            continue
-                        if session.scene_id == v[0] and session.channel_id == v[1]:
-                            session.send(MsgId.SendActionNotice, rsp, 0)
+                        # if session.player_id == ac[2].from_player_id:
+                        #     continue
+                        if session.scene_id == ac[0] and session.channel_id == ac[1]:
+                            session.send(MsgId.SendActionNotice, ac[2], 0)
                 action.clear()
             with lock_scene_action:
                 if now - _last_send_time >= SEND_INTERVAL_REAL:
@@ -143,49 +139,31 @@ def notice_sync_loop():
                         for i in channel:
                             for data in i.data:
                                 if data.player_id < 1010000:
-                                    rsend(0, scene_id, channel_id, 1208, i)
+                                    rsend(1208, i, [scene_id, channel_id])
                 scene_action.clear()
             with lock_chat_msg:
                 for session in session_list:
                     # 聊天信息同步
-                    for msg in chat_msg["default"][session.scene_id][
-                        session.channel_id
-                    ]:
-                        if msg[1] == session.player_id:
+                    for msg in chat_msg:
+                        if msg[3].msg.player_id == session.player_id:
                             continue
-                        rsp = pb.ChatMsgNotice()
-                        rsp.status = StatusCode_pb2.StatusCode_OK
-                        rsp.msg.player_id = msg[1]
-                        rsp.msg.head = session.avatar_id
-                        rsp.msg.badge = session.badge_id
-                        rsp.msg.name = session.player_name
-                        if msg[0]:
-                            rsp.msg.text = msg[2]
-                        else:
-                            rsp.msg.expression = msg[2]
-                        rsp.msg.send_time = int(time.time() * 1000)
-                        session.send(MsgId.ChatMsgNotice, rsp, 0)
-                for scene_id, scene_t in chat_msg["default"].items():
-                    for channel_id, channel in scene_t.items():
-                        for msg in channel:
-                            rsp = pb.ChatMsgNotice()
-                            rsp.status = StatusCode_pb2.StatusCode_OK
-                            rsp.msg.player_id = msg[1]
-                            rsp.msg.head = session.avatar_id
-                            rsp.msg.badge = session.badge_id
-                            rsp.msg.name = session.player_name or ""
-                            if msg[0]:
-                                rsp.msg.text = msg[2]
-                            else:
-                                rsp.msg.expression = msg[2]
-                            rsp.msg.send_time = int(time.time() * 1000)
-                            rsend(
-                                msg[1], scene_id, channel_id, MsgId.ChatMsgNotice, rsp
-                            )
+                        match msg[3].type:
+                            case pb.ChatChannel_Default:
+                                if (
+                                    session.scene_id == msg[1]
+                                    and session.channel_id == msg[2]
+                                ):
+                                    session.send(MsgId.ChatMsgNotice, msg[3], 0)
+                            case pb.ChatChannel_ChatRoom:
+                                if session.chat_channel_id == msg[0]:
+                                    session.send(MsgId.ChatMsgNotice, msg[3], 0)
+                for msg in chat_msg:
+                    if msg[3].msg.player_id < 1010000:
+                        rsend(MsgId.ChatMsgNotice, msg[3], [msg[0], msg[1], msg[2]])
                 chat_msg.clear()
             with lock_scene:
                 with lock_rec_list:
-                    # 玩家动作同步
+                    # 1206 玩家动作同步
                     for scene_id, channel_id in rec_list:
                         rsp = OverField_pb2.PlayerSceneSyncDataNotice()
                         rsp.status = StatusCode_pb2.StatusCode_OK
@@ -197,13 +175,12 @@ def notice_sync_loop():
                                 tmp.data.add().CopyFrom(v)
                             else:
                                 oth_notice.append((k, v))
-                        rsend(0, scene_id, channel_id, 1206, rsp)  # 排除其他服务器的
+                        rsend(1206, rsp, [scene_id, channel_id])  # 排除其他服务器的
                         for k, v in oth_notice:
                             tmp = rsp.data.add()
                             tmp.player_id = k
                             tmp.data.add().CopyFrom(v)
                         scene[scene_id][channel_id].clear()
-                        # rsend(0, scene_id, channel_id, 1206, rsp)
                         for session in session_list:
                             if (
                                 session.scene_id == scene_id

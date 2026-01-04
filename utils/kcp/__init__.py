@@ -222,6 +222,9 @@ class KCPManager:
         with self._lock:
             return dict(self._sessions)
 
+    def __bool__(self) -> bool:
+        return True
+
     def __len__(self) -> int:
         return self.session_count
 

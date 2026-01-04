@@ -36,12 +36,19 @@ def cmd_exec(cmd: str):
             kick(cmds)  # kick player_id/all
         case "link":
             link(cmds)
+        case "players":
+            players(cmds)
         case _:
             logger.warning("Unknow command.")
 
 
 def link(cmds):
     logger.info(str(get_connected_servers()))
+
+
+def players(cmds):
+    for player in get_session():
+        logger.info(f"{player.player_name}({player.player_id})")
 
 
 def give(cmds: list):

@@ -3,9 +3,9 @@ from collections import defaultdict
 from typing import Any, Dict, Optional, List
 
 _scene: Dict[int, Dict[int, Dict[int, Any]]] = defaultdict(lambda: defaultdict(dict))
-_action: Dict[int, list] = {}
+_action: List = []
 _scene_action: Dict[int, Dict[int, List]] = defaultdict(lambda: defaultdict(list))
-_chat_msg: Dict[str, Dict] = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+_chat_msg: List = []
 _session_list: List = []
 _rec_list: List = []
 
@@ -46,11 +46,9 @@ def up_recorder(scene_id: int, channel_id: int, player_id: int, rec_data: Any) -
                 _rec_list.append(rec)
 
 
-def up_action(
-    player_id: int, player_name: str, scene_id: int, channel_id: int, action_id: int
-) -> None:
+def up_action(scene_id: int, channel_id: int, msg) -> None:
     with lock_action:
-        _action[player_id] = [scene_id, channel_id, action_id, player_name]
+        _action.append([scene_id, channel_id, msg])
 
 
 def up_scene_action(scene_id: int, channel_id: int, action: Any) -> None:
@@ -58,24 +56,9 @@ def up_scene_action(scene_id: int, channel_id: int, action: Any) -> None:
         _scene_action[scene_id][channel_id].append(action)
 
 
-def up_chat_msg(
-    type_: int,
-    player_id: int,
-    text: str,
-    expression: int,
-    scene_id: int,
-    channel_id: int,
-) -> None:
+def up_chat_msg(chat_channel_id: int, scene_id: int, channel_id: int, notice) -> None:
     with lock_chat_msg:
-        if type_ == 0:
-            if expression == 0:
-                _chat_msg["default"][scene_id][channel_id].append(
-                    [True, player_id, text]
-                )
-            else:
-                _chat_msg["default"][scene_id][channel_id].append(
-                    [False, player_id, expression]
-                )
+        _chat_msg.append([chat_channel_id, scene_id, channel_id, notice])
 
 
 def get_scene_id(player_id: int) -> Optional[int]:

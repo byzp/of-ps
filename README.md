@@ -94,6 +94,44 @@
    1. 直接找到taptap的游戏文件夹，选择launcher.exe运行
    2. 例如`E:\TapTap\PC Games\176228\launcher.exe`
 
+## 可用控制台命令
+
+- 给予玩家物品, item_id可在resources/data/String_Simplified.json搜索物品名称寻找, (输入1400可导入全部物品)
+   ```
+   give player_id/all item_id [num]
+   # give 1000001 102 100
+   # give all 108
+   # 1400
+   ```
+- 字面意思, 放烟花, id可在resources/data/FireworksParty.json找到
+   ```
+   firework id [dur_time] [start_time]
+   ```
+- 设置场景时间, num的值为1-86400
+   ```
+   time num
+   ```
+- 传送, 常规场景, scene_id可在resources/data/Scene.json找到
+   ```
+   tp player_id/all scene_id [channel_id]
+   ```
+- 传送, 秘境/副本, dungeon_id可在resources/data/Dungeon.json找到
+   ```
+   tpd player_id/all dungeon_id
+   ```
+- 踢出玩家
+   ```
+   kick player_id/all
+   ```
+- 显示已连接的玩家
+   ```
+   players
+   ```
+- 显示互联的其他服务器
+   ```
+   link
+   ```
+
 
 ## 可选操作
 

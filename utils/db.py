@@ -74,7 +74,7 @@ def init():
         CREATE TABLE IF NOT EXISTS players (
             player_id INTEGER PRIMARY KEY,
             player_name TEXT,
-            level INTEGER DEFAULT 1,
+            level INTEGER DEFAULT 10,
             exp INTEGER DEFAULT 200,
             sex INTEGER DEFAULT 0,
             world_level INTEGER DEFAULT 1,
