@@ -21,3 +21,4 @@ build
 /main.spec
 /server.spec
 /link_pool.json
+.idea
