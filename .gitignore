@@ -18,4 +18,4 @@ __pycache__/
 /dist
 /main.spec
 /server.spec
-/link_pool.json
+.idea
