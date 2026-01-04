@@ -95,17 +95,6 @@
    2. 例如`E:\TapTap\PC Games\176228\launcher.exe`
 
 
-
-
-## 可选操作
-
-- 项目仅存在一个不支持自由线程的依赖(python-snappy的依赖cramjam), 如果你使用python3.14t+, 可以尝试这个[修改版snappy](https://github.com/byzp/snappy-py)
-
-- 互联模块允许服务器之间相互发现和连接，各个服务器的玩家可以在同一场景交互, 需要编译utils/kcp的扩展(如果频繁出现断线问题，请增大utils/kcp/_kcp.c第69行的KCP_MINRTO, 然后重新编译)
-    ```
-    python utils/kcp/setup.py build_ext --inplace
-    ```
-
 ## 可选操作
 
 - 项目仅存在一个不支持自由线程的依赖(python-snappy的依赖cramjam), 如果你使用python3.14t+, 可以尝试这个[修改版snappy](https://github.com/byzp/snappy-py)

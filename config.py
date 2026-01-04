@@ -29,7 +29,7 @@ class Config:
     LINK_LISTEN = ("0.0.0.0", 11000)
     SELF_ADDR = ("0.0.0.0", 11000)
     LINK_POOL = [
-        ("192.168.10.122", 11000),
+        ("139.196.113.128", 11000),
     ]
     LINK_POOL_CACHE = "./link_pool.json"
 
