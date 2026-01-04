@@ -148,9 +148,7 @@ def changeScenechannel(cmds):
         d.player_id = session.player_id
         sd = d.server_data.add()
         sd.action_type = pb.SceneActionType_LEAVE
-        scene_data.up_scene_action(
-            session.scene_id, session.channel_id, notice.SerializeToString()
-        )
+        scene_data.up_scene_action(session.scene_id, session.channel_id, notice)
 
         rsp = pb.SceneDataNotice()
         rsp.CopyFrom(make_SceneDataNotice(session))
@@ -163,8 +161,7 @@ def changeScenechannel(cmds):
         sd = d.server_data.add()
         sd.action_type = pb.SceneActionType_ENTER
         sd.player.CopyFrom(session.scene_player)
-        res = notice.SerializeToString()
-        scene_data.up_scene_action(session.scene_id, session.channel_id, res)
+        scene_data.up_scene_action(session.scene_id, session.channel_id, notice)
 
 
 def DungeonEnter(cmds):

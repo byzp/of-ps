@@ -48,9 +48,7 @@ class Handler(PacketHandler):
             tmp.action_type = pb.SceneActionType_UPDATE_EQUIP  # 使用装备更新枚举
             tmp.player.CopyFrom(session.scene_player)
 
-            up_scene_action(
-                session.scene_id, session.channel_id, sy.SerializeToString()
-            )
+            up_scene_action(session.scene_id, session.channel_id, sy)
 
         rsp = CharacterGatherWeaponUpdateRsp_pb2.CharacterGatherWeaponUpdateRsp()
         rsp.status = StatusCode_pb2.StatusCode_OK

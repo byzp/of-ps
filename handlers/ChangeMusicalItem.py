@@ -37,9 +37,7 @@ class Handler(PacketHandler):
         session.scene_player.musical_item_instance_id = req.musical_item_instance_id
         session.scene_player.musical_item_source = req.source
         server_data_entry.player.CopyFrom(session.scene_player)
-        up_scene_action(
-            session.scene_id, session.channel_id, notice.SerializeToString()
-        )
+        up_scene_action(session.scene_id, session.channel_id, notice)
 
         # 视为完成登录，同步场景玩家并广播加入事件
         if session.logged_in == False:
@@ -52,8 +50,7 @@ class Handler(PacketHandler):
             sd = d.server_data.add()
             sd.action_type = pb.SceneActionType_ENTER
             sd.player.CopyFrom(session.scene_player)
-            res = notice.SerializeToString()
-            up_scene_action(session.scene_id, session.channel_id, res)
+            up_scene_action(session.scene_id, session.channel_id, notice)
 
             # 同步时间
             rsp = pb.ServerSceneSyncDataNotice()

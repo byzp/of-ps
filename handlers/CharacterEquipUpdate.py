@@ -126,9 +126,7 @@ class Handler(PacketHandler):
             tmp = data.server_data.add()
             tmp.action_type = pb.SceneActionType_UPDATE_EQUIP
             tmp.player.CopyFrom(session.scene_player)
-            up_scene_action(
-                session.scene_id, session.channel_id, sy.SerializeToString()
-            )
+            up_scene_action(session.scene_id, session.channel_id, sy)
             # TODO 防具和映像其他玩家看不到，暂时不写同步
         ep1.CopyFrom(ep)
         db.set_character(session.player_id, req.char_id, chr.SerializeToString())

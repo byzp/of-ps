@@ -62,6 +62,7 @@ class GameSession:
         "running",
         "verified",
         "logged_in",
+        "remote",
     )
 
     HEADER_LENGTH = 2
@@ -104,6 +105,7 @@ class GameSession:
         self.running = True
         self.verified = False
         self.logged_in = False
+        self.remote = False
 
     def run(self):
         self._send_thread = Thread(

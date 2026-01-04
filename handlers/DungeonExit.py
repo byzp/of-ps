@@ -48,5 +48,4 @@ class Handler(PacketHandler):
         sd = d.server_data.add()
         sd.action_type = pb.SceneActionType_ENTER
         sd.player.CopyFrom(session.scene_player)
-        res = notice.SerializeToString()
-        scene_data.up_scene_action(session.scene_id, session.channel_id, res)
+        scene_data.up_scene_action(session.scene_id, session.channel_id, notice)

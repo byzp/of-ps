@@ -47,6 +47,4 @@ class Handler(PacketHandler):
             tmp = data.server_data.add()
             tmp.action_type = pb.SceneActionType_UPDATE_FASHION
             tmp.player.CopyFrom(session.scene_player)
-            up_scene_action(
-                session.scene_id, session.channel_id, sy.SerializeToString()
-            )
+            up_scene_action(session.scene_id, session.channel_id, sy)

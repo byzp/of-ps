@@ -18,8 +18,19 @@ class Config:
     COMPRESS_THRESHOLD = 1200
     DEBUG_PACKET_PASS = [1007, 1008, 1203, 1206, 2201, 2202]
 
+    VERIFY_TOKEN = False
     REJECT_PAYMENT = False  # CreatePayOrderReq
     SKIP_QUESTS = True
+
+    # Link Server
+    LINK_OTHER_SERVER = True
+    SERVER_NAME = "aac"
+    LINK_LISTEN = ("0.0.0.0", 11000)
+    SELF_ADDR = ("0.0.0.0", 11000)
+    LINK_POOL = [
+        ("139.196.113.128", 11000),
+    ]
+    LINK_POOL_CACHE = "./link_pool.json"
 
     # database
     DB_PATH = "./player.db"

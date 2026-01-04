@@ -1,7 +1,6 @@
 import threading
 from collections import defaultdict
 from typing import Any, Dict, Optional, List
-import proto.OverField_pb2 as pb
 
 _scene: Dict[int, Dict[int, Dict[int, Any]]] = defaultdict(lambda: defaultdict(dict))
 _action: Dict[int, list] = {}
