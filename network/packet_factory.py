@@ -40,9 +40,7 @@ class PacketFactory:
                 if hasattr(handler_class, "msg_id"):
                     instance = handler_class()
                     cls._handlers[handler_class.msg_id] = instance
-                    logger.debug(
-                        f"Registered handler for msg_id: {handler_class.msg_id}"
-                    )
+                    # logger.debug(f"Registered handler for msg_id: {handler_class.msg_id}")
 
             logger.info(f"Registered {len(cls._handlers)} handlers in total")
 

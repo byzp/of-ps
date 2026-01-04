@@ -13,6 +13,7 @@ import server.notice_sync as notice_sync
 import utils.db as db
 from utils.pb_create import make_item
 from utils.pb_create import make_SceneDataNotice
+from network.remote_link import get_connected_servers
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +34,14 @@ def cmd_exec(cmd: str):
             DungeonEnter(cmds)  # tpd player_id/all dungeon_id
         case "kick":
             kick(cmds)  # kick player_id/all
+        case "link":
+            link(cmds)
         case _:
             logger.warning("Unknow command.")
+
+
+def link(cmds):
+    logger.info(str(get_connected_servers()))
 
 
 def give(cmds: list):

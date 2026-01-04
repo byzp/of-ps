@@ -16,3 +16,4 @@ for /r "%MODULE_DIR%" %%f in (*.py) do (
 call !CMD!
 
 REM nuitka --standalone --show-memory --show-progress --output-dir=out --mingw64 --include-package=handlers --include-package=utils main.py
+REM ./configure --disable-gil --enable-optimizations --with-openssl=/usr/include/openssl --enable-loadable-sqlite-extensions

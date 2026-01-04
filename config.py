@@ -25,6 +25,7 @@ class Config:
     # Link Server
     LINK_OTHER_SERVER = True
     SERVER_NAME = "aac"
+    SELF_ADDR_IS_PUBLIC = False  # Set to False if behind NAT (server will connect to others but won't advertise its address)
     LINK_LISTEN = ("0.0.0.0", 11000)
     SELF_ADDR = ("0.0.0.0", 11000)
     LINK_POOL = [

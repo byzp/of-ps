@@ -5,14 +5,25 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdatomic.h>
 
 #ifdef _WIN32
     #include <windows.h>
     #define MUTEX_TYPE          CRITICAL_SECTION
-    #define MUTEX_INIT(m)       InitializeCriticalSection(&(m))
-    #define MUTEX_DESTROY(m)    DeleteCriticalSection(&(m))
-    #define MUTEX_LOCK(m)       EnterCriticalSection(&(m))
-    #define MUTEX_UNLOCK(m)     LeaveCriticalSection(&(m))
+    
+    static inline void mutex_init(CRITICAL_SECTION *m) {
+        InitializeCriticalSection(m);
+    }
+    static inline void mutex_destroy(CRITICAL_SECTION *m) {
+        DeleteCriticalSection(m);
+    }
+    static inline void mutex_lock(CRITICAL_SECTION *m) {
+        EnterCriticalSection(m);
+    }
+    static inline void mutex_unlock(CRITICAL_SECTION *m) {
+        LeaveCriticalSection(m);
+    }
+    
     static inline IUINT32 iclock(void) {
         return (IUINT32)GetTickCount64();
     }
@@ -20,10 +31,26 @@
     #include <pthread.h>
     #include <sys/time.h>
     #define MUTEX_TYPE          pthread_mutex_t
-    #define MUTEX_INIT(m)       pthread_mutex_init(&(m), NULL)
-    #define MUTEX_DESTROY(m)    pthread_mutex_destroy(&(m))
-    #define MUTEX_LOCK(m)       pthread_mutex_lock(&(m))
-    #define MUTEX_UNLOCK(m)     pthread_mutex_unlock(&(m))
+    
+    /* Initialize as RECURSIVE mutex - critical for avoiding deadlock 
+       when KCP callback invokes Python code that re-enters KCPSession */
+    static inline void mutex_init(pthread_mutex_t *m) {
+        pthread_mutexattr_t attr;
+        pthread_mutexattr_init(&attr);
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+        pthread_mutex_init(m, &attr);
+        pthread_mutexattr_destroy(&attr);
+    }
+    static inline void mutex_destroy(pthread_mutex_t *m) {
+        pthread_mutex_destroy(m);
+    }
+    static inline void mutex_lock(pthread_mutex_t *m) {
+        pthread_mutex_lock(m);
+    }
+    static inline void mutex_unlock(pthread_mutex_t *m) {
+        pthread_mutex_unlock(m);
+    }
+    
     static inline IUINT32 iclock(void) {
         struct timeval tv;
         gettimeofday(&tv, NULL);
@@ -39,13 +66,14 @@
 #define KCP_SNDWND          256     /* Send window size */
 #define KCP_RCVWND          256     /* Receive window size */
 #define KCP_MTU             1400    /* Maximum transmission unit */
-#define KCP_MINRTO          100      /* Minimum RTO (ms) */
+#define KCP_MINRTO          100     /* Minimum RTO (ms) */
 #define KCP_DEADLINK        20      /* Max retransmit count before dead */
 #define KCP_RECV_BUF_SIZE   65536   /* Receive buffer size */
 #define KCP_STREAM_MODE     0       /* 0=message, 1=stream */
 #ifndef IKCP_OVERHEAD
 #define IKCP_OVERHEAD 24
 #endif
+
 /* ========================= KCPSession Object ========================= */
 
 typedef struct {
@@ -55,50 +83,69 @@ typedef struct {
     void *user_data;                /* User context pointer */
     IUINT32 conv;
     MUTEX_TYPE lock;
-    int dead;                       /* Connection dead flag */
+    atomic_int dead;                /* Connection dead flag - atomic for lock-free reads */
+    int initialized;                /* Track if mutex was initialized */
 } KCPSessionObject;
 
 static PyTypeObject KCPSessionType;
 
 /* Thread-safe lock helpers */
 static inline void kcp_lock(KCPSessionObject *self) {
-    MUTEX_LOCK(self->lock);
+    mutex_lock(&self->lock);
 }
 
 static inline void kcp_unlock(KCPSessionObject *self) {
-    MUTEX_UNLOCK(self->lock);
+    mutex_unlock(&self->lock);
 }
 
-/* KCP output callback - invoked when KCP needs to send UDP packet */
+/* KCP output callback - invoked when KCP needs to send UDP packet 
+   NOTE: This is called while self->lock is held by the calling thread.
+   The mutex MUST be recursive to allow the Python callback to re-enter
+   KCPSession methods safely. */
 static int kcp_output_callback(const char *buf, int len, ikcpcb *kcp, void *user) {
     KCPSessionObject *self = (KCPSessionObject *)user;
     int result = 0;
     
-    if (self->output_func == NULL || self->output_func == Py_None) {
+    /* 
+     * We're called from within ikcp_update/send/flush while self->lock is held.
+     * We need to call into Python, which may call back into this object.
+     * The recursive mutex allows this to work correctly.
+     */
+    
+    /* Acquire GIL/thread state for Python callback */
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    
+    /* Get a strong reference to output_func while holding lock (already held by caller).
+     * This protects against concurrent modification via set_output(). */
+    PyObject *func = self->output_func;
+    if (func == NULL || func == Py_None) {
+        PyGILState_Release(gstate);
         return -1;
     }
     
-    /* Acquire GIL for Python callback */
-    PyGILState_STATE gstate = PyGILState_Ensure();
+    /* Hold reference for the duration of the call */
+    Py_INCREF(func);
     
     PyObject *data = PyBytes_FromStringAndSize(buf, len);
     if (data == NULL) {
         PyErr_Clear();
-        result = -1;
-        goto cleanup;
+        Py_DECREF(func);
+        PyGILState_Release(gstate);
+        return -1;
     }
     
-    PyObject *ret = PyObject_CallOneArg(self->output_func, data);
+    PyObject *ret = PyObject_CallOneArg(func, data);
     Py_DECREF(data);
+    Py_DECREF(func);
     
     if (ret == NULL) {
+        /* Log or handle error; clear to prevent propagation issues */
         PyErr_Clear();
         result = -1;
     } else {
         Py_DECREF(ret);
     }
     
-cleanup:
     PyGILState_Release(gstate);
     return result;
 }
@@ -112,7 +159,8 @@ KCPSession_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->output_func = NULL;
         self->user_data = NULL;
         self->conv = 0;
-        self->dead = 0;
+        atomic_init(&self->dead, 0);
+        self->initialized = 0;
     }
     return (PyObject *)self;
 }
@@ -133,14 +181,16 @@ KCPSession_init(KCPSessionObject *self, PyObject *args, PyObject *kwds) {
         return -1;
     }
     
-    /* Initialize mutex */
-    MUTEX_INIT(self->lock);
+    /* Initialize recursive mutex */
+    mutex_init(&self->lock);
+    self->initialized = 1;
     
     /* Create KCP control block */
     self->kcp = ikcp_create(conv, self);
     if (self->kcp == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Failed to create KCP instance");
-        MUTEX_DESTROY(self->lock);
+        mutex_destroy(&self->lock);
+        self->initialized = 0;
         return -1;
     }
     
@@ -165,12 +215,22 @@ KCPSession_init(KCPSessionObject *self, PyObject *args, PyObject *kwds) {
 /* KCPSession.__dealloc__ */
 static void
 KCPSession_dealloc(KCPSessionObject *self) {
+    /* Release KCP before destroying mutex, in case release triggers any cleanup */
     if (self->kcp != NULL) {
         ikcp_release(self->kcp);
         self->kcp = NULL;
     }
+    
+    /* Release Python reference outside of any lock */
     Py_XDECREF(self->output_func);
-    MUTEX_DESTROY(self->lock);
+    self->output_func = NULL;
+    
+    /* Destroy mutex only if it was initialized */
+    if (self->initialized) {
+        mutex_destroy(&self->lock);
+        self->initialized = 0;
+    }
+    
     Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
@@ -184,13 +244,16 @@ KCPSession_send(KCPSessionObject *self, PyObject *args) {
         return NULL;
     }
     
-    if (self->dead) {
+    kcp_lock(self);
+    
+    /* Check dead flag under lock for consistency */
+    if (atomic_load_explicit(&self->dead, memory_order_relaxed)) {
+        kcp_unlock(self);
         PyBuffer_Release(&buf);
         PyErr_SetString(PyExc_ConnectionError, "Connection is dead");
         return NULL;
     }
     
-    kcp_lock(self);
     int ret = ikcp_send(self->kcp, buf.buf, (int)buf.len);
     kcp_unlock(self);
     
@@ -267,7 +330,7 @@ KCPSession_update(KCPSessionObject *self, PyObject *Py_UNUSED(ignored)) {
     
     /* Check if connection is dead */
     if (self->kcp->state == (IUINT32)-1) {
-        self->dead = 1;
+        atomic_store_explicit(&self->dead, 1, memory_order_relaxed);
     }
     kcp_unlock(self);
     
@@ -336,12 +399,17 @@ KCPSession_set_output(KCPSessionObject *self, PyObject *args) {
         return NULL;
     }
     
+    /* Increment ref before acquiring lock to minimize lock hold time */
+    Py_XINCREF(func);
+    
     kcp_lock(self);
     PyObject *old = self->output_func;
-    Py_XINCREF(func);
     self->output_func = func;
-    Py_XDECREF(old);
     kcp_unlock(self);
+    
+    /* Decrement old reference outside of lock to avoid potential 
+       deadlock if __del__ re-enters this object */
+    Py_XDECREF(old);
     
     Py_RETURN_NONE;
 }
@@ -354,7 +422,7 @@ KCPSession_get_conv(KCPSessionObject *self, void *closure) {
 
 static PyObject *
 KCPSession_get_dead(KCPSessionObject *self, void *closure) {
-    return PyBool_FromLong(self->dead);
+    return PyBool_FromLong(atomic_load_explicit(&self->dead, memory_order_relaxed));
 }
 
 static PyObject *

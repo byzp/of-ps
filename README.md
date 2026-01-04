@@ -23,7 +23,6 @@
     pip install -r requirements-server.txt
     pip install -r requirements-client.txt
     ```
-- (此步骤可省略) 项目仅存在一个不支持自由线程的依赖(python-snappy的依赖cramjam), 如果你使用python3.14t+，可以尝试这个[修改版snappy](https://github.com/byzp/snappy-py)
 - 启动程序
     ```
     python main.py
@@ -36,3 +35,12 @@
 
 - 启动客户端 (请从安装目录直接启动本体，不要从启动器启动，仅在taptap版pc客户端经过测试，不保证其他端可用)
 
+
+## 可选操作
+
+- 项目仅存在一个不支持自由线程的依赖(python-snappy的依赖cramjam), 如果你使用python3.14t+, 可以尝试这个[修改版snappy](https://github.com/byzp/snappy-py)
+
+- 互联模块允许服务器之间相互发现和连接，各个服务器的玩家可以在同一场景交互, 需要编译utils/kcp的扩展(如果频繁出现断线问题，请增大utils/kcp/_kcp.c第69行的KCP_MINRTO, 然后重新编译)
+    ```
+    python utils/kcp/setup.py build_ext --inplace
+    ```

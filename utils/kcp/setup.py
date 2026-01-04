@@ -21,7 +21,7 @@ extra_compile_args = []
 extra_link_args = []
 
 if sys.platform == "win32":
-    extra_compile_args = ["/O2", "/W3"]
+    extra_compile_args = ["/O2", "/W3", "/std:c11", "/experimental:c11atomics"]
 else:
     extra_compile_args = [
         "-O3",
