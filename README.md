@@ -89,7 +89,7 @@
    - 点击Get mitmproxy-ca-cert.p12
    - 点击这个证书, 安装
 
-6. 启动开发空间launcher本体
+6. 启动开放空间launcher本体
 
    1. 直接找到taptap的游戏文件夹，选择launcher.exe运行
    2. 例如`E:\TapTap\PC Games\176228\launcher.exe`
