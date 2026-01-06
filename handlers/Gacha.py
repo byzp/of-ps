@@ -109,16 +109,4 @@ class Handler(PacketHandler):
         rsp.info.guarantee = 0
 
         session.send(MsgId.GachaRsp, rsp, packet_id)
-
-        notice = Pack_pb2.PackNotice()
-        notice.status = 1
-        notice.temp_pack_max_size = 100
-        notice.is_clear_temp_pack = False
-
-        for it in rsp.items:
-            # 假设：每抽到一个角色，给 10 个碎片
-            pack_item = notice.items.add()
-            pack_item.main_item.item_id = it.main_item.item_id + 100000  # 假设碎片ID
-            pack_item.main_item.base_item.num = 10
-
         session.send(MsgId.PackNotice, notice, 0)
