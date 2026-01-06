@@ -7,6 +7,7 @@ import os
 import proto.OverField_pb2 as GachaRecordReq_pb2
 import proto.OverField_pb2 as GachaRecordRsp_pb2
 import proto.OverField_pb2 as StatusCode_pb2
+import utils.db as db
 
 logger = logging.getLogger(__name__)
 
@@ -21,42 +22,26 @@ class Handler(PacketHandler):
         # Create response message
         rsp = GachaRecordRsp_pb2.GachaRecordRsp()
 
-        # Load hardcoded data
-        parsed_result = TEST_DATA["parsed_result"]
-
-        # Set status
         rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp.gacha_id = req.gacha_id
+        rsp.page = req.page
 
-        # Set fields from parsed result
-        rsp.gacha_id = parsed_result.get("gacha_id", 0)
-        rsp.page = parsed_result.get("page", 0)
-        rsp.total_page = parsed_result.get("total_page", 0)
+        records = db.get_gacha_records(
+            session.player_id,
+            req.gacha_id,
+            req.page,
+        )
 
-        # Set records
-        records_data = parsed_result.get("records", [])
-        for record_data in records_data:
-            record = rsp.records.add()
-            record.gacha_id = record_data.get("gacha_id", 0)
-            record.item_id = record_data.get("item_id", 0)
-            record.gacha_time = record_data.get("gacha_time", 0)
+        rsp.total_page = db.get_gacha_record_total_page(
+            session.player_id,
+            req.gacha_id,
+        )
 
-        # Send response
+        for item_id, gacha_time in records:
+            rec = rsp.records.add()
+            rec.gacha_id = req.gacha_id
+            rec.item_id = item_id
+            rec.gacha_time = gacha_time
+
         session.send(MsgId.GachaRecordRsp, rsp, packet_id)
 
-
-# Hardcoded test data
-TEST_DATA = {
-    "parsed_result": {
-        "status": 1,
-        "gacha_id": 0,
-        "page": 0,
-        "total_page": 88,
-        "records": [
-            {"gacha_id": 3014, "item_id": 101001, "gacha_time": 1763350670},
-            {"gacha_id": 3013, "item_id": 202004, "gacha_time": 1761191725},
-            {"gacha_id": 3013, "item_id": 11230, "gacha_time": 1761191725},
-            {"gacha_id": 3013, "item_id": 10210, "gacha_time": 1761191725},
-            {"gacha_id": 3013, "item_id": 10240, "gacha_time": 1761191725},
-        ],
-    }
-}
