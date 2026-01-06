@@ -2,12 +2,13 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 import random
+import time
 
 import proto.OverField_pb2 as GachaReq_pb2
 import proto.OverField_pb2 as GachaRsp_pb2
-import proto.OverField_pb2 as Pack_pb2
 
 from utils.res_loader import res
+import utils.db as db
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +81,8 @@ class Handler(PacketHandler):
             i["free_gacha_pool_i_d"] for i in pool["items"]
         ]
 
+        now_ts = int(time.time())
+
         # 抽卡
         for idx in range(draw_times):
             reward_pool_id = random.choice(reward_pool_ids)
@@ -90,11 +93,19 @@ class Handler(PacketHandler):
             reward = random.choice(reward_pool["items"])
             item_id = reward["item_i_d"]
 
+            # ===== 写入抽卡记录 =====
+            db.add_gacha_record(
+                session.player_id,
+                req.gacha_id,
+                item_id,
+                now_ts,
+            )
+
             item = rsp.items.add()
             item.main_item.item_id = item_id
             item.main_item.item_tag = 7
             item.main_item.temp_pack_index = idx
-            item.main_item.is_new = True  # 先全当新
+            item.main_item.is_new = True
             item.main_item.character.character_id = item_id
 
             item.extra_quality = calc_extra_quality(item_id)
@@ -109,4 +120,3 @@ class Handler(PacketHandler):
         rsp.info.guarantee = 0
 
         session.send(MsgId.GachaRsp, rsp, packet_id)
-        session.send(MsgId.PackNotice, notice, 0)
