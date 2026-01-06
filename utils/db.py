@@ -1107,8 +1107,13 @@ def add_gacha_record(player_id, gacha_id, item_id, gacha_time=None):
     )
 
 
-def get_gacha_records(player_id, gacha_id, page, page_size=10):
-    offset = page * page_size
+def get_gacha_records(player_id, gacha_id, page, page_size=5):
+    # page 从 1 开始
+    if page < 1:
+        page = 1
+
+    offset = (page - 1) * page_size
+
     cur = db.execute(
         """
         SELECT item_id, gacha_time
@@ -1122,7 +1127,8 @@ def get_gacha_records(player_id, gacha_id, page, page_size=10):
     return cur.fetchall()
 
 
-def get_gacha_record_total_page(player_id, gacha_id, page_size=10):
+
+def get_gacha_record_total_page(player_id, gacha_id, page_size=5):
     cur = db.execute(
         """
         SELECT COUNT(*) FROM gacha_record
@@ -1131,4 +1137,9 @@ def get_gacha_record_total_page(player_id, gacha_id, page_size=10):
         (player_id, gacha_id),
     )
     total = cur.fetchone()[0]
+
+    if total == 0:
+        return 0
+
     return (total + page_size - 1) // page_size
+
