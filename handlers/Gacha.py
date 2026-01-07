@@ -70,6 +70,10 @@ class Handler(PacketHandler):
             return
 
         pool_id = gacha_info.get("big_guarantee_pool_i_d")
+        if pool_id == 400 and req.gacha_id == 2000:
+            pool_id = 2000  # 常驻卡池
+        elif pool_id is None and req.gacha_id == 4000:
+            pool_id = 4000  # 服装卡池
         pool = get_pool(pool_id)
         if not pool:
             logger.error(f"Gacha pool not found: {pool_id}")
