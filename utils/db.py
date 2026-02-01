@@ -227,6 +227,17 @@ def init():
         );
 
         INSERT OR IGNORE INTO users (id, username, password, user_token) VALUES (1000000, "", "", "");
+        
+        CREATE TABLE IF NOT EXISTS gacha_record (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id INTEGER NOT NULL,
+            gacha_id INTEGER NOT NULL,
+            item_id INTEGER NOT NULL,
+            gacha_time INTEGER NOT NULL,
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_gacha_record_player ON gacha_record(player_id, gacha_id, gacha_time);
 
     """
     )
@@ -1081,3 +1092,54 @@ def get_collection(player_id, item_id=None):
             for row in rows:
                 collections.append(row)
         return collections
+
+
+def add_gacha_record(player_id, gacha_id, item_id, gacha_time=None):
+    if gacha_time is None:
+        gacha_time = int(time.time())
+
+    db.execute(
+        """
+        INSERT INTO gacha_record (player_id, gacha_id, item_id, gacha_time)
+        VALUES (?, ?, ?, ?)
+        """,
+        (player_id, gacha_id, item_id, gacha_time),
+    )
+
+
+def get_gacha_records(player_id, gacha_id, page, page_size=5):
+    # page 从 1 开始
+    if page < 1:
+        page = 1
+
+    offset = (page - 1) * page_size
+
+    cur = db.execute(
+        """
+        SELECT item_id, gacha_time
+        FROM gacha_record
+        WHERE player_id=? AND gacha_id=?
+        ORDER BY gacha_time DESC
+        LIMIT ? OFFSET ?
+        """,
+        (player_id, gacha_id, page_size, offset),
+    )
+    return cur.fetchall()
+
+
+
+def get_gacha_record_total_page(player_id, gacha_id, page_size=5):
+    cur = db.execute(
+        """
+        SELECT COUNT(*) FROM gacha_record
+        WHERE player_id=? AND gacha_id=?
+        """,
+        (player_id, gacha_id),
+    )
+    total = cur.fetchone()[0]
+
+    if total == 0:
+        return 0
+
+    return (total + page_size - 1) // page_size
+
