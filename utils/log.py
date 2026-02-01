@@ -6,7 +6,7 @@ from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.shortcuts import print_formatted_text
 from colorama import Fore, Style, init as color_init
 
-color_init()
+color_init(wrap=False)
 
 _log_queue = None
 _consumer_thread = None
