@@ -21,7 +21,7 @@ extra_compile_args = []
 extra_link_args = []
 
 if sys.platform == "win32":
-    extra_compile_args = ["/O2", "/W3", "/std:c11", "/experimental:c11atomics"]
+    extra_compile_args = ["/O2", "/W3"]
 else:
     extra_compile_args = [
         "-O3",
@@ -36,7 +36,7 @@ else:
 kcp_extension = Extension(
     "utils.kcp._kcp",
     sources=[
-        os.path.join(here, "_kcp.c"),
+        os.path.join(here, "_kcp.cpp"),
         os.path.join(here, "ikcp.c"),
     ],
     include_dirs=[here],
