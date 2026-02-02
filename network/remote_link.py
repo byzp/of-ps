@@ -206,7 +206,6 @@ def _handle_data(origin, datas, mid, payload):
         rsp = pb.ChatMsgNotice()
         rsp.ParseFromString(payload)
         rsp.msg.player_id = _trans_id(origin, rsp.msg.player_id)
-        print(datas[0], datas[1], datas[2], rsp)
         up_chat_msg(datas[0], datas[1], datas[2], rsp)
     elif mid == 1206:
         rsp = pb.PlayerSceneSyncDataNotice()

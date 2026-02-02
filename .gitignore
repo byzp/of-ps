@@ -10,6 +10,7 @@ build
 /trash
 /resources/assets
 /resources/data
+/resources/swirlnoisetexture
 /player.db
 /player.db-journal
 /player.db-shm

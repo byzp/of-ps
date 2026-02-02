@@ -59,6 +59,7 @@ class GameSession:
         "temp_pack",
         "pos",
         "drop_items",
+        "color_data",
         "running",
         "verified",
         "logged_in",
@@ -101,6 +102,11 @@ class GameSession:
         self.temp_pack = []
         self.pos = {}
         self.drop_items = {}
+        self.color_data = [
+            None,
+            None,
+            OverField_pb2.PosColor(),
+        ]  # SwirlNoiseGenHelper,noise_texture_id,color
 
         self.running = True
         self.verified = False
