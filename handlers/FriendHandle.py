@@ -42,18 +42,18 @@ class Handler(PacketHandler):
                         )
 
                         rsp1.type = FriendHandleType_pb2.FriendHandleType_ADD
-                        rsp1.target_player_id == req.player_id
+                        rsp1.target_player_id = req.player_id
                         session.send(MsgId.FriendHandleNotice, rsp1, 0)
                         for s in get_session():
                             if s.player_id == req.player_id:
-                                rsp1.target_player_id == session.player_id
+                                rsp1.target_player_id = session.player_id
                                 s.send(MsgId.FriendHandleNotice, rsp1, 0)
                                 break
                     else:
                         db.del_friend_info(session.player_id, req.player_id)
                         # 对方不需要知道被拒绝
                         rsp1.type = FriendHandleType_pb2.FriendHandleType_DEL
-                        rsp1.target_player_id == req.player_id
+                        rsp1.target_player_id = req.player_id
                         session.send(MsgId.FriendHandleNotice, rsp1, 0)
                 case 2:  # 好友,正常也不可能
                     rsp.status = StatusCode_pb2.StatusCode_FRIEND_EXIST
@@ -69,7 +69,7 @@ class Handler(PacketHandler):
                         rsp1.status = StatusCode_pb2.StatusCode_OK
                         db.del_friend_info(session.player_id, req.player_id)
                         rsp1.type = FriendHandleType_pb2.FriendHandleType_DEL
-                        rsp1.target_player_id == req.player_id
+                        rsp1.target_player_id = req.player_id
                         session.send(MsgId.FriendHandleNotice, rsp1, 0)
 
         session.send(MsgId.FriendHandleRsp, rsp, packet_id)

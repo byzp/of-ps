@@ -1127,7 +1127,6 @@ def get_gacha_records(player_id, gacha_id, page, page_size=5):
     return cur.fetchall()
 
 
-
 def get_gacha_record_total_page(player_id, gacha_id, page_size=5):
     cur = db.execute(
         """
@@ -1142,4 +1141,3 @@ def get_gacha_record_total_page(player_id, gacha_id, page_size=5):
         return 0
 
     return (total + page_size - 1) // page_size
-

@@ -91,6 +91,9 @@ class Handler(PacketHandler):
                 session.send(MsgId.PackNotice, rsp1, 0)
             case 7:  # 退出染色
                 session.color_data[0] = None
+            case 9:  # TODO 登录时是否进入热门频道，0为进入，1为不进入
+                if req.params[0].int_value:
+                    pass
             case _:
                 print(req)
         session.send(MsgId.GenericGameARsp, rsp, packet_id)

@@ -33,5 +33,6 @@ class Handler(PacketHandler):
         )  # expression->res.chat.chat_emotion
 
         rsp = SendChatMsgRsp_pb2.SendChatMsgRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK  # TODO
+        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp.text = req.text
         session.send(MsgId.SendChatMsgRsp, rsp, packet_id)  # 1933,1934 -> 1936

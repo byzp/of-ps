@@ -44,4 +44,3 @@ class Handler(PacketHandler):
             rec.gacha_time = gacha_time
 
         session.send(MsgId.GachaRecordRsp, rsp, packet_id)
-

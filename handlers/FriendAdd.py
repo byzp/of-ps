@@ -53,6 +53,6 @@ class Handler(PacketHandler):
                 rsp = FriendHandleNotice_pb2.FriendHandleNotice()
                 rsp.status = StatusCode_pb2.StatusCode_OK
                 rsp.type = FriendHandleType_pb2.FriendHandleType_APPLY
-                rsp.target_player_id == session.player_id
+                rsp.target_player_id = session.player_id
                 s.send(MsgId.FriendHandleNotice, rsp, 0)
                 return

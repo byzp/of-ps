@@ -81,9 +81,7 @@ class Handler(PacketHandler):
             return
 
         # 所有 reward_pool_id
-        reward_pool_ids = [
-            i["free_gacha_pool_i_d"] for i in pool["items"]
-        ]
+        reward_pool_ids = [i["free_gacha_pool_i_d"] for i in pool["items"]]
 
         now_ts = int(time.time())
 

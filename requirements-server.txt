@@ -2,6 +2,7 @@ fastapi
 uvicorn
 protobuf
 numpy
+pillow
 python-snappy
 # git+http://github.com/byzp/snappy-py
 prompt-toolkit
