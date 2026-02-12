@@ -328,6 +328,42 @@ enum AbyssRankType {
     CHALLENGE = 3;
 }
 
+enum EGemDuel_SkillTriggerEffect {
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400001 = 0;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400002 = 1;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400003 = 2;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400004 = 3;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400005 = 4;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400006 = 5;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400007 = 6;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400008 = 7;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400009 = 8;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400010 = 9;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400011 = 10;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400012 = 11;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400013 = 12;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400014 = 13;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400015 = 14;
+    EGemDuel_SkillTriggerEffect_None = 15;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400017 = 16;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400018 = 17;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400019 = 18;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400020 = 19;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400021 = 20;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400022 = 21;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400023 = 22;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400024 = 23;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400025 = 24;
+}
+
+enum EGemDuel_SkillAttribute {
+    EGemDuel_SkillAttribute_None = 0;
+    EGemDuel_SkillAttribute_HP = 1;
+    EGemDuel_SkillAttribute_Att = 2;
+    EGemDuel_SkillAttribute_Arm = 3;
+    EGemDuel_SkillAttribute_Mag = 4;
+}
+
 enum GemDuelGamePlayerType {
     GemDuelGamePlayerType_None = 0;
     GemDuelGamePlayerType_Human = 1;
@@ -366,6 +402,18 @@ enum GemDuelActionType {
     GemDuelActionType_PassiveSkill = 15;
     GemDuelActionType_ChangeGemDefRatio = 16;
     GemDuelActionType_ShieldChange = 17;
+    GemDuelActionType_AddBuff = 18;
+    GemDuelActionType_DelBuff = 19;
+    GemDuelActionType_AddCharacter = 20;
+    GemDuelActionType_EnergyChange = 21;
+    GemDuelActionType_BuffChangeNum = 22;
+}
+
+enum GemDuelQuestStatus {
+    GemDuelQuestStatus_Locked = 0;
+    GemDuelQuestStatus_InProgress = 1;
+    GemDuelQuestStatus_Completed = 2;
+    GemDuelQuestStatus_Finish = 3;
 }
 
 enum AccountOSType {
@@ -679,6 +727,7 @@ enum StatusCode {
     StatusCode_GEM_DUEL_SKILL_ALREADY_UNLOCKED = 1781;
     StatusCode_GEM_DUEL_BUY_STAMINA_LIMIT = 1782;
     StatusCode_GEM_DUEL_TEAM_NOT_UNLOCK = 1783;
+    StatusCode_GEM_DUEL_SHOP_REFRESH_LIMIT = 1784;
 }
 
 enum PlayerOfflineReason {
@@ -850,6 +899,15 @@ enum MoonSpotOperateType {
     OperateType_Place = 1;
     OperateType_Remove = 2;
     OperateType_Move = 3;
+}
+
+enum EGemDuelQuestType {
+    EGemDuelQuestType_GemDuelDungeonQuest = 0;
+    EGemDuelQuestType_GemDuelMainQuest = 1;
+    EGemDuelQuestType_GemDuelDailyQuest = 2;
+    EGemDuelQuestType_GemDuelWeeklyQuest = 3;
+    EGemDuelQuestType_GemDuelAchievementQuest = 4;
+    EGemDuelQuestType_GemDuelBadgeQuest = 5;
 }
 
 enum MPPlayRoomEventType {
@@ -2198,6 +2256,25 @@ message GemDuelGameCharacter {
     uint32 index = 10;
     uint32 health_max = 11;
     uint32 gem_def_ratio = 12;
+    repeated GemDueGameCharacterBuff buffs = 13;
+    uint32 player_index = 14;
+    uint32 buff_seq = 15;
+    uint32 race_tag = 16;
+}
+
+message GemDueGameCharacterBuff {
+    uint32 effect_type = 1;
+    uint32 effect_sub_type = 2;
+    uint32 start_round = 3;
+    uint32 end_round = 4;
+    uint32 effect_id = 5;
+    int32 record_num = 6;
+    int32 num = 7;
+    EGemDuel_SkillTriggerEffect effect = 8;
+    EGemDuel_SkillAttribute attribute = 9;
+    uint32 trigger_timing = 10;
+    bool can_overwrite = 11;
+    uint32 buff_id = 12;
 }
 
 message GemDuelGamePlayer {
@@ -2231,8 +2308,9 @@ message GemDuelSkillEffect {
     repeated uint32 character_index_list = 2;
     repeated int32 skill_value = 3;
     repeated GemDuelGrid grid_list = 4;
-    uint32 player_index = 5;
     GemDuelActionType skill_action_type = 6;
+    GemDueGameCharacterBuff buff = 7;
+    uint32 effect_id = 8;
 }
 
 message GemDuelAction {
@@ -2250,6 +2328,8 @@ message GemDuelAction {
     GemDuelActionMove move = 12;
     repeated GemDuelSkillEffect skill_effect_list = 13;
     uint32 value = 15;
+    GemDuelGameCharacter character = 16;
+    GemDueGameCharacterBuff buff = 17;
 }
 
 message GemDuelItem {
@@ -2261,6 +2341,8 @@ message GemDuelTeamData {
     uint32 team_id = 1;
     string team_name = 2;
     repeated uint32 characters = 3;
+    repeated uint32 ai_priority_index = 4;
+    bool priority_skill = 5;
 }
 
 message GemDuelArenaData {
@@ -2297,6 +2379,75 @@ message GemDuelArenaRankPlayerInfo {
     uint32 total_game = 6;
     uint32 win_game = 7;
     uint32 total_point = 8;
+}
+
+message GemDuelPlayerGachaRecord {
+    uint32 gacha_id = 1;
+    uint32 item_id = 2;
+    int64 gacha_time = 3;
+}
+
+message GemDuelGachaInfo {
+    uint32 gacha_id = 1;
+    uint32 gacha_times = 2;
+    bool has_full_pick = 3;
+    bool is_free = 4;
+    uint32 optional_up_item = 5;
+    uint32 optional_value = 6;
+    uint32 guarantee = 7;
+}
+
+message GemDuelShopGrid {
+    uint32 id = 1;
+    uint32 grid_id = 2;
+    uint32 pool_id = 3;
+    uint32 pool_index = 4;
+    uint32 buy_times = 5;
+    int64 update_time = 6;
+}
+
+message GemDuelPlayerShopInfo {
+    uint32 shop_id = 1;
+    repeated GemDuelShopGrid grids = 2;
+    uint32 shop_refresh_remain = 4;
+}
+
+message GemDuelQuest {
+    uint32 quest_id = 1;
+    repeated GemDuelCondition conditions = 2;
+    GemDuelQuestStatus status = 3;
+    uint32 activity_id = 4;
+    uint32 complete_count = 5;
+}
+
+message GemDuelCondition {
+    uint32 condition_id = 1;
+    uint32 progress = 2;
+    GemDuelQuestStatus status = 3;
+}
+
+message GemDuelDailyQuestBonus {
+    uint32 liveness = 1;
+    repeated uint32 reward_liveness = 2;
+    int64 update_time = 3;
+}
+
+message GemDuelGrowthFund {
+    uint32 growth_fund_id = 1;
+    repeated uint32 free_lv_reward_lst = 2;
+    repeated uint32 pay_lv_reward_lst = 3;
+    bool has_buy = 4;
+}
+
+message GemDuelBattlePass {
+    uint32 battle_pass_id = 1;
+    int64 open_time = 2;
+    int64 close_time = 3;
+    uint32 level = 4;
+    uint32 total_exp = 5;
+    bool has_buy = 6;
+    repeated uint32 free_lv_reward_lst = 7;
+    repeated uint32 pay_lv_reward_lst = 8;
 }
 
 message VerifyLoginTokenReq {
@@ -2554,6 +2705,8 @@ message MailBriefData {
     repeated BaseItem items = 11;
     bool is_questionnaire = 12;
     bool collect_status = 13;
+    bool is_gem_duel = 14;
+    repeated GemDuelItem gem_duel_item = 15;
 }
 
 message GetMailsReq {
@@ -2576,6 +2729,7 @@ message OperateMailsRsp {
     repeated uint32 deleted_mail_ids = 4;
     MailOperateType operate_type = 5;
     bool collect_status = 6;
+    repeated GemDuelItem gem_duel_item = 7;
 }
 
 message ReceiveMailNotice {
@@ -4713,6 +4867,7 @@ message CreatePayOrderReq {
     string blibli_p_c_sign_param = 5;
     uint32 to_player_id = 6;
     uint32 pool_id = 7;
+    bool is_gem_duel = 8;
 }
 
 message CreatePayOrderRsp {
@@ -6229,6 +6384,19 @@ message GemDuelInfoRsp {
     repeated GemDuelTeamData teams = 6;
     repeated uint32 passed_main_dungeons = 7;
     GemDuelArenaData arena = 8;
+    GemDuelQuestDetail quest = 9;
+    int64 month_card_over_due_time = 10;
+    uint32 month_card_reward_days = 11;
+    bool month_card_is_reward_today = 12;
+    repeated GemDuelGrowthFund growth_fund = 13;
+    uint32 player_level = 14;
+    uint32 player_exp = 15;
+}
+
+message GemDuelQuestDetail {
+    repeated GemDuelQuest quests = 1;
+    GemDuelDailyQuestBonus daily_quest_record = 2;
+    GemDuelDailyQuestBonus weekly_quest_record = 3;
 }
 
 message GemDuelEnterMainDungeonReq {
@@ -6261,6 +6429,7 @@ message GemDuelActionReq {
     GemDuelActionMove move = 2;
     uint32 character_index = 3;
     uint32 target_index = 4;
+    repeated uint32 choose_index = 5;
 }
 
 message GemDuelActionRsp {
@@ -6389,6 +6558,129 @@ message GemDuelArenaRankRsp {
     repeated GemDuelArenaRankPlayerInfo point_top_rank = 3;
 }
 
+message GemDuelGachaListReq {
+}
+
+message GemDuelGachaListRsp {
+    StatusCode status = 1;
+    repeated GemDuelGachaInfo gachas = 2;
+}
+
+message GemDuelGachaReq {
+    uint32 gacha_id = 1;
+    bool is_single = 2;
+}
+
+message GemDuelGachaRsp {
+    StatusCode status = 1;
+    repeated GemDuelItem items = 2;
+    GemDuelGachaInfo info = 3;
+}
+
+message GemDuelGachaFullPickReq {
+    uint32 gacha_id = 1;
+    uint32 item_id = 2;
+}
+
+message GemDuelGachaFullPickRsp {
+    StatusCode status = 1;
+    repeated GemDuelItem item = 2;
+}
+
+message GemDuelGachaRecordReq {
+    uint32 gacha_id = 1;
+    uint32 page = 2;
+}
+
+message GemDuelGachaRecordRsp {
+    StatusCode status = 1;
+    uint32 gacha_id = 2;
+    uint32 page = 3;
+    uint32 total_page = 4;
+    repeated GemDuelPlayerGachaRecord records = 5;
+}
+
+message GemDuelShopInfoReq {
+    uint32 shop_id = 1;
+}
+
+message GemDuelShopInfoRsp {
+    StatusCode status = 1;
+    uint32 shop_id = 2;
+    repeated GemDuelShopGrid grids = 3;
+    uint32 shop_refresh_remain = 4;
+}
+
+message GemDuelShopBuyReq {
+    uint32 shop_id = 1;
+    uint32 grid_id = 2;
+    uint32 buy_times = 3;
+    uint32 item_id = 4;
+}
+
+message GemDuelShopBuyRsp {
+    StatusCode status = 1;
+    uint32 shop_id = 2;
+    GemDuelShopGrid grids = 3;
+    repeated GemDuelItem items = 5;
+}
+
+message GemDuelShopRefreshNotice {
+    StatusCode status = 1;
+    repeated uint32 shop_id = 2;
+}
+
+message GemDuelShopInitNotice {
+    StatusCode status = 1;
+    repeated GemDuelPlayerShopInfo player_shop = 2;
+}
+
+message GemDuelDiamondConvertReq {
+    uint32 num = 1;
+}
+
+message GemDuelDiamondConvertRsp {
+    StatusCode status = 1;
+    repeated GemDuelItem items = 2;
+}
+
+message GemDuelPaySendGoodsNotice {
+    StatusCode status = 1;
+    uint32 shop_id = 2;
+    GemDuelShopGrid grids = 3;
+    string order_id = 5;
+    repeated GemDuelItem items = 6;
+}
+
+message GemDuelShopRefreshReq {
+    uint32 shop_id = 1;
+}
+
+message GemDuelShopRefreshRsp {
+    StatusCode status = 1;
+    GemDuelPlayerShopInfo player_shop = 2;
+}
+
+message GemDuelItemUseReq {
+    uint32 item_id = 1;
+    uint32 num = 2;
+}
+
+message GemDuelItemUseRsp {
+    StatusCode status = 1;
+    repeated GemDuelItem items = 2;
+}
+
+message GemDuelSetTeamAIPriorityPlanReq {
+    uint32 team_id = 1;
+    repeated uint32 ai_priority_index = 2;
+    bool priority_skill = 3;
+}
+
+message GemDuelSetTeamAIPriorityPlanRsp {
+    StatusCode status = 1;
+}
+
 message InheritCodeUseReq {
     string code = 1;
 }
@@ -6397,6 +6689,130 @@ message InheritCodeUseRsp {
     StatusCode status = 1;
     string code_str = 2;
     repeated ItemDetail rewards = 3;
+}
+
+message GemDuelQuestNotice {
+    StatusCode status = 1;
+    repeated GemDuelQuest quests = 2;
+}
+
+message GemDuelClaimQuestRewardReq {
+    EGemDuelQuestType quest_type = 1;
+    uint32 quest_id = 2;
+}
+
+message GemDuelClaimQuestRewardRsp {
+    StatusCode status = 1;
+    repeated GemDuelQuest quest = 2;
+    repeated GemDuelItem items = 3;
+    EGemDuelQuestType quest_type = 4;
+    uint32 liveness = 5;
+}
+
+message GemDuelClaimDailyQuestRewardReq {
+    EGemDuelQuestType quest_type = 1;
+    uint32 liveness = 2;
+}
+
+message GemDuelClaimDailyQuestRewardRsp {
+    StatusCode status = 1;
+    repeated GemDuelItem items = 2;
+    EGemDuelQuestType quest_type = 3;
+    GemDuelDailyQuestBonus quest_bonus = 4;
+}
+
+message GemDuelFastFinishQuestReq {
+    EGemDuelQuestType quest_type = 1;
+    uint32 quest_id = 2;
+}
+
+message GemDuelFastFinishQuestRsp {
+    StatusCode status = 1;
+    repeated GemDuelQuest quest = 2;
+}
+
+message GemDuelQuestDailyUpdateNotice {
+    StatusCode status = 1;
+    repeated GemDuelQuest quests = 2;
+    GemDuelDailyQuestBonus daily_quest_record = 3;
+    GemDuelDailyQuestBonus weekly_quest_record = 4;
+}
+
+message GemDuelMonthCardNotice {
+    StatusCode status = 1;
+    int64 over_due_time = 2;
+    bool is_reward_today = 3;
+}
+
+message GemDuelMonthCardRewardReq {
+}
+
+message GemDuelMonthCardRewardRsp {
+    StatusCode status = 1;
+    uint32 month_card_reward_days = 2;
+}
+
+message GemDuelPlayerLevelExpNotice {
+    StatusCode status = 1;
+    uint32 level = 2;
+    uint32 exp = 3;
+}
+
+message GemDuelGrowthFundRewardReq {
+    uint32 growth_fund_id = 1;
+    uint32 level = 2;
+    bool get_free_reward = 3;
+}
+
+message GemDuelGrowthFundRewardRsp {
+    StatusCode status = 1;
+    repeated GemDuelItem rewards = 2;
+}
+
+message GemDuelGrowthFundBuyNotice {
+    StatusCode status = 1;
+    uint32 growth_fund_id = 2;
+}
+
+message GemDuelBattlePassInfoNotice {
+    StatusCode status = 1;
+    repeated GemDuelBattlePass battle_pass = 2;
+}
+
+message GemDuelBattlePassRewardReq {
+    uint32 battle_pass_id = 1;
+    uint32 level = 2;
+    bool get_free_reward = 3;
+}
+
+message GemDuelBattlePassRewardRsp {
+    StatusCode status = 1;
+    repeated GemDuelItem rewards = 2;
+}
+
+message GemDuelBattlePassBuyNotice {
+    StatusCode status = 1;
+    uint32 battle_pass_id = 2;
+    uint32 battle_pass_lv = 3;
+    uint32 total_exp = 4;
+}
+
+message GemDuelBattlePassBuyExpReq {
+    uint32 battle_pass_id = 2;
+}
+
+message GemDuelBattlePassBuyExpRsp {
+    StatusCode status = 1;
+    uint32 battle_pass_id = 2;
+    uint32 battle_pass_lv = 3;
+    uint32 total_exp = 4;
+}
+
+message GemDuelBattlePassNotice {
+    StatusCode status = 1;
+    uint32 battle_pass_id = 2;
+    uint32 battle_pass_lv = 3;
+    uint32 total_exp = 4;
 }
 
 ///////////互联模块定义的msg，不属于游戏本身
