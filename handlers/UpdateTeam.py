@@ -2,10 +2,14 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as UpdateTeamReq_pb2
-import proto.OverField_pb2 as UpdateTeamRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as pb
+from proto.net_pb2 import (
+    UpdateTeamReq,
+    UpdateTeamRsp,
+    StatusCode,
+    Character,
+    ServerSceneSyncDataNotice,
+    SceneActionType,
+)
 from server.scene_data import up_scene_action
 import utils.pb_create as pb_create
 
@@ -17,11 +21,11 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.UpdateTeamReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = UpdateTeamReq_pb2.UpdateTeamReq()
+        req = UpdateTeamReq()
         req.ParseFromString(data)
 
-        rsp = UpdateTeamRsp_pb2.UpdateTeamRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = UpdateTeamRsp()
+        rsp.status = StatusCode.StatusCode_OK
 
         db.set_players_info(
             session.player_id, "team", (req.char1, req.char2, req.char3)
@@ -31,7 +35,7 @@ class Handler(PacketHandler):
         # 修改玩家 队长徽章ID
         characters = db.get_characters(session.player_id, req.char1)
         if characters:
-            character = pb.Character()
+            character = Character()
             character.ParseFromString(characters[0])
             db.set_players_info(
                 session.player_id,
@@ -43,12 +47,12 @@ class Handler(PacketHandler):
 
         # 发送场景同步通知
         pb_create.make_ScenePlayer(session)
-        notice = pb.ServerSceneSyncDataNotice()
-        notice.status = StatusCode_pb2.StatusCode_OK
+        notice = ServerSceneSyncDataNotice()
+        notice.status = StatusCode.StatusCode_OK
         data_entry = notice.data.add()
         data_entry.player_id = session.player_id
         server_data_entry = data_entry.server_data.add()
-        server_data_entry.action_type = pb.SceneActionType_UPDATE_TEAM
+        server_data_entry.action_type = SceneActionType.SceneActionType_UPDATE_TEAM
 
         server_data_entry.player.CopyFrom(session.scene_player)
         up_scene_action(session.scene_id, session.channel_id, notice)

@@ -3,12 +3,14 @@ from network.msg_id import MsgId
 import logging
 import time
 
-import proto.OverField_pb2 as DungeonEnterReq_pb2
-import proto.OverField_pb2 as DungeonEnterRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as ServerSceneSyncDataNotice_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as pb
+from proto.net_pb2 import (
+    DungeonEnterReq,
+    DungeonEnterRsp,
+    StatusCode,
+    ServerSceneSyncDataNotice,
+    StatusCode,
+    SceneActionType,
+)
 
 import server.scene_data as scene_data
 from utils.pb_create import make_SceneTeam
@@ -19,11 +21,11 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.DungeonEnterReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = DungeonEnterReq_pb2.DungeonEnterReq()
+        req = DungeonEnterReq()
         req.ParseFromString(data)
 
-        rsp = DungeonEnterRsp_pb2.DungeonEnterRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = DungeonEnterRsp()
+        rsp.status = StatusCode.StatusCode_OK
         char_ids = []
         char_ids.append(req.char1)
         char_ids.append(req.char2)
@@ -41,10 +43,10 @@ class Handler(PacketHandler):
         session.send(MsgId.DungeonEnterRsp, rsp, packet_id)
 
         # 向其他玩家广播离开事件
-        notice = ServerSceneSyncDataNotice_pb2.ServerSceneSyncDataNotice()
-        notice.status = StatusCode_pb2.StatusCode_OK
+        notice = ServerSceneSyncDataNotice()
+        notice.status = StatusCode.StatusCode_OK
         d = notice.data.add()
         d.player_id = session.player_id
         sd = d.server_data.add()
-        sd.action_type = pb.SceneActionType_LEAVE
+        sd.action_type = SceneActionType.SceneActionType_LEAVE
         scene_data.up_scene_action(session.scene_id, session.channel_id, notice)

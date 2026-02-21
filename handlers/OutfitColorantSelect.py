@@ -4,9 +4,7 @@ import logging
 import numpy as np
 import random
 
-import proto.OverField_pb2 as OutfitColorantSelectReq_pb2
-import proto.OverField_pb2 as OutfitColorantSelectRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import OutfitColorantSelectReq, OutfitColorantSelectRsp, StatusCode
 from utils.res_loader import res
 
 logger = logging.getLogger(__name__)
@@ -15,11 +13,11 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.OutfitColorantSelectReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = OutfitColorantSelectReq_pb2.OutfitColorantSelectReq()
+        req = OutfitColorantSelectReq()
         req.ParseFromString(data)
 
-        rsp = OutfitColorantSelectRsp_pb2.OutfitColorantSelectRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = OutfitColorantSelectRsp()
+        rsp.status = StatusCode.StatusCode_OK
 
         rsp.param.uvy = 0.0
         rsp.param.is_dye = False

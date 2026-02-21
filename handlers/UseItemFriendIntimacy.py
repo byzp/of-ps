@@ -3,11 +3,13 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as UseItemFriendIntimacyReq_pb2
-import proto.OverField_pb2 as UseItemFriendIntimacyRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as ItemDetail_pb2
-import proto.OverField_pb2 as PackNotice_pb2
+from proto.net_pb2 import (
+    UseItemFriendIntimacyReq,
+    UseItemFriendIntimacyRsp,
+    StatusCode,
+    ItemDetail,
+    PackNotice,
+)
 import utils.db as db
 
 logger = logging.getLogger(__name__)
@@ -16,17 +18,17 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.UseItemFriendIntimacyReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = UseItemFriendIntimacyReq_pb2.UseItemFriendIntimacyReq()
+        req = UseItemFriendIntimacyReq()
         req.ParseFromString(data)
 
-        rsp = UseItemFriendIntimacyRsp_pb2.UseItemFriendIntimacyRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = UseItemFriendIntimacyRsp()
+        rsp.status = StatusCode.StatusCode_OK
 
         intimacy_map = {1501: 5, 1502: 10, 1503: 20}
         intimacy_increase = intimacy_map.get(req.item_id, 0)
 
         item_data = db.get_item_detail(session.player_id, req.item_id)
-        item = ItemDetail_pb2.ItemDetail()
+        item = ItemDetail()
         item.ParseFromString(item_data)
         item.main_item.base_item.num -= 1
         db.set_item_detail(
@@ -54,8 +56,8 @@ class Handler(PacketHandler):
         )  # 2651 2652 使用道具增加好友亲密度
 
         # 数量更新通知
-        rsp = PackNotice_pb2.PackNotice()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = PackNotice()
+        rsp.status = StatusCode.StatusCode_OK
         rsp.items.add().CopyFrom(item)
 
         session.send(MsgId.PackNotice, rsp, packet_id)

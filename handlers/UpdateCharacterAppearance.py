@@ -2,10 +2,15 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as UpdateCharacterAppearanceReq_pb2
-import proto.OverField_pb2 as UpdateCharacterAppearanceRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as pb
+from proto.net_pb2 import (
+    UpdateCharacterAppearanceReq,
+    UpdateCharacterAppearanceRsp,
+    StatusCode,
+    Character,
+    CharacterAppearance,
+    ServerSceneSyncDataNotice,
+    SceneActionType,
+)
 import utils.db as db
 import utils.pb_create as pb_create
 from server.scene_data import up_scene_action
@@ -16,23 +21,23 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.UpdateCharacterAppearanceReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = UpdateCharacterAppearanceReq_pb2.UpdateCharacterAppearanceReq()
+        req = UpdateCharacterAppearanceReq()
         req.ParseFromString(data)
 
         char_id = req.char_id
         characters = db.get_characters(session.player_id, char_id)
         if not characters:
-            rsp = UpdateCharacterAppearanceRsp_pb2.UpdateCharacterAppearanceRsp()
-            rsp.status = StatusCode_pb2.StatusCode_Error
+            rsp = UpdateCharacterAppearanceRsp()
+            rsp.status = StatusCode.StatusCode_Error
             session.send(MsgId.UpdateCharacterAppearanceRsp, rsp, packet_id)
             return
 
-        character = pb.Character()
+        character = Character()
         character.ParseFromString(characters[0])
 
         if req.HasField("appearance"):
             appearance = req.appearance
-            default_appearance = pb.CharacterAppearance()
+            default_appearance = CharacterAppearance()
             fields_to_check = [
                 "badge",
                 "umbrella_id",
@@ -56,8 +61,8 @@ class Handler(PacketHandler):
 
         db.set_character(session.player_id, char_id, character.SerializeToString())
 
-        rsp = UpdateCharacterAppearanceRsp_pb2.UpdateCharacterAppearanceRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = UpdateCharacterAppearanceRsp()
+        rsp.status = StatusCode.StatusCode_OK
         rsp.char_id = char_id
         rsp.appearance.badge = req.appearance.badge
         rsp.appearance.umbrella_id = req.appearance.umbrella_id
@@ -95,11 +100,13 @@ class Handler(PacketHandler):
             session.scene_player.team.char1.character_appearance.CopyFrom(
                 req.appearance
             )
-            notice = pb.ServerSceneSyncDataNotice()
-            notice.status = StatusCode_pb2.StatusCode_OK
+            notice = ServerSceneSyncDataNotice()
+            notice.status = StatusCode.StatusCode_OK
             data_entry = notice.data.add()
             data_entry.player_id = session.player_id
             server_data_entry = data_entry.server_data.add()
-            server_data_entry.action_type = pb.SceneActionType_UPDATE_APPEARANCE
+            server_data_entry.action_type = (
+                SceneActionType.SceneActionType_UPDATE_APPEARANCE
+            )
             server_data_entry.player.CopyFrom(session.scene_player)
             up_scene_action(session.scene_id, session.channel_id, notice)

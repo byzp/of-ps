@@ -1,20 +1,18 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 
-import proto.OverField_pb2 as SetFriendExtInfoRsp_pb2
-import proto.OverField_pb2 as SetFriendExtInfoReq_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import SetFriendExtInfoRsp, SetFriendExtInfoReq, StatusCode
 import utils.db as db
 
 
 @packet_handler(MsgId.SetFriendExtInfoReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = SetFriendExtInfoReq_pb2.SetFriendExtInfoReq()
+        req = SetFriendExtInfoReq()
         req.ParseFromString(data)
 
-        rsp = SetFriendExtInfoRsp_pb2.SetFriendExtInfoRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = SetFriendExtInfoRsp()
+        rsp.status = StatusCode.StatusCode_OK
         rsp.player_id = req.player_id
         rsp.data.extend(req.data)
 

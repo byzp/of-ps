@@ -3,9 +3,7 @@ from network.msg_id import MsgId
 import logging
 
 
-import proto.OverField_pb2 as GamePlayRewardReq_pb2
-import proto.OverField_pb2 as GamePlayRewardRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import GamePlayRewardReq, GamePlayRewardRsp, StatusCode
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +12,11 @@ logger = logging.getLogger(__name__)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
 
-        req = GamePlayRewardReq_pb2.GamePlayRewardReq()
+        req = GamePlayRewardReq()
         req.ParseFromString(data)
 
-        rsp = GamePlayRewardRsp_pb2.GamePlayRewardRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = GamePlayRewardRsp()
+        rsp.status = StatusCode.StatusCode_OK
 
         session.send(MsgId.GamePlayRewardRsp, rsp, packet_id)
 

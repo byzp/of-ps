@@ -3,10 +3,12 @@ from network.msg_id import MsgId
 import logging
 import time
 
-import proto.OverField_pb2 as TreasureBoxOpenReq_pb2
-import proto.OverField_pb2 as TreasureBoxOpenRsp_pb2
-import proto.OverField_pb2 as TreasureBoxData_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import (
+    TreasureBoxOpenReq,
+    TreasureBoxOpenRsp,
+    TreasureBoxData,
+    StatusCode,
+)
 
 import utils.db as db
 from utils.pb_create import make_treasure_box_item
@@ -17,13 +19,13 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.TreasureBoxOpenReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = TreasureBoxOpenReq_pb2.TreasureBoxOpenReq()
+        req = TreasureBoxOpenReq()
         req.ParseFromString(data)
 
-        rsp = TreasureBoxOpenRsp_pb2.TreasureBoxOpenRsp()  # TODO 宝箱种类需要区分
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = TreasureBoxOpenRsp()  # TODO 宝箱种类需要区分
+        rsp.status = StatusCode.StatusCode_OK
 
-        tb = TreasureBoxData_pb2.TreasureBoxData()
+        tb = TreasureBoxData()
         tb_b = db.get_treasure_box(session.player_id, req.treasure_box_index)
         refresh = False
         time_t = int(time.time())
@@ -36,7 +38,7 @@ class Handler(PacketHandler):
                     rsp.items.add().CopyFrom(item)
                 rsp.next_refresh_time = tb.next_refresh_time
         if not tb_b or refresh:  # TODO 金币直接放背包
-            tb = TreasureBoxData_pb2.TreasureBoxData()
+            tb = TreasureBoxData()
             tb.index = req.treasure_box_index
             tb.box_id = req.treasure_box_index
             for item in make_treasure_box_item(

@@ -7,7 +7,7 @@ from network.packet_handler import PacketHandler
 from utils.scanner import scan_handlers
 from network.msg_id import MsgId
 from config import Config
-from proto import OverField_pb2
+from proto import net_pb2
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,8 @@ class PacketFactory:
             logger.info(f"Registered {len(cls._handlers)} handlers in total")
 
         except Exception as e:
-            logger.error(f"Failed to register handlers: {e}")
+            exception_traceback = traceback.format_exc()
+            logger.error(f"Failed to register handlers: {exception_traceback}")
 
     @classmethod
     def process_packet(cls, msg_id: int, data: bytes, packet_id: int, session):
@@ -78,7 +79,7 @@ class PacketFactory:
     def _log_unknown_packet(cls, msg_id: int, data: bytes):
         name = id_to_name.get(msg_id)
         if name:
-            msg_class = getattr(OverField_pb2, name, None)
+            msg_class = getattr(net_pb2, name, None)
             if msg_class:
                 try:
                     msg = msg_class()

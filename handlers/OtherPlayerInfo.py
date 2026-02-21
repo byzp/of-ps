@@ -2,13 +2,8 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as OtherPlayerInfoReq_pb2
-import proto.OverField_pb2 as OtherPlayerInfoRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as PlayerBriefInfo_pb2
-import proto.OverField_pb2 as FriendStatus_pb2
 import utils.db as db
-import proto.OverField_pb2 as pb
+from proto.net_pb2 import OtherPlayerInfoReq, OtherPlayerInfoRsp, StatusCode
 
 logger = logging.getLogger(__name__)
 
@@ -16,11 +11,11 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.OtherPlayerInfoReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = OtherPlayerInfoReq_pb2.OtherPlayerInfoReq()
+        req = OtherPlayerInfoReq()
         req.ParseFromString(data)
 
-        rsp = OtherPlayerInfoRsp_pb2.OtherPlayerInfoRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = OtherPlayerInfoRsp()
+        rsp.status = StatusCode.StatusCode_OK
         player_id = req.player_id
 
         other_info = rsp.other_info

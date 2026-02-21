@@ -2,9 +2,7 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as GardenPlaceCharacterReq_pb2
-import proto.OverField_pb2 as GardenPlaceCharacterRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import GardenPlaceCharacterReq, GardenPlaceCharacterRsp, StatusCode
 
 logger = logging.getLogger(__name__)
 
@@ -17,10 +15,10 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.GardenPlaceCharacterReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = GardenPlaceCharacterReq_pb2.GardenPlaceCharacterReq()
+        req = GardenPlaceCharacterReq()
         req.ParseFromString(data)
 
-        rsp = GardenPlaceCharacterRsp_pb2.GardenPlaceCharacterRsp()
+        rsp = GardenPlaceCharacterRsp()
 
         # Set data from test data
         rsp.status = TEST_DATA["status"]

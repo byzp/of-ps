@@ -3,11 +3,14 @@ from network.msg_id import MsgId
 import logging
 import json
 
-import proto.OverField_pb2 as CharacterStarUpReq_pb2
-import proto.OverField_pb2 as CharacterStarUpRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as PackNotice_pb2
-import proto.OverField_pb2 as pb
+from proto.net_pb2 import (
+    CharacterStarUpReq,
+    CharacterStarUpRsp,
+    StatusCode,
+    PackNotice,
+    Character,
+    ItemDetail,
+)
 
 import utils.db as db
 from utils.res_loader import res
@@ -18,18 +21,18 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.CharacterStarUpReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = CharacterStarUpReq_pb2.CharacterStarUpReq()
+        req = CharacterStarUpReq()
         req.ParseFromString(data)
 
-        rsp = CharacterStarUpRsp_pb2.CharacterStarUpRsp()
+        rsp = CharacterStarUpRsp()
 
         character_data = db.get_characters(session.player_id, req.char_id)
         if not character_data:
-            rsp.status = StatusCode_pb2.StatusCode_CHARACTER_NOT_FOUND
+            rsp.status = StatusCode.StatusCode_CHARACTER_NOT_FOUND
             session.send(MsgId.CharacterStarUpRsp, rsp, packet_id)
             return
 
-        character = pb.Character()
+        character = Character()
         character.ParseFromString(character_data[0])
 
         current_star = character.star
@@ -44,7 +47,7 @@ class Handler(PacketHandler):
                 break
 
         if not char_star_data:
-            rsp.status = StatusCode_pb2.StatusCode_CHARACTER_STAR_CONFIG_NOT_FOUND
+            rsp.status = StatusCode.StatusCode_CHARACTER_STAR_CONFIG_NOT_FOUND
             session.send(MsgId.CharacterStarUpRsp, rsp, packet_id)
             return
 
@@ -56,7 +59,7 @@ class Handler(PacketHandler):
                 break
 
         if not star_config:
-            rsp.status = StatusCode_pb2.StatusCode_CHARACTER_STAR_MAX_LEVEL
+            rsp.status = StatusCode.StatusCode_CHARACTER_STAR_MAX_LEVEL
             session.send(MsgId.CharacterStarUpRsp, rsp, packet_id)
             return
 
@@ -64,23 +67,23 @@ class Handler(PacketHandler):
         item_num = star_config.get("item_num", 0)
 
         if item_id == 0 or item_num == 0:
-            rsp.status = StatusCode_pb2.StatusCode_CHARACTER_STAR_CONFIG_ERROR
+            rsp.status = StatusCode.StatusCode_CHARACTER_STAR_CONFIG_ERROR
             session.send(MsgId.CharacterStarUpRsp, rsp, packet_id)
             return
 
         # 检查玩家是否有足够物品
         item_data = db.get_item_detail(session.player_id, item_id)
         if not item_data:
-            rsp.status = StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+            rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
             session.send(MsgId.CharacterStarUpRsp, rsp, packet_id)
             return
 
-        item = pb.ItemDetail()
+        item = ItemDetail()
         item.ParseFromString(item_data)
         current_item_num = item.main_item.base_item.num
 
         if current_item_num < item_num:
-            rsp.status = StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+            rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
             session.send(MsgId.CharacterStarUpRsp, rsp, packet_id)
             return
 
@@ -94,14 +97,14 @@ class Handler(PacketHandler):
 
         # TODO 满星剩余碎片转换物品响应
 
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp.status = StatusCode.StatusCode_OK
         rsp.char_id = req.char_id
         rsp.star = character.star
 
         session.send(MsgId.CharacterStarUpRsp, rsp, packet_id)  # 角色升星 1037 1038
 
         # 更新碎片数量通知
-        notice = PackNotice_pb2.PackNotice()
-        notice.status = StatusCode_pb2.StatusCode_OK
+        notice = PackNotice()
+        notice.status = StatusCode.StatusCode_OK
         notice.items.add().CopyFrom(item)
         session.send(MsgId.PackNotice, notice, packet_id)

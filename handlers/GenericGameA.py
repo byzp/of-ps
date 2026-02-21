@@ -2,11 +2,13 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as GenericGameAReq_pb2
-import proto.OverField_pb2 as GenericGameARsp_pb2
-import proto.OverField_pb2 as ItemDetail_pb2
-import proto.OverField_pb2 as PackNotice_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import (
+    GenericGameAReq,
+    GenericGameARsp,
+    ItemDetail,
+    PackNotice,
+    StatusCode,
+)
 
 import utils.db as db
 from utils.pb_create import make_item
@@ -17,18 +19,18 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.GenericGameAReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = GenericGameAReq_pb2.GenericGameAReq()
+        req = GenericGameAReq()
         req.ParseFromString(data)
 
-        rsp = GenericGameARsp_pb2.GenericGameARsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = GenericGameARsp()
+        rsp.status = StatusCode.StatusCode_OK
 
         match req.generic_msg_id:
             case 5:  # 解锁染色方案
-                rsp1 = PackNotice_pb2.PackNotice()
-                rsp1.status = StatusCode_pb2.StatusCode_OK
+                rsp1 = PackNotice()
+                rsp1.status = StatusCode.StatusCode_OK
                 cur_t = db.get_item_detail(session.player_id, 102)
-                cur_item = ItemDetail_pb2.ItemDetail()
+                cur_item = ItemDetail()
                 if not cur_t:
                     cur_item.CopyFrom(
                         make_item(
@@ -43,14 +45,14 @@ class Handler(PacketHandler):
                 if num < 100:  # 使用菱石补齐星石
                     cur_t = db.get_item_detail(session.player_id, 108)
                     if not cur_t:
-                        rsp.status = StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+                        rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
                         session.send(MsgId.GenericGameARsp, rsp, packet_id)
                         return
                     else:
-                        item_t = ItemDetail_pb2.ItemDetail()
+                        item_t = ItemDetail()
                         item_t.ParseFromString(cur_t)
                         if item_t.main_item.base_item.num + num < 100:
-                            rsp.status = StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+                            rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
                             session.send(MsgId.GenericGameARsp, rsp, packet_id)
                             return
                         else:
@@ -76,7 +78,7 @@ class Handler(PacketHandler):
                         102,
                     )
                     rsp1.items.add().CopyFrom(cur_item)
-                outfit = ItemDetail_pb2.ItemDetail()
+                outfit = ItemDetail()
                 outfit.ParseFromString(
                     db.get_item_detail(session.player_id, req.params[0].int_value)
                 )

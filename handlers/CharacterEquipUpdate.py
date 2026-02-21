@@ -2,10 +2,15 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as CharacterEquipUpdateReq_pb2
-import proto.OverField_pb2 as CharacterEquipUpdateRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as pb
+from proto.net_pb2 import (
+    CharacterEquipUpdateReq,
+    CharacterEquipUpdateRsp,
+    StatusCode,
+    Character,
+    ServerSceneSyncDataNotice,
+    ItemDetail,
+    SceneActionType,
+)
 
 import utils.db as db
 from server.scene_data import up_scene_action
@@ -16,25 +21,25 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.CharacterEquipUpdateReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = CharacterEquipUpdateReq_pb2.CharacterEquipUpdateReq()
+        req = CharacterEquipUpdateReq()
         req.ParseFromString(data)
 
-        rsp = CharacterEquipUpdateReq_pb2.CharacterEquipUpdateRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = CharacterEquipUpdateRsp()
+        rsp.status = StatusCode.StatusCode_OK
 
         ep = req.equipment_preset
 
-        chr = pb.Character()
+        chr = Character()
         chr.ParseFromString(db.get_characters(session.player_id, req.char_id)[0])
         ep1 = chr.equipment_presets[0]  # 装备套装方案目前仅0可用
 
         if req.char_id in db.get_players_info(session.player_id, "team"):
             # 场景同步
-            sy = pb.ServerSceneSyncDataNotice()
-            sy.status = StatusCode_pb2.StatusCode_OK
+            sy = ServerSceneSyncDataNotice()
+            sy.status = StatusCode.StatusCode_OK
             if ep.weapon != ep1.weapon:
                 if ep.weapon:
-                    item = pb.ItemDetail()
+                    item = ItemDetail()
                     item.ParseFromString(
                         db.get_item_detail(session.player_id, None, ep.weapon)
                     )
@@ -47,7 +52,7 @@ class Handler(PacketHandler):
                     )  # 标记新使用者
                     rsp.items.add().CopyFrom(item)
                 if ep1.weapon:
-                    item = pb.ItemDetail()
+                    item = ItemDetail()
                     item.ParseFromString(
                         db.get_item_detail(session.player_id, None, ep1.weapon)
                     )
@@ -61,7 +66,7 @@ class Handler(PacketHandler):
                 armor1 = ep1.armors[i]
                 if armor.armor_id != armor1.armor_id:
                     if armor.armor_id:
-                        item = pb.ItemDetail()
+                        item = ItemDetail()
                         item.ParseFromString(
                             db.get_item_detail(session.player_id, None, armor.armor_id)
                         )
@@ -74,7 +79,7 @@ class Handler(PacketHandler):
                         )
                         rsp.items.add().CopyFrom(item)
                     if armor1.armor_id:
-                        item = pb.ItemDetail()
+                        item = ItemDetail()
                         item.ParseFromString(
                             db.get_item_detail(session.player_id, None, armor1.armor_id)
                         )
@@ -91,7 +96,7 @@ class Handler(PacketHandler):
                 poster1 = ep1.posters[i]
                 if poster.poster_id != poster1.poster_id:
                     if poster.poster_id:
-                        item = pb.ItemDetail()
+                        item = ItemDetail()
                         item.ParseFromString(
                             db.get_item_detail(
                                 session.player_id, None, poster.poster_id
@@ -106,7 +111,7 @@ class Handler(PacketHandler):
                         )
                         rsp.items.add().CopyFrom(item)
                     if poster1.poster_id:
-                        item = pb.ItemDetail()
+                        item = ItemDetail()
                         item.ParseFromString(
                             db.get_item_detail(
                                 session.player_id, None, poster1.poster_id
@@ -124,7 +129,7 @@ class Handler(PacketHandler):
             data = sy.data.add()
             data.player_id = session.player_id
             tmp = data.server_data.add()
-            tmp.action_type = pb.SceneActionType_UPDATE_EQUIP
+            tmp.action_type = SceneActionType.SceneActionType_UPDATE_EQUIP
             tmp.player.CopyFrom(session.scene_player)
             up_scene_action(session.scene_id, session.channel_id, sy)
             # TODO 防具和映像其他玩家看不到，暂时不写同步

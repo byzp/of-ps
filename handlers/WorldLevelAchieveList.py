@@ -1,15 +1,14 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import proto.OverField_pb2 as WorldLevelAchieveList_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import WorldLevelAchieveListRsp, StatusCode
 from utils.res_loader import res
 
 
 @packet_handler(MsgId.WorldLevelAchieveListReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        rsp = WorldLevelAchieveList_pb2.WorldLevelAchieveListRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = WorldLevelAchieveListRsp()
+        rsp.status = StatusCode.StatusCode_OK
 
         for dat in res["Level"]["world_level"]["datas"]:
             if dat.get("world_level_info") is not None:

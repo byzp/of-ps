@@ -2,9 +2,7 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as PlayerVitalityReq_pb2
-import proto.OverField_pb2 as PlayerVitalityRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import PlayerVitalityReq, PlayerVitalityRsp, StatusCode
 
 logger = logging.getLogger(__name__)
 
@@ -12,11 +10,11 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.PlayerVitalityReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = PlayerVitalityReq_pb2.PlayerVitalityReq()
+        req = PlayerVitalityReq()
         req.ParseFromString(data)
 
-        rsp = PlayerVitalityRsp_pb2.PlayerVitalityRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = PlayerVitalityRsp()
+        rsp.status = StatusCode.StatusCode_OK
         rsp.vitality_buy_num = TEST_DATA["parsed_result"]["vitality_buy_num"]
         # items is empty as specified in the requirements
 

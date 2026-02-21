@@ -1,11 +1,13 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 
-import proto.OverField_pb2 as CollectingReq_pb2
-import proto.OverField_pb2 as CollectingRsp_pb2
-import proto.OverField_pb2 as PackNotice_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as pb
+from proto.net_pb2 import (
+    CollectingReq,
+    CollectingRsp,
+    PackNotice,
+    StatusCode,
+    RewardStatus,
+)
 
 import utils.db as db
 from utils.res_loader import res
@@ -15,19 +17,19 @@ from utils.pb_create import make_item
 @packet_handler(MsgId.CollectingReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = CollectingReq_pb2.CollectingReq()
+        req = CollectingReq()
         req.ParseFromString(data)
 
-        rsp = CollectingRsp_pb2.CollectingRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = CollectingRsp()
+        rsp.status = StatusCode.StatusCode_OK
         collection = rsp.collections.add()
         item = db.get_collection(session.player_id, req.item_id)
         if item:
-            rsp.status = StatusCode_pb2.StatusCode_ALREADY_COLLECTED
+            rsp.status = StatusCode.StatusCode_ALREADY_COLLECTED
             session.send(MsgId.CollectingRsp, rsp, packet_id)
             return
         collection.item_map[req.item_id].item_id = req.item_id
-        collection.item_map[req.item_id].status = pb.Reward
+        collection.item_map[req.item_id].status = RewardStatus.Reward
         for collection_t in res["CollectionItem"]["collection_item"]["datas"]:
             if collection_t["i_d"] == req.item_id:
                 collection.type = collection_t["new_collection_type"]
@@ -38,8 +40,8 @@ class Handler(PacketHandler):
             collection.type,
             collection.item_map[req.item_id].SerializeToString(),
         )
-        rsp1 = PackNotice_pb2.PackNotice()
-        rsp1.status = StatusCode_pb2.StatusCode_OK
+        rsp1 = PackNotice()
+        rsp1.status = StatusCode.StatusCode_OK
         for item_t in res["Item"]["item"]["datas"]:
             if item_t["i_d"] == req.item_id:
                 item_b = db.get_item_detail(session.player_id, item_t["text_i_d"])

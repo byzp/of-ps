@@ -11,7 +11,7 @@ try:
 except ImportError:
     import snappy
 from config import Config
-from proto import OverField_pb2
+from proto.net_pb2 import ScenePlayer, PosColor, PacketHead
 from network.packet_factory import PacketFactory
 
 logger = logging.getLogger(__name__)
@@ -27,6 +27,7 @@ id_to_name = {
     for k, v in vars(MsgId).items()
     if not k.startswith("__") and isinstance(v, int)
 }
+
 
 class SendTask:
     __slots__ = ("msg_id", "data", "packet_id", "is_bin")
@@ -104,14 +105,14 @@ class GameSession:
         self.chat_channel_id = 1
         self.avatar_id = 41101
         self.badge_id = 0
-        self.scene_player = OverField_pb2.ScenePlayer()
+        self.scene_player = ScenePlayer()
         self.temp_pack = []
         self.pos = {}
         self.drop_items = {}
         self.color_data = [
             None,
             None,
-            OverField_pb2.PosColor(),
+            PosColor(),
         ]  # SwirlNoiseGenHelper,noise_texture_id,color
 
         self.running = True
@@ -154,7 +155,7 @@ class GameSession:
             if hend > end:
                 break
 
-            head = OverField_pb2.PacketHead()
+            head = PacketHead()
             head.ParseFromString(bytes(self._recv_mv[pos + 2 : hend]))
 
             msg_id = head.msg_id
@@ -211,7 +212,7 @@ class GameSession:
         out_buf = bytearray(65536)
 
         # 避免频繁创建销毁
-        head_proto = OverField_pb2.PacketHead()
+        head_proto = PacketHead()
 
         while self.running:
             event.wait()

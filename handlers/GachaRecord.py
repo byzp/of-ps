@@ -4,9 +4,7 @@ import logging
 import json
 import os
 
-import proto.OverField_pb2 as GachaRecordReq_pb2
-import proto.OverField_pb2 as GachaRecordRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import GachaRecordReq, GachaRecordRsp, StatusCode
 import utils.db as db
 
 logger = logging.getLogger(__name__)
@@ -16,13 +14,13 @@ logger = logging.getLogger(__name__)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         # Parse request
-        req = GachaRecordReq_pb2.GachaRecordReq()
+        req = GachaRecordReq()
         req.ParseFromString(data)
 
         # Create response message
-        rsp = GachaRecordRsp_pb2.GachaRecordRsp()
+        rsp = GachaRecordRsp()
 
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp.status = StatusCode.StatusCode_OK
         rsp.gacha_id = req.gacha_id
         rsp.page = req.page
 

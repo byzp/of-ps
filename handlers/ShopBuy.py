@@ -2,11 +2,7 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as ShopBuyReq_pb2
-import proto.OverField_pb2 as ShopBuyRsp_pb2
-import proto.OverField_pb2 as ItemDetail_pb2
-import proto.OverField_pb2 as PackNotice_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import ShopBuyReq, ShopBuyRsp, ItemDetail, PackNotice, StatusCode
 
 import utils.db as db
 from utils.res_loader import res
@@ -18,11 +14,11 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.ShopBuyReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = ShopBuyReq_pb2.ShopBuyReq()
+        req = ShopBuyReq()
         req.ParseFromString(data)
 
-        rsp = ShopBuyRsp_pb2.ShopBuyRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = ShopBuyRsp()
+        rsp.status = StatusCode.StatusCode_OK
         rsp.shop_id = req.shop_id
         rsp.grids.id = req.shop_id
         rsp.grids.grid_id = req.grid_id
@@ -31,8 +27,8 @@ class Handler(PacketHandler):
 
         for data in res["Shop"]["grid"]["datas"]:
             if data["i_d"] == req.shop_id:  # TODO 如果含有武器, 可能引起严重错误
-                rsp1 = PackNotice_pb2.PackNotice()
-                rsp1.status = StatusCode_pb2.StatusCode_OK
+                rsp1 = PackNotice()
+                rsp1.status = StatusCode.StatusCode_OK
                 for items in data["items"]:
                     if items["grid_i_d"] == req.grid_id:
                         for pool in res["Shop"]["pool"]["datas"]:
@@ -46,7 +42,7 @@ class Handler(PacketHandler):
                                         cur_t = db.get_item_detail(
                                             session.player_id, currency["currency_i_d"]
                                         )
-                                        cur_item = ItemDetail_pb2.ItemDetail()
+                                        cur_item = ItemDetail()
                                         if not cur_t:
                                             cur_item.CopyFrom(
                                                 make_item(
@@ -67,21 +63,21 @@ class Handler(PacketHandler):
                                             )
                                             if not cur_t:
                                                 rsp.status = (
-                                                    StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+                                                    StatusCode.StatusCode_ITEM_NOT_ENOUGH
                                                 )
                                                 session.send(
                                                     MsgId.ShopBuyRsp, rsp, packet_id
                                                 )
                                                 return
                                             else:
-                                                item_t = ItemDetail_pb2.ItemDetail()
+                                                item_t = ItemDetail()
                                                 item_t.ParseFromString(cur_t)
                                                 if (
                                                     item_t.main_item.base_item.num + num
                                                     < currency["price"]
                                                 ):
                                                     rsp.status = (
-                                                        StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+                                                        StatusCode.StatusCode_ITEM_NOT_ENOUGH
                                                     )
                                                     session.send(
                                                         MsgId.ShopBuyRsp, rsp, packet_id
@@ -106,7 +102,7 @@ class Handler(PacketHandler):
                                             < currency["price"]
                                         ):
                                             rsp.status = (
-                                                StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+                                                StatusCode.StatusCode_ITEM_NOT_ENOUGH
                                             )
                                             session.send(
                                                 MsgId.ShopBuyRsp, rsp, packet_id
@@ -127,7 +123,7 @@ class Handler(PacketHandler):
                                     item = db.get_item_detail(
                                         session.player_id, item_pool["item_i_d"]
                                     )
-                                    tmp1 = ItemDetail_pb2.ItemDetail()
+                                    tmp1 = ItemDetail()
                                     if not item:
                                         tmp1.CopyFrom(
                                             make_item(

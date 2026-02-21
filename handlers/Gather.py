@@ -2,11 +2,7 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as GatherReq_pb2
-import proto.OverField_pb2 as GatherRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as ItemDetail_pb2
-import proto.OverField_pb2 as PackNotice_pb2
+from proto.net_pb2 import GatherReq, GatherRsp, StatusCode, ItemDetail, PackNotice
 import utils.db as db
 from utils.res_loader import res
 from utils.pb_create import make_item
@@ -17,16 +13,16 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.GatherReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = GatherReq_pb2.GatherReq()
+        req = GatherReq()
         req.ParseFromString(data)
 
-        rsp = GatherRsp_pb2.GatherRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = GatherRsp()
+        rsp.status = StatusCode.StatusCode_OK
         rsp.index = req.gather_item.index
         rsp.item_level = 1
 
-        rsp1 = PackNotice_pb2.PackNotice()
-        rsp1.status = StatusCode_pb2.StatusCode_OK
+        rsp1 = PackNotice()
+        rsp1.status = StatusCode.StatusCode_OK
         for data in res.get("Gather", {}).get("gather", {}).get("datas", []):
             for info in data["gather_group_info"]:
                 if info["reward"] == req.gather_item.reward:
@@ -49,7 +45,7 @@ class Handler(PacketHandler):
                             item = db.get_item_detail(
                                 session.player_id, item_t["item_i_d"]
                             )
-                            tmp1 = ItemDetail_pb2.ItemDetail()
+                            tmp1 = ItemDetail()
                             if not item:
                                 tmp1.CopyFrom(
                                     make_item(

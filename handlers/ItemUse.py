@@ -3,11 +3,7 @@ from network.msg_id import MsgId
 import logging
 import random
 
-import proto.OverField_pb2 as ItemUseReq_pb2
-import proto.OverField_pb2 as ItemUseRsp_pb2
-import proto.OverField_pb2 as ItemDetail_pb2
-import proto.OverField_pb2 as PackNotice_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import ItemUseReq, ItemUseRsp, ItemDetail, PackNotice, StatusCode
 import utils.db as db
 from utils.res_loader import res
 from utils.pb_create import make_item
@@ -18,30 +14,30 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.ItemUseReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = ItemUseReq_pb2.ItemUseReq()
+        req = ItemUseReq()
         req.ParseFromString(data)
 
-        rsp = ItemUseRsp_pb2.ItemUseRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = ItemUseRsp()
+        rsp.status = StatusCode.StatusCode_OK
 
         item = db.get_item_detail(session.player_id, req.item_id)
         if not item:
-            rsp.status = StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+            rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
             session.send(MsgId.ItemUseRsp, rsp, packet_id)
             return
         else:
-            item_use = ItemDetail_pb2.ItemDetail()
+            item_use = ItemDetail()
             item_use.ParseFromString(item)
             if item_use.main_item.base_item.num >= req.num:  # TODO 尚未考虑打折
                 item_use.main_item.base_item.num -= req.num
-                rsp1 = PackNotice_pb2.PackNotice()
-                rsp1.status = StatusCode_pb2.StatusCode_OK
+                rsp1 = PackNotice()
+                rsp1.status = StatusCode.StatusCode_OK
                 rsp1.items.add().CopyFrom(item_use)
                 db.set_item_detail(
                     session.player_id, item_use.SerializeToString(), req.item_id, None
                 )
             else:
-                rsp.status = StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+                rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
                 session.send(MsgId.ItemUseRsp, rsp, packet_id)
                 return
 
@@ -59,7 +55,7 @@ class Handler(PacketHandler):
                             tmp = db.get_item_detail(
                                 session.player_id, item["item_i_d"]
                             )
-                            tmp1 = ItemDetail_pb2.ItemDetail()
+                            tmp1 = ItemDetail()
                             if not tmp:
                                 tmp1.CopyFrom(
                                     make_item(item["item_i_d"], 0, session.player_id)

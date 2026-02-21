@@ -2,9 +2,7 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import random
 
-import proto.OverField_pb2 as MonsterDeadReq_pb2
-import proto.OverField_pb2 as MonsterDeadRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import MonsterDeadReq, MonsterDeadRsp, StatusCode
 
 from utils.res_loader import res
 from utils.pb_create import make_item
@@ -13,11 +11,11 @@ from utils.pb_create import make_item
 @packet_handler(MsgId.MonsterDeadReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = MonsterDeadReq_pb2.MonsterDeadReq()
+        req = MonsterDeadReq()
         req.ParseFromString(data)
 
-        rsp = MonsterDeadRsp_pb2.MonsterDeadRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = MonsterDeadRsp()
+        rsp.status = StatusCode.StatusCode_OK
         rsp.monster_index = req.monster_index  # TODO ?
         if not bool(random.randint(0, 1)) or True:
             if len(session.drop_items) == 0:

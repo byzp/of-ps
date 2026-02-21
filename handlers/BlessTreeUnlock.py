@@ -1,11 +1,13 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 
-import proto.OverField_pb2 as BlessTreeUnlockReq_pb2
-import proto.OverField_pb2 as BlessTreeUnlockRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as PackNotice_pb2
-import proto.OverField_pb2 as ItemDetail_pb2
+from proto.net_pb2 import (
+    BlessTreeUnlockReq,
+    BlessTreeUnlockRsp,
+    StatusCode,
+    PackNotice,
+    ItemDetail,
+)
 
 from utils.res_loader import res
 from utils.pb_create import make_item
@@ -16,35 +18,35 @@ import utils.db as db
 @packet_handler(MsgId.BlessTreeUnlockReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = BlessTreeUnlockReq_pb2.BlessTreeUnlockReq()
+        req = BlessTreeUnlockReq()
         req.ParseFromString(data)
 
-        rsp = BlessTreeUnlockRsp_pb2.BlessTreeUnlockRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = BlessTreeUnlockRsp()
+        rsp.status = StatusCode.StatusCode_OK
 
         tree_ids = db.get_bless_tree(session.player_id, req.def_id)
         if req.tree_id in tree_ids:
-            rsp.status = StatusCode_pb2.StatusCode_PLAYER_BLESS_TREE_EXIST
+            rsp.status = StatusCode.StatusCode_PLAYER_BLESS_TREE_EXIST
             session.send(MsgId.BlessTreeUnlockRsp, rsp, packet_id)
             return
-        rsp1 = PackNotice_pb2.PackNotice()
-        rsp1.status = StatusCode_pb2.StatusCode_OK
+        rsp1 = PackNotice()
+        rsp1.status = StatusCode.StatusCode_OK
         rsp.def_id = req.def_id
         rsp.tree_id = req.tree_id
         for tree in res["BlessingTree"]["blessing_tree_info"]["datas"]:
             if tree["i_d"] == req.def_id:
                 for i in tree["blessing_tree_info_group_info"]:
                     if i["box_i_d"] == req.tree_id:
-                        item = ItemDetail_pb2.ItemDetail()
+                        item = ItemDetail()
                         item_b = db.get_item_detail(session.player_id, i["item_i_d"])
                         if not item:
-                            rsp.status = StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+                            rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
                             session.send(MsgId.BlessTreeUnlockRsp, rsp, packet_id)
                             return
                         else:
                             item.ParseFromString(item_b)
                             if item.main_item.base_item.num < i["item_count"]:
-                                rsp.status = StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+                                rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
                                 session.send(MsgId.BlessTreeUnlockRsp, rsp, packet_id)
                                 return
                             else:
@@ -53,16 +55,14 @@ class Handler(PacketHandler):
                             i.get("relate_box_i_d", 0)
                             and not i.get("relate_box_i_d", 0) in tree_ids
                         ):
-                            rsp.status = (
-                                StatusCode_pb2.StatusCode_PLAYER_BLESS_NEED_NODE
-                            )
+                            rsp.status = StatusCode.StatusCode_PLAYER_BLESS_NEED_NODE
                             session.send(MsgId.BlessTreeUnlockRsp, rsp, packet_id)
                             return
                         rsp1.items.add().CopyFrom(item)
                         db.set_item_detail(
                             session.player_id, item.SerializeToString(), i["item_i_d"]
                         )
-                        item = ItemDetail_pb2.ItemDetail()
+                        item = ItemDetail()
                         item_b = db.get_item_detail(
                             session.player_id, i["reward_item_i_d"]
                         )

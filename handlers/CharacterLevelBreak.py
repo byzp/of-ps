@@ -1,10 +1,12 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
-import proto.OverField_pb2 as CharacterLevelBreakReq_pb2
-import proto.OverField_pb2 as CharacterLevelBreakRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as PackNotice_pb2
+from proto.net_pb2 import (
+    CharacterLevelBreakReq,
+    CharacterLevelBreakRsp,
+    StatusCode,
+    PackNotice,
+)
 import utils.db as db
 from utils.res_loader import res
 
@@ -14,18 +16,18 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.CharacterLevelBreakReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = CharacterLevelBreakReq_pb2.CharacterLevelBreakReq()
-        rsp = CharacterLevelBreakRsp_pb2.CharacterLevelBreakRsp()
+        req = CharacterLevelBreakReq()
+        rsp = CharacterLevelBreakRsp()
         req.ParseFromString(data)
 
         character_data = db.get_characters(session.player_id, req.char_id)
         if not character_data:
-            rsp.status = StatusCode_pb2.StatusCode_CHARACTER_NOT_FOUND
+            rsp.status = StatusCode.StatusCode_CHARACTER_NOT_FOUND
             rsp.char_id = req.char_id
             session.send(MsgId.CharacterLevelBreakRsp, rsp, packet_id)
             return
 
-        character = CharacterLevelBreakReq_pb2.Character()
+        character = CharacterLevelBreakReq.Character()
         character.ParseFromString(character_data[0])
 
         # 获取角色当前最大等级
@@ -42,7 +44,7 @@ class Handler(PacketHandler):
                 break
 
         if not char_level_data:
-            rsp.status = StatusCode_pb2.StatusCode_CHAR_NOT_EXIST
+            rsp.status = StatusCode.StatusCode_CHAR_NOT_EXIST
             rsp.char_id = req.char_id
             session.send(MsgId.CharacterLevelBreakRsp, rsp, packet_id)
             return
@@ -56,7 +58,7 @@ class Handler(PacketHandler):
                 break
 
         if not level_config:
-            rsp.status = StatusCode_pb2.StatusCode_CHARACTER_SKILL_LV_IS_MAX
+            rsp.status = StatusCode.StatusCode_CHARACTER_SKILL_LV_IS_MAX
             rsp.char_id = req.char_id
             session.send(MsgId.CharacterLevelBreakRsp, rsp, packet_id)
             return
@@ -69,19 +71,19 @@ class Handler(PacketHandler):
             # 检查玩家是否有足够物品
             item_data = db.get_item_detail(session.player_id, item_id)
             if not item_data:
-                rsp.status = StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+                rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
                 rsp.char_id = req.char_id
                 session.send(MsgId.CharacterLevelBreakRsp, rsp, packet_id)
                 return
 
             # 解析物品数据
-            item = CharacterLevelBreakReq_pb2.ItemDetail()
+            item = CharacterLevelBreakReq.ItemDetail()
             item.ParseFromString(item_data)
             current_item_num = item.main_item.base_item.num
 
             # 检查物品数量是否足够
             if current_item_num < item_count:
-                rsp.status = StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+                rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
                 rsp.char_id = req.char_id
                 session.send(MsgId.CharacterLevelBreakRsp, rsp, packet_id)
                 return
@@ -93,15 +95,15 @@ class Handler(PacketHandler):
             )
 
             # 发送物品变动通知
-            notice = PackNotice_pb2.PackNotice()
-            notice.status = StatusCode_pb2.StatusCode_OK
+            notice = PackNotice()
+            notice.status = StatusCode.StatusCode_OK
             notice.items.add().CopyFrom(item)
             session.send(MsgId.PackNotice, notice, packet_id)
 
         character.max_level = next_max_level
         db.set_character(session.player_id, req.char_id, character.SerializeToString())
 
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp.status = StatusCode.StatusCode_OK
         rsp.char_id = req.char_id
         rsp.level = character.level
         rsp.exp = character.exp

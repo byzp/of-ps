@@ -2,9 +2,20 @@ from network.msg_id import MsgId
 import logging
 import time
 
-import proto.OverField_pb2 as FireworksStartNotice_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as pb
+from proto.net_pb2 import (
+    FireworksStartNotice,
+    StatusCode,
+    PackNotice,
+    FireworksStartNotice,
+    ServerSceneSyncDataNotice,
+    ItemDetail,
+    SceneActionType,
+    PlayerOfflineRsp,
+    DungeonEnterRsp,
+    ChangeSceneChannelRsp,
+    SceneDataNotice,
+    PlayerOfflineReason,
+)
 
 from utils.res_loader import res
 from server.scene_data import get_session, lock_scene_action
@@ -72,11 +83,11 @@ def give(cmds: list):
         logger.warning("No matching players found.")
         return
     for session in target_session:
-        rsp = pb.PackNotice()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = PackNotice()
+        rsp.status = StatusCode.StatusCode_OK
         for i in res["Item"]["item"]["datas"]:
             if i["i_d"] == cmds[2] or cmds[2] == "all":
-                item = pb.ItemDetail()
+                item = ItemDetail()
                 tmp = db.get_item_detail(session.player_id, i["i_d"])
                 if not tmp:
                     item.CopyFrom(make_item(i["i_d"], 0, session.player_id))
@@ -97,8 +108,8 @@ def firework(cmds):
         logger.warning("firework id [dur_time] [start_time]")
         return
     cmds = list(map(lambda x: int(x) if x.lstrip("+-").isdigit() else x, cmds))
-    rsp = FireworksStartNotice_pb2.FireworksStartNotice()
-    rsp.status = StatusCode_pb2.StatusCode_OK
+    rsp = FireworksStartNotice()
+    rsp.status = StatusCode.StatusCode_OK
 
     fireworks_info = rsp.fireworks_info
     fireworks_info.fireworks_id = cmds[1]
@@ -145,8 +156,8 @@ def changeScenechannel(cmds):
         logger.warning("No matching players found.")
         return
 
-    rsp = pb.ChangeSceneChannelRsp()
-    rsp.status = StatusCode_pb2.StatusCode_OK
+    rsp = ChangeSceneChannelRsp()
+    rsp.status = StatusCode.StatusCode_OK
     rsp.scene_id = cmds[2]
     if len(cmds) > 3:
         rsp.channel_label = cmds[3]
@@ -156,24 +167,24 @@ def changeScenechannel(cmds):
     for session in target_session:
         session.send(MsgId.ChangeSceneChannelRsp, rsp, 0)
 
-        notice = pb.ServerSceneSyncDataNotice()
-        notice.status = StatusCode_pb2.StatusCode_OK
+        notice = ServerSceneSyncDataNotice()
+        notice.status = StatusCode.StatusCode_OK
         d = notice.data.add()
         d.player_id = session.player_id
         sd = d.server_data.add()
-        sd.action_type = pb.SceneActionType_LEAVE
+        sd.action_type = SceneActionType.SceneActionType_LEAVE
         scene_data.up_scene_action(session.scene_id, session.channel_id, notice)
 
-        rsp = pb.SceneDataNotice()
+        rsp = SceneDataNotice()
         rsp.CopyFrom(make_SceneDataNotice(session))
         session.send(MsgId.SceneDataNotice, rsp, 0)
 
-        notice = pb.ServerSceneSyncDataNotice()
-        notice.status = pb.StatusCode_OK
+        notice = ServerSceneSyncDataNotice()
+        notice.status = StatusCode.StatusCode_OK
         d = notice.data.add()
         d.player_id = session.player_id
         sd = d.server_data.add()
-        sd.action_type = pb.SceneActionType_ENTER
+        sd.action_type = SceneActionType.SceneActionType_ENTER
         sd.player.CopyFrom(session.scene_player)
         scene_data.up_scene_action(session.scene_id, session.channel_id, notice)
 
@@ -200,8 +211,8 @@ def DungeonEnter(cmds):
         return
 
     for session in target_session:
-        rsp = pb.DungeonEnterRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = DungeonEnterRsp()
+        rsp.status = StatusCode.StatusCode_OK
         rsp.team.CopyFrom(session.scene_player.team)
         rsp.dungeon_data.dungeon_id = cmds[2]
         rsp.dungeon_data.enter_times = 1
@@ -233,8 +244,8 @@ def kick(cmds: list):
         logger.warning("No matching players found.")
         return
     for session in target_session:
-        rsp = pb.PlayerOfflineRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
-        rsp.reason = pb.PlayerOfflineReason_KICK
+        rsp = PlayerOfflineRsp()
+        rsp.status = StatusCode.StatusCode_OK
+        rsp.reason = PlayerOfflineReason.PlayerOfflineReason_KICK
         session.send(MsgId.PlayerOfflineRsp, rsp, 0)
         # session.close()  # 不能主动断开连接,不然客户端会先提示重连

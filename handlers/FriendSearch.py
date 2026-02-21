@@ -2,9 +2,7 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as FriendSearchReq_pb2
-import proto.OverField_pb2 as FriendSearchRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import FriendSearchReq, FriendSearchRsp, StatusCode
 
 import utils.db as db
 
@@ -14,11 +12,11 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.FriendSearchReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = FriendSearchReq_pb2.FriendSearchReq()
+        req = FriendSearchReq()
         req.ParseFromString(data)
 
-        rsp = FriendSearchRsp_pb2.FriendSearchRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = FriendSearchRsp()
+        rsp.status = StatusCode.StatusCode_OK
 
         try:
             player_index = int(req.search_args)

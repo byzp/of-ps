@@ -1,16 +1,25 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 
-import proto.OverField_pb2 as PlayerMainDataRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as PackNotice_pb2
-import proto.OverField_pb2 as SceneDataNotice_pb2
-import proto.OverField_pb2 as ChatMsgRecordInitNotice_pb2
-import proto.OverField_pb2 as ActivitySignInDataNotice_pb2
-import proto.OverField_pb2 as ChangeChatChannelRsp_pb2
-import proto.OverField_pb2 as BlessTreeNotice_pb2
-import proto.OverField_pb2 as Quest_pb2
-import proto.OverField_pb2 as pb
+from proto.net_pb2 import (
+    PlayerMainDataRsp,
+    StatusCode,
+    PackNotice,
+    SceneDataNotice,
+    ChatMsgRecordInitNotice,
+    ActivitySignInDataNotice,
+    ChangeChatChannelRsp,
+    BlessTreeNotice,
+    Quest,
+    Character,
+    Chapter,
+    RandomQuestBonus,
+    PlayerBuff,
+    UnSaveOutfitDyeScheme,
+    PlayerQuestionnaireInfo,
+    PlayerAppearance,
+    ItemDetail,
+)
 import utils.db as db
 from utils.res_loader import res
 from utils.pb_create import make_SceneDataNotice
@@ -21,8 +30,8 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         player_id = session.player_id
 
-        rsp = PlayerMainDataRsp_pb2.PlayerMainDataRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = PlayerMainDataRsp()
+        rsp.status = StatusCode.StatusCode_OK
         rsp.player_id = session.player_id
         rsp.player_name = session.player_name
 
@@ -40,7 +49,7 @@ class Handler(PacketHandler):
         rsp.phone_background = db.get_players_info(player_id, "phone_background")
         rsp.create_time = db.get_players_info(player_id, "create_time")
 
-        chrp = pb.Character()
+        chrp = Character()
         for chr in db.get_characters(player_id):
             chrp.ParseFromString(chr)
             tmp = rsp.characters.add()
@@ -53,20 +62,20 @@ class Handler(PacketHandler):
         rsp.channel_id = session.channel_id
 
         for chapter in db.get_chapter(session.player_id):
-            tmp = pb.Chapter()
+            tmp = Chapter()
             tmp.ParseFromString(chapter)
             rsp.quest_detail.chapters.add().CopyFrom(tmp)
-        rsp.quest_detail.random_quest_bonus_left.CopyFrom(pb.RandomQuestBonus())
+        rsp.quest_detail.random_quest_bonus_left.CopyFrom(RandomQuestBonus())
         for quest in db.get_quest(session.player_id):
-            tmp = Quest_pb2.Quest()
+            tmp = Quest()
             tmp.ParseFromString(quest)
             rsp.quest_detail.quests.add().CopyFrom(tmp)
 
-        rsp.player_buffs.add().system_type = pb.PlayerBuff.BuffSystemType_GLOBAL
-        rsp.un_save_outfit_dye_scheme.CopyFrom(pb.UnSaveOutfitDyeScheme())
+        rsp.player_buffs.add().system_type = PlayerBuff.BuffSystemType_GLOBAL
+        rsp.un_save_outfit_dye_scheme.CopyFrom(UnSaveOutfitDyeScheme())
         rsp.player_drop_rate_info.kill_drop_rate = 1000
         rsp.player_drop_rate_info.treasure_drop_rate = 1000
-        rsp.questionnaire_info.CopyFrom(pb.PlayerQuestionnaireInfo())
+        rsp.questionnaire_info.CopyFrom(PlayerQuestionnaireInfo())
         rsp.player_label = player_id
         rsp.channel_label = player_id
         rsp.month_card_over_due_time = db.get_month_card_over_due_time(player_id)
@@ -80,7 +89,7 @@ class Handler(PacketHandler):
         rsp.daily_task.tasks[3] = 521006
         rsp.daily_task.tasks[4] = 521007
         rsp.daily_task.exchange_times_left = 0
-        rsp.appearance.CopyFrom(pb.PlayerAppearance())
+        rsp.appearance.CopyFrom(PlayerAppearance())
 
         session.send(MsgId.PlayerMainDataRsp, rsp, packet_id)  # 1005,1006
 
@@ -89,7 +98,7 @@ class Handler(PacketHandler):
             items_by_tag = {}
 
             for item_blob in items_data:
-                item = PackNotice_pb2.ItemDetail()
+                item = ItemDetail()
                 item.ParseFromString(item_blob)
                 item_tag = item.main_item.item_tag
                 if item_tag not in items_by_tag:
@@ -97,10 +106,10 @@ class Handler(PacketHandler):
                 items_by_tag[item_tag].append(item_blob)
 
             for item_tag, items_in_tag in items_by_tag.items():
-                rsp = PackNotice_pb2.PackNotice()
-                rsp.status = StatusCode_pb2.StatusCode_OK
+                rsp = PackNotice()
+                rsp.status = StatusCode.StatusCode_OK
                 for item_blob in items_in_tag:
-                    item_t = pb.ItemDetail()
+                    item_t = ItemDetail()
                     item_t.ParseFromString(item_blob)
                     # TODO 临时物品发到邮件
                     item = rsp.items.add().CopyFrom(item_t)
@@ -108,32 +117,32 @@ class Handler(PacketHandler):
                     MsgId.PackNotice, rsp, 0
                 )  # 按物品类型分组发送items物品数据
 
-        rsp = ActivitySignInDataNotice_pb2.ActivitySignInDataNotice()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = ActivitySignInDataNotice()
+        rsp.status = StatusCode.StatusCode_OK
         for activity in res["Activity"]["activity"]["datas"]:
             if activity.get("i_d", 0):
                 tmp = rsp.info.add()
                 tmp.activity_id = activity["i_d"]
         session.send(MsgId.ActivitySignInDataNotice, rsp, 0)  # TODO
 
-        rsp = BlessTreeNotice_pb2.BlessTreeNotice()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = BlessTreeNotice()
+        rsp.status = StatusCode.StatusCode_OK
         for k, v in db.get_bless_tree(session.player_id).items():
             rsp.trees[k].tree_ids.extend(v)
         session.send(MsgId.BlessTreeNotice, rsp, 0)
 
-        rsp = SceneDataNotice_pb2.SceneDataNotice()
+        rsp = SceneDataNotice()
         rsp.CopyFrom(make_SceneDataNotice(session))
         session.send(MsgId.SceneDataNotice, rsp, 0)
 
-        rsp = ChangeChatChannelRsp_pb2.ChangeChatChannelRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = ChangeChatChannelRsp()
+        rsp.status = StatusCode.StatusCode_OK
         rsp.channel_id = session.channel_id
         session.send(MsgId.ChangeChatChannelRsp, rsp, packet_id)
 
         for i in db.get_chat_history(player_id):
-            rsp = ChatMsgRecordInitNotice_pb2.ChatMsgRecordInitNotice()
-            rsp.status = StatusCode_pb2.StatusCode_OK
+            rsp = ChatMsgRecordInitNotice()
+            rsp.status = StatusCode.StatusCode_OK
             rsp.type = i["type"]
             for m in i["msg"]:
                 tmp = rsp.msg.add()

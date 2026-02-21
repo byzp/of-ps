@@ -1,12 +1,9 @@
 import time
-from datetime import datetime, timezone
 
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 
-import proto.OverField_pb2 as PlayerLoginReq_pb2
-import proto.OverField_pb2 as PlayerLoginRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import PlayerLoginReq, PlayerLoginRsp, StatusCode
 import utils.db as db
 import server.scene_data as scene_data
 import utils.pb_create as pb_create
@@ -16,17 +13,17 @@ from network.remote_link import sync_player
 @packet_handler(MsgId.PlayerLoginReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = PlayerLoginReq_pb2.PlayerLoginReq()
+        req = PlayerLoginReq()
         req.ParseFromString(data)
 
-        rsp = PlayerLoginRsp_pb2.PlayerLoginRsp()
+        rsp = PlayerLoginRsp()
 
         player_id = session.player_id
         if req.is_reconnect == True:
-            rsp.status = StatusCode_pb2.StatusCode_FAIL
+            rsp.status = StatusCode.StatusCode_FAIL
             session.send(MsgId.PlayerLoginRsp, rsp, packet_id)
             return
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp.status = StatusCode.StatusCode_OK
         rsp.server_time_ms = int(time.time() * 1000)
         rsp.region_name = db.get_players_info(player_id, "region_name")
         rsp.register_time = db.get_players_info(player_id, "register_time")

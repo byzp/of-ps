@@ -2,9 +2,7 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as FriendReq_pb2
-import proto.OverField_pb2 as FriendRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import FriendReq, FriendRsp, StatusCode
 
 import utils.db as db
 from server.scene_data import get_session
@@ -15,11 +13,11 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.FriendReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = FriendReq_pb2.FriendReq()
+        req = FriendReq()
         req.ParseFromString(data)
 
-        rsp = FriendRsp_pb2.FriendRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = FriendRsp()
+        rsp.status = StatusCode.StatusCode_OK
 
         # 获取在线玩家列表
         online_sessions = get_session()

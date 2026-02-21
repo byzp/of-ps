@@ -10,7 +10,18 @@ import struct
 from datetime import datetime
 from config import Config
 from network.game_session import GameSession, snappy
-import proto.OverField_pb2 as pb
+from proto.net_pb2 import (
+    LinkNegotiate,
+    LinkPacket,
+    LinkMessage,
+    SendActionNotice,
+    SceneActionType,
+    ServerSceneSyncDataNotice,
+    ChatMsgNotice,
+    PlayerSceneSyncDataNotice,
+    PlayerInfo,
+    ScenePlayer,
+)
 from server.scene_data import (
     get_session,
     up_action,
@@ -62,7 +73,7 @@ def _send_raw(data, addr):
 
 
 def _send_neg(addr, ntype, conv):
-    neg = pb.LinkNegotiate(type=ntype, conv=conv, server_name=_name)
+    neg = LinkNegotiate(type=ntype, conv=conv, server_name=_name)
     _send_raw(struct.pack("!B", PACKET_NEGOTIATE) + neg.SerializeToString(), addr)
 
 
@@ -82,34 +93,34 @@ def _negotiate(addr):
             return
     conv = random.randint(1, 0x7FFFFFFF)
     _pending[addr] = conv
-    _send_neg(addr, pb.LinkNegotiate.PROPOSE, conv)
+    _send_neg(addr, LinkNegotiate.PROPOSE, conv)
 
 
 def _on_negotiate(payload, addr):
     addr = tuple(addr)
-    neg = pb.LinkNegotiate()
+    neg = LinkNegotiate()
     neg.ParseFromString(payload)
 
-    if neg.type == pb.LinkNegotiate.PROPOSE:
+    if neg.type == LinkNegotiate.PROPOSE:
         with _conv_lock:
             if addr in _addr_to_conv:
-                _send_neg(addr, pb.LinkNegotiate.ACCEPT, _addr_to_conv[addr])
+                _send_neg(addr, LinkNegotiate.ACCEPT, _addr_to_conv[addr])
                 return
         if _register(neg.conv, addr):
-            _send_neg(addr, pb.LinkNegotiate.ACCEPT, neg.conv)
+            _send_neg(addr, LinkNegotiate.ACCEPT, neg.conv)
             _on_connected(neg.conv, addr, neg.server_name)
         else:
-            _send_neg(addr, pb.LinkNegotiate.CONFLICT, neg.conv)
+            _send_neg(addr, LinkNegotiate.CONFLICT, neg.conv)
 
-    elif neg.type == pb.LinkNegotiate.ACCEPT:
+    elif neg.type == LinkNegotiate.ACCEPT:
         _pending.pop(addr, None)
         if _register(neg.conv, addr):
             _on_connected(neg.conv, addr, neg.server_name)
 
-    elif neg.type == pb.LinkNegotiate.CONFLICT:
+    elif neg.type == LinkNegotiate.CONFLICT:
         conv = random.randint(1, 0x7FFFFFFF)
         _pending[addr] = conv
-        _send_neg(addr, pb.LinkNegotiate.PROPOSE, conv)
+        _send_neg(addr, LinkNegotiate.PROPOSE, conv)
 
 
 def _on_connected(conv, addr, server):
@@ -136,7 +147,7 @@ def _output(conv):
         with _conv_lock:
             addr = _conv_to_addr.get(conv)
         if addr:
-            pkt = pb.LinkPacket(conv=conv, kcp_data=kcp_data)
+            pkt = LinkPacket(conv=conv, kcp_data=kcp_data)
             _send_raw(struct.pack("!B", PACKET_KCP) + pkt.SerializeToString(), addr)
 
     return fn
@@ -147,13 +158,13 @@ def _pack(msg):
 
 
 def _unpack(data):
-    msg = pb.LinkMessage()
+    msg = LinkMessage()
     msg.ParseFromString(snappy.uncompress(data))
     return msg
 
 
 def _make_msg(mtype):
-    msg = pb.LinkMessage(id=uuid.uuid4().hex, origin=_name, type=mtype)
+    msg = LinkMessage(id=uuid.uuid4().hex, origin=_name, type=mtype)
     with _lock:
         _seen_msgs[msg.id] = time.time()
     return msg
@@ -184,17 +195,17 @@ def _broadcast(msg, exclude=None):
 
 def _handle_data(origin, datas, mid, payload):
     if mid == 1970:
-        rsp = pb.SendActionNotice()
+        rsp = SendActionNotice()
         rsp.ParseFromString(payload)
         rsp.from_player_id = _trans_id(origin, rsp.from_player_id)
         up_action(datas[0], datas[1], rsp)
     elif mid == 1208:
-        rsp = pb.ServerSceneSyncDataNotice()
+        rsp = ServerSceneSyncDataNotice()
         rsp.ParseFromString(payload)
         for d in rsp.data:
             d.player_id = _trans_id(origin, d.player_id)
             for sd in d.server_data:
-                if sd.action_type == pb.SceneActionType_ENTER:
+                if sd.action_type == SceneActionType.SceneActionType_ENTER:
                     for s in get_session():
                         if s.player_id == d.player_id:
                             s.scene_id, s.channel_id = datas[0], datas[1]
@@ -203,12 +214,12 @@ def _handle_data(origin, datas, mid, payload):
                     sd.player.player_id = _trans_id(origin, sd.player.player_id)
         up_scene_action(datas[0], datas[1], rsp)
     elif mid == 1936:
-        rsp = pb.ChatMsgNotice()
+        rsp = ChatMsgNotice()
         rsp.ParseFromString(payload)
         rsp.msg.player_id = _trans_id(origin, rsp.msg.player_id)
         up_chat_msg(datas[0], datas[1], datas[2], rsp)
     elif mid == 1206:
-        rsp = pb.PlayerSceneSyncDataNotice()
+        rsp = PlayerSceneSyncDataNotice()
         rsp.ParseFromString(payload)
         for d in rsp.data:
             d.player_id = _trans_id(origin, d.player_id)
@@ -216,7 +227,7 @@ def _handle_data(origin, datas, mid, payload):
 
 
 def _share_servers(addr):
-    msg = _make_msg(pb.LinkMessage.SERVERS)
+    msg = _make_msg(LinkMessage.SERVERS)
     with _lock:
         for a in _announced:
             if a != tuple(addr):
@@ -229,9 +240,9 @@ def _share_servers(addr):
 def _sync_players(addr):
     for s in get_session():
         if s.player_id < 1010000:
-            msg = _make_msg(pb.LinkMessage.PLAYER)
+            msg = _make_msg(LinkMessage.PLAYER)
             msg.player_info.CopyFrom(
-                pb.PlayerInfo(
+                PlayerInfo(
                     player_id=s.player_id,
                     player_name=s.player_name,
                     scene_id=s.scene_id,
@@ -246,9 +257,9 @@ def _sync_players(addr):
 
 
 def sync_player(session):
-    msg = _make_msg(pb.LinkMessage.PLAYER)
+    msg = _make_msg(LinkMessage.PLAYER)
     msg.player_info.CopyFrom(
-        pb.PlayerInfo(
+        PlayerInfo(
             player_id=session.player_id,
             player_name=session.player_name,
             scene_id=session.scene_id,
@@ -278,18 +289,18 @@ def _process(data, addr):
         _seen_msgs[msg.id] = time.time()
 
     if msg.origin == _name:
-        _send_to(_make_msg(pb.LinkMessage.NAME_CONFLICT), addr)
+        _send_to(_make_msg(LinkMessage.NAME_CONFLICT), addr)
         return
 
     with _lock:
         if msg.origin in _servers:
             _last_seen[msg.origin] = time.time()
 
-    if msg.type == pb.LinkMessage.NAME_CONFLICT:
+    if msg.type == LinkMessage.NAME_CONFLICT:
         _name += uuid.uuid4().hex[:8]
-        _send_to(_make_msg(pb.LinkMessage.HEARTBEAT), addr)
+        _send_to(_make_msg(LinkMessage.HEARTBEAT), addr)
 
-    elif msg.type == pb.LinkMessage.SERVERS:
+    elif msg.type == LinkMessage.SERVERS:
         for sa in msg.addrs:
             sa_tuple = (sa.host, sa.port)
             if sa_tuple != tuple(Config.SELF_ADDR):
@@ -299,7 +310,7 @@ def _process(data, addr):
                         _negotiate(sa_tuple)
         _broadcast(msg, exclude=msg.origin)
 
-    elif msg.type == pb.LinkMessage.PLAYER:
+    elif msg.type == LinkMessage.PLAYER:
         trans_id = _trans_id(msg.origin, msg.player_info.player_id)
         if not any(s.player_id == trans_id for s in get_session()):
             with lock_session:
@@ -309,7 +320,7 @@ def _process(data, addr):
                 )
             _broadcast(msg, exclude=msg.origin)
 
-    elif msg.type == pb.LinkMessage.DATA:
+    elif msg.type == LinkMessage.DATA:
         _handle_data(msg.origin, list(msg.datas), msg.msg_id, msg.payload)
         _broadcast(msg, exclude=msg.origin)
 
@@ -331,7 +342,7 @@ def _on_dead(conv):
 def _heartbeat():
     while True:
         time.sleep(3)
-        _broadcast(_make_msg(pb.LinkMessage.HEARTBEAT))
+        _broadcast(_make_msg(LinkMessage.HEARTBEAT))
 
         now = time.time()
         with _lock:
@@ -361,7 +372,7 @@ def _heartbeat():
 
 
 def _on_kcp_packet(payload, addr):
-    pkt = pb.LinkPacket()
+    pkt = LinkPacket()
     pkt.ParseFromString(payload)
     addr = tuple(addr)
     with _conv_lock:
@@ -436,7 +447,7 @@ def init():
 def rsend(msg_id, proto_msg, datas=[]):
     if not Config.LINK_OTHER_SERVER:
         return
-    msg = _make_msg(pb.LinkMessage.DATA)
+    msg = _make_msg(LinkMessage.DATA)
     msg.datas.extend(datas)
     msg.msg_id = msg_id
     msg.payload = proto_msg.SerializeToString()
@@ -463,7 +474,7 @@ class RemoteSession(GameSession):
         self.chat_channel_id = info.chat_channel_id
         self.avatar_id = info.avatar_id
         self.badge_id = info.badge_id
-        self.scene_player = pb.ScenePlayer()
+        self.scene_player = ScenePlayer()
         self.scene_player.ParseFromString(info.scene_player)
         self.scene_player.player_id = _trans_id(
             server_name, self.scene_player.player_id

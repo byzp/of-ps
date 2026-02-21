@@ -2,13 +2,16 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as CharacterLevelUpReq_pb2
-import proto.OverField_pb2 as CharacterLevelUpRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as PackNotice_pb2
+from proto.net_pb2 import (
+    CharacterLevelUpReq,
+    CharacterLevelUpRsp,
+    StatusCode,
+    PackNotice,
+    Character,
+)
+
 import utils.db as db
 import utils.res_loader as res_loader
-from proto.OverField_pb2 import Character
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +19,9 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.CharacterLevelUpReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = CharacterLevelUpReq_pb2.CharacterLevelUpReq()
+        req = CharacterLevelUpReq()
         req.ParseFromString(data)
-        rsp = CharacterLevelUpRsp_pb2.CharacterLevelUpRsp()
+        rsp = CharacterLevelUpRsp()
 
         small_energy_bottle = req.nums[0] if len(req.nums) > 0 else 0
         medium_energy_bottle = req.nums[1] if len(req.nums) > 1 else 0
@@ -34,7 +37,7 @@ class Handler(PacketHandler):
             if quantity > 0:
                 item_data = db.get_item_detail(session.player_id, item_id)
                 if item_data:
-                    item = CharacterLevelUpReq_pb2.ItemDetail()
+                    item = CharacterLevelUpReq.ItemDetail()
                     item.ParseFromString(item_data)
                     item.main_item.base_item.num = max(
                         0, item.main_item.base_item.num - quantity
@@ -45,7 +48,7 @@ class Handler(PacketHandler):
 
         character_data_list = db.get_characters(session.player_id, req.char_id)
         if not character_data_list:
-            rsp.status = StatusCode_pb2.StatusCode_CHARACTER_NOT_FOUND
+            rsp.status = StatusCode.StatusCode_CHARACTER_NOT_FOUND
             session.send(MsgId.CharacterLevelUpRsp, rsp, packet_id)
             return
 
@@ -95,7 +98,7 @@ class Handler(PacketHandler):
             coin_item_id = 101  # 金币ID
             coin_data = db.get_item_detail(session.player_id, coin_item_id)
             if coin_data:
-                coin_item = CharacterLevelUpReq_pb2.ItemDetail()
+                coin_item = CharacterLevelUpReq.ItemDetail()
                 coin_item.ParseFromString(coin_data)
                 coin_item.main_item.base_item.num = max(
                     0, coin_item.main_item.base_item.num - coin_cost
@@ -105,14 +108,14 @@ class Handler(PacketHandler):
                 )
 
                 # 更新金币通知
-                notice = PackNotice_pb2.PackNotice()
-                notice.status = StatusCode_pb2.StatusCode_OK
+                notice = PackNotice()
+                notice.status = StatusCode.StatusCode_OK
                 notice.items.add().CopyFrom(coin_item)
                 session.send(MsgId.PackNotice, notice, packet_id)
 
         db.set_character(session.player_id, req.char_id, character.SerializeToString())
 
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp.status = StatusCode.StatusCode_OK
         rsp.char_id = req.char_id
         rsp.level = new_level
         rsp.exp = new_exp

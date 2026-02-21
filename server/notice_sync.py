@@ -5,11 +5,15 @@ import os
 import traceback
 
 from config import Config
-from proto import OverField_pb2 as OverField_pb2
-import proto.OverField_pb2 as SendActionNotice_pb2
-import proto.OverField_pb2 as ServerSceneSyncDataNotice_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as pb
+from proto.net_pb2 import (
+    ServerSceneSyncDataNotice,
+    StatusCode,
+    PlayerOfflineRsp,
+    PlayerOfflineReason,
+    SceneActionType,
+    ChatChannelType,
+    PlayerSceneSyncDataNotice,
+)
 from network.msg_id import MsgId
 from network.remote_link import rsend
 from server.scene_data import (
@@ -71,9 +75,9 @@ def notice_sync_loop():
             if sync_stop:
                 logger.info("Save player data...")
                 # 向所有玩家发送离线通知
-                rsp = pb.PlayerOfflineRsp()
-                rsp.status = StatusCode_pb2.StatusCode_OK
-                rsp.reason = pb.PlayerOfflineReason_SERVER_SHUTDOWN
+                rsp = PlayerOfflineRsp()
+                rsp.status = StatusCode.StatusCode_OK
+                rsp.reason = PlayerOfflineReason.PlayerOfflineReason_SERVER_SHUTDOWN
                 for session in session_list:
                     if session.running == True and session.logged_in == True:
                         session.send(MsgId.PlayerOfflineRsp, rsp, 0)
@@ -89,12 +93,12 @@ def notice_sync_loop():
                         f"Player logout: {session.player_name}({session.player_id})"
                     )
                     # 向其他玩家广播离开事件
-                    notice = ServerSceneSyncDataNotice_pb2.ServerSceneSyncDataNotice()
-                    notice.status = StatusCode_pb2.StatusCode_OK
+                    notice = ServerSceneSyncDataNotice()
+                    notice.status = StatusCode.StatusCode_OK
                     d = notice.data.add()
                     d.player_id = session.player_id
                     sd = d.server_data.add()
-                    sd.action_type = pb.SceneActionType_LEAVE
+                    sd.action_type = SceneActionType.SceneActionType_LEAVE
                     up_scene_action(session.scene_id, session.channel_id, notice)
 
             session_list[:] = [
@@ -125,10 +129,10 @@ def notice_sync_loop():
                 for session in session_list:
                     # 1208 场景时间同步
                     if time_sync:
-                        rsp = ServerSceneSyncDataNotice_pb2.ServerSceneSyncDataNotice()
-                        rsp.status = StatusCode_pb2.StatusCode_OK
+                        rsp = ServerSceneSyncDataNotice()
+                        rsp.status = StatusCode.StatusCode_OK
                         tmp = rsp.data.add().server_data.add()
-                        tmp.action_type = OverField_pb2.SceneActionType_TOD_UPDATE
+                        tmp.action_type = SceneActionType.SceneActionType_TOD_UPDATE
                         tmp.tod_time = int(tod_time)
                         session.send(MsgId.ServerSceneSyncDataNotice, rsp, 0)
                     # 1208 其他事件
@@ -148,13 +152,13 @@ def notice_sync_loop():
                         if msg[3].msg.player_id == session.player_id:
                             continue
                         match msg[3].type:
-                            case pb.ChatChannel_Default:
+                            case ChatChannelType.ChatChannel_Default:
                                 if (
                                     session.scene_id == msg[1]
                                     and session.channel_id == msg[2]
                                 ):
                                     session.send(MsgId.ChatMsgNotice, msg[3], 0)
-                            case pb.ChatChannel_ChatRoom:
+                            case ChatChannelType.ChatChannel_ChatRoom:
                                 if session.chat_channel_id == msg[0]:
                                     session.send(MsgId.ChatMsgNotice, msg[3], 0)
                 for msg in chat_msg:
@@ -165,8 +169,8 @@ def notice_sync_loop():
                 with lock_rec_list:
                     # 1206 玩家动作同步
                     for scene_id, channel_id in rec_list:
-                        rsp = OverField_pb2.PlayerSceneSyncDataNotice()
-                        rsp.status = StatusCode_pb2.StatusCode_OK
+                        rsp = PlayerSceneSyncDataNotice()
+                        rsp.status = StatusCode.StatusCode_OK
                         oth_notice = []
                         for k, v in scene[scene_id][channel_id].items():
                             if k < 1010000:

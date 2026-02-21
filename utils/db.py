@@ -9,8 +9,20 @@ from contextlib import contextmanager
 
 from config import Config
 from utils.res_loader import res
-import proto.OverField_pb2 as Character_pb2
-import proto.OverField_pb2 as pb
+from proto.net_pb2 import (
+    Character,
+    EEquipType,
+    EBagItemTag,
+    ItemDetail,
+    OutfitHideInfo,
+    Quest,
+    Achieve,
+    QuestStatus,
+    MailBriefData,
+    LifeBaseInfo,
+    Chapter,
+    MailContentType,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -259,7 +271,9 @@ def init_player(player_id):
     player_unlock_data = (
         res.get("PlayerUnlock", {}).get("player_unlock", {}).get("datas", [])
     )
-    unlock_func_ids = [item["i_d"] for item in player_unlock_data] # [100000000,100000001,100000002,100000003,100000006,100000009,100000010,100000011,100000021,100000025,100000027,100000035,100000036,100000037]
+    unlock_func_ids = [
+        item["i_d"] for item in player_unlock_data
+    ]  # [100000000,100000001,100000002,100000003,100000006,100000009,100000010,100000011,100000021,100000025,100000027,100000035,100000036,100000037]
     unlock_funcs = pickle.dumps(unlock_func_ids)
 
     team = pickle.dumps((101001, 0, 0))
@@ -283,7 +297,7 @@ def init_player(player_id):
     # 初始化角色
     datas = res.get("Character", {}).get("character", {}).get("datas", [])
     for i in datas:
-        c = Character_pb2.Character()
+        c = Character()
 
         c.character_id = i["i_d"]
         c.level = 1
@@ -297,9 +311,9 @@ def init_player(player_id):
         t1.weapon = 0
 
         t1.armors.add()
-        t1.armors.add().equip_type = pb.EEquipType_Chest
-        t1.armors.add().equip_type = pb.EEquipType_Hand
-        t1.armors.add().equip_type = pb.EEquipType_Shoes
+        t1.armors.add().equip_type = EEquipType.EEquipType_Chest
+        t1.armors.add().equip_type = EEquipType.EEquipType_Hand
+        t1.armors.add().equip_type = EEquipType.EEquipType_Shoes
         t1.posters.add()
         t1.posters.add().poster_index = 1
         t1.posters.add().poster_index = 2
@@ -309,8 +323,8 @@ def init_player(player_id):
 
         for iter in range(0, 3):
             o = c.outfit_presets.add()
-            item = pb.ItemDetail()
-            item.main_item.item_tag = pb.EBagItemTag_Fashion
+            item = ItemDetail()
+            item.main_item.item_tag = EBagItemTag.EBagItemTag_Fashion
             item.main_item.outfit.dye_schemes.add().is_un_lock = True
             o.hat = i.get("hat_i_d") or 0
             if o.hat:
@@ -333,7 +347,7 @@ def init_player(player_id):
                 item.main_item.outfit.outfit_id = o.ornament
                 set_item_detail(player_id, item.SerializeToString(), o.ornament)
             o.preset_index = iter
-            o.outfit_hide_info.CopyFrom(pb.OutfitHideInfo())
+            o.outfit_hide_info.CopyFrom(OutfitHideInfo())
 
         c.character_appearance.badge = 5000
         c.character_appearance.umbrella_id = 4050
@@ -365,10 +379,10 @@ def init_player(player_id):
         )
 
     # 初始化物品(星石+10, 用于第一次改名)
-    item = pb.ItemDetail()
+    item = ItemDetail()
     tmp = item.main_item
     tmp.item_id = 102
-    tmp.item_tag = pb.EBagItemTag_Currency
+    tmp.item_tag = EBagItemTag.EBagItemTag_Currency
     tmp.base_item.item_id = 102
     tmp.base_item.num = 10
 
@@ -380,13 +394,13 @@ def init_player(player_id):
     # 初始化 Achieve
     for achieve in res["Achieve"]["achieve"]["datas"]:
         if achieve.get("i_d", 0):
-            tmp = pb.Achieve()
+            tmp = Achieve()
             tmp.achieve_id = achieve["i_d"]
             set_achieve(player_id, achieve["i_d"], tmp.SerializeToString())
 
     # 初始化任务
     for quest in res["Quest"]["quest"]["datas"]:
-        tmp = pb.Quest()
+        tmp = Quest()
         tmp.quest_id = quest["i_d"]
         if quest.get("condition_set_group_i_d", 0):
             for condition in res["Quest"]["condition_set_group"]["datas"]:
@@ -401,14 +415,14 @@ def init_player(player_id):
                                 if achieve["i_d"] == achieve_condition_id:
                                     tmp1.progress = achieve.get("count_param", 0)
                                     break
-                            tmp1.status = pb.QuestStatus_Finish
+                            tmp1.status = QuestStatus.QuestStatus_Finish
                     break
-        tmp.status = pb.QuestStatus_Finish
+        tmp.status = QuestStatus.QuestStatus_Finish
         tmp.bonus_times = 1
         set_quest(player_id, quest["i_d"], tmp.SerializeToString())
     # 初始化任务章节
     for chapter in res["Story"]["story_chapter"]["datas"]:
-        tmp = pb.Chapter()
+        tmp = Chapter()
         tmp.chapter_id = chapter["i_d"]
         for story in chapter["story_list"]:
             tmp.rewarded_story_ids.append(story)
@@ -416,7 +430,7 @@ def init_player(player_id):
     # 初始化生活信息
     life_list = {}
     for i in range(1, 7):
-        tmp = pb.LifeBaseInfo()
+        tmp = LifeBaseInfo()
         tmp.life_type = i
         tmp.level = 0
         life_list[i] = tmp.SerializeToString()
@@ -435,10 +449,10 @@ def init_player(player_id):
     #     set_collection(player_id,collection_t["i_d"],collection_t["new_collection_type"],collection.SerializeToString())
 
     # 一封欢迎邮件
-    mail = pb.MailBriefData()
+    mail = MailBriefData()
     mail.mail_id = 1
     mail.sender = "aac"
-    mail.content_type = pb.MailContentType_TEXT
+    mail.content_type = MailContentType.MailContentType_TEXT
     mail.send_time = int(time.time())
     mail.title = "of-ps"
     mail.content = "此项目以AGPL开源, 仓库地址<color=#66ccff><b>https://github.com/byzp/of-ps</b></color>, 觉得有用点个star吧\n\n"
@@ -1152,10 +1166,10 @@ def get_gacha_record_total_page(player_id, gacha_id, page_size=5):
     return (total + page_size - 1) // page_size
 
 
-def set_furniture(scene_id, channel_id, player_id, furniture_id,furniture_detail_blob):
+def set_furniture(scene_id, channel_id, player_id, furniture_id, furniture_detail_blob):
     db.execute(
         "INSERT OR REPLACE INTO furnitures (scene_id, channel_id, player_id, furniture_id, furniture_detail_blob) VALUES (?, ?, ?, ?, ?)",
-        (scene_id, channel_id, player_id, furniture_id,furniture_detail_blob),
+        (scene_id, channel_id, player_id, furniture_id, furniture_detail_blob),
     )
 
 
@@ -1171,7 +1185,7 @@ def get_furniture(scene_id, channel_id, player_id=None, furniture_id=None):
             for row in rows:
                 furnitures.append(row)
         return furnitures
-        
+
     else:
         cur = db.execute(
             "SELECT * FROM furnitures WHERE scene_id=? AND channel_id=? AND player_id=? AND furniture_id=?",
@@ -1182,9 +1196,7 @@ def get_furniture(scene_id, channel_id, player_id=None, furniture_id=None):
             return row
 
 
-def del_furniture(
-scene_id, channel_id, player_id, furniture_id
-):
+def del_furniture(scene_id, channel_id, player_id, furniture_id):
     db.execute(
         "DELETE FROM furnitures WHERE scene_id=? AND channel_id=? AND player_id=? AND furniture_id=?",
         (scene_id, channel_id, player_id, furniture_id),

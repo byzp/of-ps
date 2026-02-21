@@ -3,12 +3,14 @@ from network.msg_id import MsgId
 from config import Config
 import logging
 
-import proto.OverField_pb2 as CreatePayOrderReq_pb2
-import proto.OverField_pb2 as CreatePayOrderRsp_pb2
-import proto.OverField_pb2 as PaySendGoodsNotice_pb2
-import proto.OverField_pb2 as ItemDetail_pb2
-import proto.OverField_pb2 as PackNotice_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import (
+    CreatePayOrderReq,
+    CreatePayOrderRsp,
+    PaySendGoodsNotice,
+    ItemDetail,
+    PackNotice,
+    StatusCode,
+)
 import utils.db as db
 from utils.res_loader import res
 from utils.pb_create import make_item
@@ -20,21 +22,21 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.CreatePayOrderReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = CreatePayOrderReq_pb2.CreatePayOrderReq()
+        req = CreatePayOrderReq()
         req.ParseFromString(data)
 
-        rsp = CreatePayOrderRsp_pb2.CreatePayOrderRsp()
+        rsp = CreatePayOrderRsp()
         if Config.REJECT_PAYMENT:
-            rsp.status = StatusCode_pb2.StatusCode_NOT_PAYMENT
+            rsp.status = StatusCode.StatusCode_NOT_PAYMENT
             session.send(MsgId.CreatePayOrderRsp, rsp, packet_id)
             return
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp.status = StatusCode.StatusCode_OK
         rsp.order_id = "1"
         rsp.result_str = "success"
         session.send(MsgId.CreatePayOrderRsp, rsp, packet_id)
 
-        rsp = PaySendGoodsNotice_pb2.PaySendGoodsNotice()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = PaySendGoodsNotice()
+        rsp.status = StatusCode.StatusCode_OK
         rsp.shop_id = req.shop_id
         rsp.order_id = "1"
         target_session = None
@@ -48,8 +50,8 @@ class Handler(PacketHandler):
                     break
         for data in res["Shop"]["grid"]["datas"]:
             if data["i_d"] == req.shop_id:  # TODO 如果含有武器, 可能引起严重错误
-                rsp1 = PackNotice_pb2.PackNotice()
-                rsp1.status = StatusCode_pb2.StatusCode_OK
+                rsp1 = PackNotice()
+                rsp1.status = StatusCode.StatusCode_OK
                 for items in data["items"]:
                     if items["grid_i_d"] == req.grid_id:
                         for pool in res["Shop"]["pool"]["datas"]:
@@ -59,7 +61,7 @@ class Handler(PacketHandler):
                                     item = db.get_item_detail(
                                         target_player_id, item_pool["item_i_d"]
                                     )
-                                    tmp1 = ItemDetail_pb2.ItemDetail()
+                                    tmp1 = ItemDetail()
                                     if not item:
                                         tmp1.CopyFrom(
                                             make_item(

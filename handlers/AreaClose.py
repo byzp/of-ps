@@ -2,10 +2,7 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as AreaCloseReq_pb2
-import proto.OverField_pb2 as AreaCloseRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as AreaData_pb2
+from proto.net_pb2 import AreaCloseReq, AreaCloseRsp, StatusCode, AreaData
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +15,10 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.AreaCloseReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = AreaCloseReq_pb2.AreaCloseReq()
+        req = AreaCloseReq()
         req.ParseFromString(data)
 
-        rsp = AreaCloseRsp_pb2.AreaCloseRsp()
+        rsp = AreaCloseRsp()
 
         # Set data from test data
         rsp.status = TEST_DATA["status"]

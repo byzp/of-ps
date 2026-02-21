@@ -2,11 +2,14 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as ChangeNickNameReq_pb2
-import proto.OverField_pb2 as ChangeNickNameRsp_pb2
-import proto.OverField_pb2 as PackNotice_pb2
-import proto.OverField_pb2 as StatusCode_pb2
-import proto.OverField_pb2 as pb
+from proto.net_pb2 import (
+    ChangeNickNameReq,
+    ChangeNickNameRsp,
+    PackNotice,
+    StatusCode,
+    SceneActionType,
+    ServerSceneSyncDataNotice,
+)
 from server.scene_data import up_scene_action
 
 import utils.db as db
@@ -17,18 +20,18 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.ChangeNickNameReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = ChangeNickNameReq_pb2.ChangeNickNameReq()
+        req = ChangeNickNameReq()
         req.ParseFromString(data)
 
         # 检查是否已存在相同的昵称
         if db.get_player_name_exists(req.nick_name):
-            rsp = ChangeNickNameRsp_pb2.ChangeNickNameRsp()
-            rsp.status = StatusCode_pb2.StatusCode_DUPLICATED_NAME
+            rsp = ChangeNickNameRsp()
+            rsp.status = StatusCode.StatusCode_DUPLICATED_NAME
             session.send(MsgId.ChangeNickNameRsp, rsp, packet_id)
             return
 
-        rsp = ChangeNickNameRsp_pb2.ChangeNickNameRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = ChangeNickNameRsp()
+        rsp.status = StatusCode.StatusCode_OK
 
         rsp.nick_name = req.nick_name
 
@@ -46,7 +49,7 @@ class Handler(PacketHandler):
             tmp.main_item.base_item.num -= 10  # 星石-10
             db.set_item_detail(session.player_id, tmp.SerializeToString(), 102, None)
         else:
-            rsp.status = StatusCode_pb2.StatusCode_ITEM_NOT_ENOUGH
+            rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
             rsp.ClearField("items")
             session.send(MsgId.ChangeNickNameRsp, rsp, packet_id)  # 修改昵称 1527 1528
             return
@@ -54,19 +57,19 @@ class Handler(PacketHandler):
         session.send(MsgId.ChangeNickNameRsp, rsp, packet_id)  # 修改昵称 1527 1528
 
         # 同步背包物品
-        rsp = PackNotice_pb2.PackNotice()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = PackNotice()
+        rsp.status = StatusCode.StatusCode_OK
         item = rsp.items.add()
         item.CopyFrom(tmp)
         session.send(MsgId.PackNotice, rsp, 0)
 
         # 发送场景同步通知
-        notice = pb.ServerSceneSyncDataNotice()
-        notice.status = StatusCode_pb2.StatusCode_OK
+        notice = ServerSceneSyncDataNotice()
+        notice.status = StatusCode.StatusCode_OK
         data_entry = notice.data.add()
         data_entry.player_id = session.player_id
         server_data_entry = data_entry.server_data.add()
-        server_data_entry.action_type = pb.SceneActionType_UPDATE_NICKNAME
+        server_data_entry.action_type = SceneActionType.SceneActionType_UPDATE_NICKNAME
 
         session.scene_player.player_name = session.player_name
         server_data_entry.player.CopyFrom(session.scene_player)

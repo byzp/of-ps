@@ -2,9 +2,11 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as BattleEncounterStateUpdateReq_pb2
-import proto.OverField_pb2 as BattleEncounterStateUpdateRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import (
+    BattleEncounterStateUpdateReq,
+    BattleEncounterStateUpdateRsp,
+    StatusCode,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -17,10 +19,10 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.BattleEncounterStateUpdateReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = BattleEncounterStateUpdateReq_pb2.BattleEncounterStateUpdateReq()
+        req = BattleEncounterStateUpdateReq()
         req.ParseFromString(data)
 
-        rsp = BattleEncounterStateUpdateRsp_pb2.BattleEncounterStateUpdateRsp()
+        rsp = BattleEncounterStateUpdateRsp()
 
         # 设置状态为成功
         rsp.status = TEST_DATA["status"]

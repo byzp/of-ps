@@ -1,7 +1,6 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import proto.OverField_pb2 as OverField_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import PlayerPingReq, PlayerPingRsp, StatusCode
 import time
 import logging
 
@@ -11,11 +10,11 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.PlayerPingReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = OverField_pb2.PlayerPingReq()
+        req = PlayerPingReq()
         req.ParseFromString(data)
 
-        rsp = OverField_pb2.PlayerPingRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = PlayerPingRsp()
+        rsp.status = StatusCode.StatusCode_OK
         rsp.client_time_ms = req.client_time_ms
         rsp.server_time_ms = int(time.time() * 1000)
 

@@ -2,8 +2,7 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as PlaceFurnitureReq_pb2
-import proto.OverField_pb2 as PlaceFurnitureRsp_pb2
+from proto.net_pb2 import PlaceFurnitureReq, PlaceFurnitureRsp
 
 logger = logging.getLogger(__name__)
 
@@ -16,10 +15,10 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.PlaceFurnitureReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = PlaceFurnitureReq_pb2.PlaceFurnitureReq()
+        req = PlaceFurnitureReq()
         req.ParseFromString(data)
 
-        rsp = PlaceFurnitureRsp_pb2.PlaceFurnitureRsp()
+        rsp = PlaceFurnitureRsp()
 
         rsp.status = TEST_DATA["status"]
 

@@ -2,9 +2,7 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as CollectMoonReq_pb2
-import proto.OverField_pb2 as CollectMoonRsp_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import CollectMoonReq, CollectMoonRsp, StatusCode
 
 
 logger = logging.getLogger(__name__)
@@ -13,11 +11,11 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.CollectMoonReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = CollectMoonReq_pb2.CollectMoonReq()
+        req = CollectMoonReq()
         req.ParseFromString(data)
 
-        rsp = CollectMoonRsp_pb2.CollectMoonRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = CollectMoonRsp()
+        rsp.status = StatusCode.StatusCode_OK
         rsp.moon_id = req.moon_id
         # TODO items
 

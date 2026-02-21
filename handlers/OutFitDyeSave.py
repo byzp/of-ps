@@ -2,10 +2,7 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-import proto.OverField_pb2 as OutFitDyeSaveReq_pb2
-import proto.OverField_pb2 as OutFitDyeSaveRsp_pb2
-import proto.OverField_pb2 as ItemDetail_pb2
-import proto.OverField_pb2 as StatusCode_pb2
+from proto.net_pb2 import OutFitDyeSaveReq, OutFitDyeSaveRsp, ItemDetail, StatusCode
 
 import utils.db as db
 
@@ -15,17 +12,17 @@ logger = logging.getLogger(__name__)
 @packet_handler(MsgId.OutFitDyeSaveReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = OutFitDyeSaveReq_pb2.OutFitDyeSaveReq()
+        req = OutFitDyeSaveReq()
         req.ParseFromString(data)
 
-        rsp = OutFitDyeSaveRsp_pb2.OutFitDyeSaveRsp()
-        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp = OutFitDyeSaveRsp()
+        rsp.status = StatusCode.StatusCode_OK
 
         if req.is_save_dye_result:  # TODO 自定义染色消耗星石
             rsp.scheme_index = req.scheme_index
             rsp.pos_color.CopyFrom(session.color_data[2])
             rsp.is_save_dye_result = True
-            outfit = ItemDetail_pb2.ItemDetail()
+            outfit = ItemDetail()
             outfit.ParseFromString(db.get_item_detail(session.player_id, req.outfit_id))
             find = False
             for color in outfit.main_item.outfit.dye_schemes[req.scheme_index].colors:

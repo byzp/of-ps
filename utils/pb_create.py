@@ -1,4 +1,15 @@
-import proto.OverField_pb2 as pb
+from proto.net_pb2 import (
+    Vector3,
+    Character,
+    SceneTeam,
+    EPropertyType,
+    SceneCharacterOutfitPreset,
+    ItemDetail,
+    EBagItemTag,
+    StatusCode,
+    SceneDataNotice,
+    PBCollectionRewardData,
+)
 import utils.db as db
 from datetime import datetime
 from utils.res_loader import res
@@ -31,12 +42,12 @@ def make_ScenePlayer(session):
 
 
 def make_SceneTeam(player_id, char_ids):
-    team = pb.SceneTeam()
+    team = SceneTeam()
     if char_ids[0]:
         char1 = team.char1
         char1.char_id = char_ids[0]
 
-        chr = pb.Character()
+        chr = Character()
         chr.ParseFromString(db.get_characters(player_id, char_ids[0])[0])
         char1.outfit_preset.CopyFrom(
             make_SceneCharacterOutfitPreset(
@@ -52,16 +63,16 @@ def make_SceneTeam(player_id, char_ids):
         char1.gather_weapon = chr.gather_weapon  # 设置采集武器
         # TODO: 铭文id 铭文等级 防具列表 映像列表
 
-        # char1.pos.CopyFrom(pb.Vector3())
-        # char1.rot.CopyFrom(pb.Vector3())
+        # char1.pos.CopyFrom(Vector3())
+        # char1.rot.CopyFrom(Vector3())
         char1.pos.x = 2394
         char1.pos.y = 908
-        char1.rot.CopyFrom(pb.Vector3())
+        char1.rot.CopyFrom(Vector3())
     if char_ids[1]:
         char2 = team.char2
         char2.char_id = char_ids[1]
 
-        chr = pb.Character()
+        chr = Character()
         chr.ParseFromString(db.get_characters(player_id, char_ids[1])[0])
         char2.outfit_preset.CopyFrom(
             make_SceneCharacterOutfitPreset(
@@ -80,12 +91,12 @@ def make_SceneTeam(player_id, char_ids):
 
         char2.pos.x = 2394
         char2.pos.y = 908
-        char2.rot.CopyFrom(pb.Vector3())
+        char2.rot.CopyFrom(Vector3())
     if char_ids[2]:
         char3 = team.char3
         char3.char_id = char_ids[2]
 
-        chr = pb.Character()
+        chr = Character()
         chr.ParseFromString(db.get_characters(player_id, char_ids[2])[0])
         char3.outfit_preset.CopyFrom(
             make_SceneCharacterOutfitPreset(
@@ -104,13 +115,13 @@ def make_SceneTeam(player_id, char_ids):
 
         char3.pos.x = 2394
         char3.pos.y = 908
-        char3.rot.CopyFrom(pb.Vector3())
+        char3.rot.CopyFrom(Vector3())
     return team
 
 
 def make_SceneCharacterOutfitPreset(player_id, outfit):
-    sc = pb.SceneCharacterOutfitPreset()
-    item = pb.ItemDetail()
+    sc = SceneCharacterOutfitPreset()
+    item = ItemDetail()
     if outfit.hat > 0:
         item.ParseFromString(db.get_item_detail(player_id, outfit.hat))
         sc.hat = outfit.hat
@@ -200,18 +211,18 @@ def make_item(item_id, num=1, player_id=0) -> list:
     for i in res["Item"]["item"]["datas"]:
         if i["i_d"] == item_id:
             match i["new_bag_item_tag"]:
-                case pb.EBagItemTag_Weapon:  # 武器 tag:2
+                case EBagItemTag.EBagItemTag_Weapon:  # 武器 tag:2
                     for weapon_i in res["Weapon"]["weapon"]["datas"]:
                         if weapon_i["i_d"] == item_id:
-                            item_detail = pb.ItemDetail()
+                            item_detail = ItemDetail()
                             item_detail.pack_type = (
-                                pb.ItemDetail.PackType.PackType_TempStorageArea
+                                ItemDetail.PackType.PackType_TempStorageArea
                             )
                             tmp = item_detail.main_item
                             if not weapon_i.get("item_i_d"):
                                 continue
                             tmp.item_id = weapon_i["item_i_d"]
-                            tmp.item_tag = pb.EBagItemTag_Weapon
+                            tmp.item_tag = EBagItemTag.EBagItemTag_Weapon
                             weapon = tmp.weapon
                             weapon.weapon_id = weapon_i["item_i_d"]
                             weapon.instance_id = db.get_instance_id(player_id)
@@ -246,13 +257,13 @@ def make_item(item_id, num=1, player_id=0) -> list:
                                         group_s["min_level"], group_s["max_level"]
                                     )
                                     return item_detail
-                case pb.EBagItemTag_Armor:  # 防具 tag:3
+                case EBagItemTag.EBagItemTag_Armor:  # 防具 tag:3
                     for armor_i in res["Armor"]["armor"]["datas"]:
                         if armor_i["i_d"] == item_id:
-                            item_detail = pb.ItemDetail()
+                            item_detail = ItemDetail()
                             tmp = item_detail.main_item
                             tmp.item_id = armor_i["i_d"]
-                            tmp.item_tag = pb.EBagItemTag_Armor
+                            tmp.item_tag = EBagItemTag.EBagItemTag_Armor
                             # tmp.is_new = False
                             armor = tmp.armor
                             armor.armor_id = armor_i["i_d"]
@@ -266,39 +277,39 @@ def make_item(item_id, num=1, player_id=0) -> list:
                                         armor.property_index - 1
                                     ]
                                     prop_group = {
-                                        pb.EPropertyType_ExtHp: [
+                                        EPropertyType.EPropertyType_ExtHp: [
                                             "min_ext_hp",
                                             "max_ext_hp",
                                         ],
-                                        pb.EPropertyType_MaxHPPercent: [
+                                        EPropertyType.EPropertyType_MaxHPPercent: [
                                             "min_hp_percent",
                                             "max_hp_percent",
                                         ],
-                                        pb.EPropertyType_ExtAttack: [
+                                        EPropertyType.EPropertyType_ExtAttack: [
                                             "min_ext_attack",
                                             "max_ext_attack",
                                         ],
-                                        pb.EPropertyType_AttackPercent: [
+                                        EPropertyType.EPropertyType_AttackPercent: [
                                             "min_attack_percent",
                                             "max_attack_percent",
                                         ],
-                                        pb.EPropertyType_ExtDefense: [
+                                        EPropertyType.EPropertyType_ExtDefense: [
                                             "min_ext_defense",
                                             "max_ext_defense",
                                         ],
-                                        pb.EPropertyType_DefensePercent: [
+                                        EPropertyType.EPropertyType_DefensePercent: [
                                             "min_defense_percent",
                                             "max_defense_percent",
                                         ],
-                                        pb.EPropertyType_CriticalRatio: [
+                                        EPropertyType.EPropertyType_CriticalRatio: [
                                             "min_critical_ratio",
                                             "max_critical_ratio",
                                         ],
-                                        pb.EPropertyType_CriticalDamagePercent: [
+                                        EPropertyType.EPropertyType_CriticalDamagePercent: [
                                             "min_critical_damage_percent",
                                             "max_critical_damage_percent",
                                         ],
-                                        pb.EPropertyType_RecoverPercent: [
+                                        EPropertyType.EPropertyType_RecoverPercent: [
                                             "min_recover_percent",
                                             "max_recover_percent",
                                         ],
@@ -325,8 +336,8 @@ def make_item(item_id, num=1, player_id=0) -> list:
                                     # armor.is_lock = False
                                     return item_detail
 
-                case pb.EBagItemTag_Poster:  # 映像 tag:5
-                    item_detail = pb.ItemDetail()
+                case EBagItemTag.EBagItemTag_Poster:  # 映像 tag:5
+                    item_detail = ItemDetail()
                     tmp = item_detail.main_item
                     tmp.item_id = i["i_d"]
                     tmp.item_tag = i["new_bag_item_tag"]
@@ -336,8 +347,8 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     poster.star = 1
                     return item_detail
 
-                case pb.EBagItemTag_Inscription:  # 铭文 tag:17
-                    item_detail = pb.ItemDetail()
+                case EBagItemTag.EBagItemTag_Inscription:  # 铭文 tag:17
+                    item_detail = ItemDetail()
                     tmp = item_detail.main_item
                     tmp.item_id = i["i_d"]
                     tmp.item_tag = i["new_bag_item_tag"]
@@ -345,8 +356,8 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     tmp.inscription.level = 1
                     return item_detail
 
-                case pb.EBagItemTag_Card:  # 收藏卡 tag:7
-                    item_detail = pb.ItemDetail()
+                case EBagItemTag.EBagItemTag_Card:  # 收藏卡 tag:7
+                    item_detail = ItemDetail()
                     tmp = item_detail.main_item
                     tmp.item_id = i["i_d"]
                     tmp.item_tag = i["new_bag_item_tag"]
@@ -354,54 +365,54 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     return item_detail
                     # 这个好像是多余的角色碎片转换成星辰后，删除角色碎片的通知
                 case _:
-                    # pb.EBagItemTag_Gift:  # 礼包 tag:1
-                    # pb.EBagItemTag_Fragment:  # 角色碎片 tag:4
-                    # pb.EBagItemTag_Collection:  # 收藏品 tag:6
-                    # pb.EBagItemTag_Material:  # 材料 tag:8
-                    # pb.EBagItemTag_Currency:  # 货币 tag:9
-                    # pb.EBagItemTag_Food:  # 食物 tag:10
-                    # pb.EBagItemTag_SpellCard
-                    # pb.EBagItemTag_Item:  # 普通道具 tag:12
-                    # pb.EBagItemTag_Fish:  # 鱼产 tag:13
-                    # pb.EBagItemTag_Recipe
-                    # pb.EBagItemTag_Baitbox:  # 鱼饵箱 tag:15
-                    # pb.EBagItemTag_Quest
-                    # pb.EBagItemTag_StrengthStone:  # 强化石 tag:18
-                    # pb.EBagItemTag_ExpBook:  # 经验书 能量饮料 tag:19
-                    # pb.EBagItemTag_Head:  # 头像 tag:20
-                    # pb.EBagItemTag_Fashion:  # 时装 tag:21
-                    # pb.EBagItemTag_UnlockItem:  # 解锁道具 tag:22
-                    # pb.EBagItemTag_AbilityItem:  # 能力道具 tag:23
-                    # pb.EBagItemTag_UnlockAbilityItem:  # 解锁能力道具 tag:24
-                    # pb.EBagItemTag_CharacterBadge:  # 角色徽章 tag:25
-                    # pb.EBagItemTag_DyeStuff
-                    # pb.EBagItemTag_PlayerExp
-                    # pb.EBagItemTag_WorldLevel
-                    # pb.EBagItemTag_Agentia:  # 特殊道具 女装之魂 蔷薇之心 等 tag:29
-                    # pb.EBagItemTag_MoonStone:  # 月石 技能材料 tag:30
-                    # pb.EBagItemTag_Umbrella:  # 伞 tag:31
-                    # pb.EBagItemTag_Vitality:  # 体力药剂 tag:32
-                    # pb.EBagItemTag_Badge:  # 头衔 tag:33
-                    # pb.EBagItemTag_Furniture:  # 家具 tag:34
-                    # pb.EBagItemTag_Energy:  # 精力药水 tag:35
-                    # pb.EBagItemTag_ShowWeapon
-                    # pb.EBagItemTag_ShowArmor
-                    # pb.EBagItemTag_TeleportKey:  # 采集空间钥匙 tag:38
-                    # pb.EBagItemTag_WallPaper:  # 壁纸 tag:39
-                    # pb.EBagItemTag_Expression
-                    # pb.EBagItemTag_MoonCard:  # 月卡通知也许 未发现实际内容 tag:41
-                    # pb.EBagItemTag_PhoneCase:  # 手机壁纸 tag:42
-                    # pb.EBagItemTag_Pendant:  # 挂件 tag:43
-                    # pb.EBagItemTag_AvatarFrame:  # 头像框 tag:44
-                    # pb.EBagItemTag_IntimacyGift:  # 亲密度礼物 tag:45
-                    # pb.EBagItemTag_MusicNote:  # 音乐册 tag:46
-                    # pb.EBagItemTag_MonthlyCard:  # 月度卡 未知 tag:47
-                    # pb.EBagItemTag_BattlePassCard:  # 战斗通行证 未知 tag:48
-                    # pb.EBagItemTag_MonthlyGiftCard:  # 月度礼物卡 tag:49
-                    # pb.EBagItemTag_BattlePassGiftCard # 战斗通行证礼物卡 tag:50
-                    # pb.EBagItemTag_SeasonalMiniGamesItem:  # 小游戏道具 tag:51
-                    # pb.EBagItemTag_Vehicle
-                    item_detail = pb.ItemDetail()
+                    # EBagItemTag.EBagItemTag_Gift:  # 礼包 tag:1
+                    # EBagItemTag.EBagItemTag_Fragment:  # 角色碎片 tag:4
+                    # EBagItemTag.EBagItemTag_Collection:  # 收藏品 tag:6
+                    # EBagItemTag.EBagItemTag_Material:  # 材料 tag:8
+                    # EBagItemTag.EBagItemTag_Currency:  # 货币 tag:9
+                    # EBagItemTag.EBagItemTag_Food:  # 食物 tag:10
+                    # EBagItemTag.EBagItemTag_SpellCard
+                    # EBagItemTag.EBagItemTag_Item:  # 普通道具 tag:12
+                    # EBagItemTag.EBagItemTag_Fish:  # 鱼产 tag:13
+                    # EBagItemTag.EBagItemTag_Recipe
+                    # EBagItemTag.EBagItemTag_Baitbox:  # 鱼饵箱 tag:15
+                    # EBagItemTag.EBagItemTag_Quest
+                    # EBagItemTag.EBagItemTag_StrengthStone:  # 强化石 tag:18
+                    # EBagItemTag.EBagItemTag_ExpBook:  # 经验书 能量饮料 tag:19
+                    # EBagItemTag.EBagItemTag_Head:  # 头像 tag:20
+                    # EBagItemTag.EBagItemTag_Fashion:  # 时装 tag:21
+                    # EBagItemTag.EBagItemTag_UnlockItem:  # 解锁道具 tag:22
+                    # EBagItemTag.EBagItemTag_AbilityItem:  # 能力道具 tag:23
+                    # EBagItemTag.EBagItemTag_UnlockAbilityItem:  # 解锁能力道具 tag:24
+                    # EBagItemTag.EBagItemTag_CharacterBadge:  # 角色徽章 tag:25
+                    # EBagItemTag.EBagItemTag_DyeStuff
+                    # EBagItemTag.EBagItemTag_PlayerExp
+                    # EBagItemTag.EBagItemTag_WorldLevel
+                    # EBagItemTag.EBagItemTag_Agentia:  # 特殊道具 女装之魂 蔷薇之心 等 tag:29
+                    # EBagItemTag.EBagItemTag_MoonStone:  # 月石 技能材料 tag:30
+                    # EBagItemTag.EBagItemTag_Umbrella:  # 伞 tag:31
+                    # EBagItemTag.EBagItemTag_Vitality:  # 体力药剂 tag:32
+                    # EBagItemTag.EBagItemTag_Badge:  # 头衔 tag:33
+                    # EBagItemTag.EBagItemTag_Furniture:  # 家具 tag:34
+                    # EBagItemTag.EBagItemTag_Energy:  # 精力药水 tag:35
+                    # EBagItemTag.EBagItemTag_ShowWeapon
+                    # EBagItemTag.EBagItemTag_ShowArmor
+                    # EBagItemTag.EBagItemTag_TeleportKey:  # 采集空间钥匙 tag:38
+                    # EBagItemTag.EBagItemTag_WallPaper:  # 壁纸 tag:39
+                    # EBagItemTag.EBagItemTag_Expression
+                    # EBagItemTag.EBagItemTag_MoonCard:  # 月卡通知也许 未发现实际内容 tag:41
+                    # EBagItemTag.EBagItemTag_PhoneCase:  # 手机壁纸 tag:42
+                    # EBagItemTag.EBagItemTag_Pendant:  # 挂件 tag:43
+                    # EBagItemTag.EBagItemTag_AvatarFrame:  # 头像框 tag:44
+                    # EBagItemTag.EBagItemTag_IntimacyGift:  # 亲密度礼物 tag:45
+                    # EBagItemTag.EBagItemTag_MusicNote:  # 音乐册 tag:46
+                    # EBagItemTag.EBagItemTag_MonthlyCard:  # 月度卡 未知 tag:47
+                    # EBagItemTag.EBagItemTag_BattlePassCard:  # 战斗通行证 未知 tag:48
+                    # EBagItemTag.EBagItemTag_MonthlyGiftCard:  # 月度礼物卡 tag:49
+                    # EBagItemTag.EBagItemTag_BattlePassGiftCard # 战斗通行证礼物卡 tag:50
+                    # EBagItemTag.EBagItemTag_SeasonalMiniGamesItem:  # 小游戏道具 tag:51
+                    # EBagItemTag.EBagItemTag_Vehicle
+                    item_detail = ItemDetail()
                     tmp = item_detail.main_item
                     tmp.item_id = i["i_d"]
                     tmp.item_tag = i["new_bag_item_tag"]
@@ -424,13 +435,13 @@ def make_treasure_box_item(
     wp_len = len(res["Weapon"]["weapon"]["datas"])
     while wp_num > 0:
         weapon_i = res["Weapon"]["weapon"]["datas"][random.randint(0, wp_len - 1)]
-        item_detail = pb.ItemDetail()
-        item_detail.pack_type = pb.ItemDetail.PackType.PackType_TempStorageArea
+        item_detail = ItemDetail()
+        item_detail.pack_type = ItemDetail.PackType.PackType_TempStorageArea
         tmp = item_detail.main_item
         if not weapon_i.get("item_i_d"):
             continue
         tmp.item_id = weapon_i["item_i_d"]
-        tmp.item_tag = pb.EBagItemTag_Weapon
+        tmp.item_tag = EBagItemTag.EBagItemTag_Weapon
         weapon = tmp.weapon
         weapon.weapon_id = weapon_i["item_i_d"]
         weapon.instance_id = db.get_instance_id(player_id)
@@ -465,10 +476,10 @@ def make_treasure_box_item(
     armor_len = len(res["Armor"]["armor"]["datas"])
     while armor_num > 0:
         armor_i = res["Armor"]["armor"]["datas"][random.randint(0, armor_len - 1)]
-        item_detail = pb.ItemDetail()
+        item_detail = ItemDetail()
         tmp = item_detail.main_item
         tmp.item_id = armor_i["i_d"]
-        tmp.item_tag = pb.EBagItemTag_Armor
+        tmp.item_tag = EBagItemTag.EBagItemTag_Armor
         # tmp.is_new = False
         armor = tmp.armor
         armor.armor_id = armor_i["i_d"]
@@ -480,27 +491,36 @@ def make_treasure_box_item(
                 )
                 group_s = prop["armor_property_group_info"][armor.property_index - 1]
                 prop_group = {
-                    pb.EPropertyType_ExtHp: ["min_ext_hp", "max_ext_hp"],
-                    pb.EPropertyType_MaxHPPercent: ["min_hp_percent", "max_hp_percent"],
-                    pb.EPropertyType_ExtAttack: ["min_ext_attack", "max_ext_attack"],
-                    pb.EPropertyType_AttackPercent: [
+                    EPropertyType.EPropertyType_ExtHp: ["min_ext_hp", "max_ext_hp"],
+                    EPropertyType.EPropertyType_MaxHPPercent: [
+                        "min_hp_percent",
+                        "max_hp_percent",
+                    ],
+                    EPropertyType.EPropertyType_ExtAttack: [
+                        "min_ext_attack",
+                        "max_ext_attack",
+                    ],
+                    EPropertyType.EPropertyType_AttackPercent: [
                         "min_attack_percent",
                         "max_attack_percent",
                     ],
-                    pb.EPropertyType_ExtDefense: ["min_ext_defense", "max_ext_defense"],
-                    pb.EPropertyType_DefensePercent: [
+                    EPropertyType.EPropertyType_ExtDefense: [
+                        "min_ext_defense",
+                        "max_ext_defense",
+                    ],
+                    EPropertyType.EPropertyType_DefensePercent: [
                         "min_defense_percent",
                         "max_defense_percent",
                     ],
-                    pb.EPropertyType_CriticalRatio: [
+                    EPropertyType.EPropertyType_CriticalRatio: [
                         "min_critical_ratio",
                         "max_critical_ratio",
                     ],
-                    pb.EPropertyType_CriticalDamagePercent: [
+                    EPropertyType.EPropertyType_CriticalDamagePercent: [
                         "min_critical_damage_percent",
                         "max_critical_damage_percent",
                     ],
-                    pb.EPropertyType_RecoverPercent: [
+                    EPropertyType.EPropertyType_RecoverPercent: [
                         "min_recover_percent",
                         "max_recover_percent",
                     ],
@@ -524,8 +544,8 @@ def make_treasure_box_item(
 
 
 def make_SceneDataNotice(session):
-    rsp = pb.SceneDataNotice()
-    rsp.status = pb.StatusCode_OK
+    rsp = SceneDataNotice()
+    rsp.status = StatusCode.StatusCode_OK
     data = rsp.data
     data.scene_id = session.scene_id
     pos = session.pos.get(session.scene_id)
@@ -536,11 +556,15 @@ def make_SceneDataNotice(session):
         tmp = data.collections.add()
         tmp.type = i
     for i in db.get_collection(session.player_id):
-        crd = pb.PBCollectionRewardData()
+        crd = PBCollectionRewardData()
         crd.ParseFromString(i[1])
         data.collections[i[0]].item_map[crd.item_id].CopyFrom(crd)
-    for furniture in db.get_furniture(session.scene_id,session.channel_id): # (scene_id, channel_id, player_id, furniture_id,furniture_detail_blob)
-        data.scene_garden_data.garden_furniture_info_map[furniture[3]].ParseFromString(furniture[4])
+    for furniture in db.get_furniture(
+        session.scene_id, session.channel_id
+    ):  # (scene_id, channel_id, player_id, furniture_id,furniture_detail_blob)
+        data.scene_garden_data.garden_furniture_info_map[furniture[3]].ParseFromString(
+            furniture[4]
+        )
 
     for i in scene_data.get_scene_player(session.scene_id, session.channel_id):
         data.players.add().CopyFrom(i)
