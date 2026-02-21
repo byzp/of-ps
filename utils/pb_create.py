@@ -539,6 +539,8 @@ def make_SceneDataNotice(session):
         crd = pb.PBCollectionRewardData()
         crd.ParseFromString(i[1])
         data.collections[i[0]].item_map[crd.item_id].CopyFrom(crd)
+    for furniture in db.get_furniture(session.scene_id,session.channel_id): # (scene_id, channel_id, player_id, furniture_id,furniture_detail_blob)
+        data.scene_garden_data.garden_furniture_info_map[furniture[3]].ParseFromString(furniture[4])
 
     for i in scene_data.get_scene_player(session.scene_id, session.channel_id):
         data.players.add().CopyFrom(i)

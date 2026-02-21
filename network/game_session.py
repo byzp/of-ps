@@ -4,6 +4,7 @@ import socket
 from collections import deque
 from threading import Lock, Event, Thread
 from google.protobuf.message import Message
+from network.msg_id import MsgId
 
 try:
     import snappy_py as snappy  # http://github.com/byzp/snappy-py
@@ -21,6 +22,11 @@ _UNAUTH_CMDS = frozenset((1001, 1007, 2201, 2203))
 _NOSEQ_CMDS = frozenset((1002, 1004, 1006, 1008))
 _COMPRESS_THRESHOLD = Config.COMPRESS_THRESHOLD
 
+id_to_name = {
+    v: k
+    for k, v in vars(MsgId).items()
+    if not k.startswith("__") and isinstance(v, int)
+}
 
 class SendTask:
     __slots__ = ("msg_id", "data", "packet_id", "is_bin")
@@ -153,7 +159,7 @@ class GameSession:
 
             msg_id = head.msg_id
             if msg_id not in Config.DEBUG_PACKET_PASS:
-                logger.debug(f"Received message: {msg_id}")
+                logger.debug(f"Received message: {id_to_name.get(msg_id)}")
             # 阻止未授权访问
             if not self.verified and msg_id not in _UNAUTH_CMDS:
                 self.close()
@@ -178,7 +184,7 @@ class GameSession:
 
     def send(self, msg_id: int, message: Message, packet_id: int, is_bin: bool = False):
         if msg_id not in Config.DEBUG_PACKET_PASS:
-            logger.debug(f"Sending message: {msg_id}")
+            logger.debug(f"Sending message: {id_to_name.get(msg_id)}")
         if not self.running:
             return
 

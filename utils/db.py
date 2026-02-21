@@ -226,8 +226,6 @@ def init():
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
 
-        INSERT OR IGNORE INTO users (id, username, password, user_token) VALUES (1000000, "", "", "");
-        
         CREATE TABLE IF NOT EXISTS gacha_record (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             player_id INTEGER NOT NULL,
@@ -236,9 +234,20 @@ def init():
             gacha_time INTEGER NOT NULL,
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS furnitures (
+            scene_id INTEGER NOT NULL,
+            channel_id INTEGER NOT NULL,
+            player_id INTEGER NOT NULL,
+            furniture_id INTEGER NOT NULL,
+            furniture_detail_blob BLOB NOT NULL,
+            PRIMARY KEY (scene_id, channel_id, player_id, furniture_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
         
         CREATE INDEX IF NOT EXISTS idx_gacha_record_player ON gacha_record(player_id, gacha_id, gacha_time);
 
+        INSERT OR IGNORE INTO users (id, username, password, user_token) VALUES (1000000, "", "", "");
     """
     )
 
@@ -250,10 +259,10 @@ def init_player(player_id):
     player_unlock_data = (
         res.get("PlayerUnlock", {}).get("player_unlock", {}).get("datas", [])
     )
-    unlock_func_ids = [item["i_d"] for item in player_unlock_data]
+    unlock_func_ids = [item["i_d"] for item in player_unlock_data] # [100000000,100000001,100000002,100000003,100000006,100000009,100000010,100000011,100000021,100000025,100000027,100000035,100000036,100000037]
     unlock_funcs = pickle.dumps(unlock_func_ids)
 
-    team = pickle.dumps((101001, 101002, 101003))
+    team = pickle.dumps((101001, 0, 0))
 
     db.execute(
         """INSERT OR IGNORE INTO players 
@@ -1141,3 +1150,42 @@ def get_gacha_record_total_page(player_id, gacha_id, page_size=5):
         return 0
 
     return (total + page_size - 1) // page_size
+
+
+def set_furniture(scene_id, channel_id, player_id, furniture_id,furniture_detail_blob):
+    db.execute(
+        "INSERT OR REPLACE INTO furnitures (scene_id, channel_id, player_id, furniture_id, furniture_detail_blob) VALUES (?, ?, ?, ?, ?)",
+        (scene_id, channel_id, player_id, furniture_id,furniture_detail_blob),
+    )
+
+
+def get_furniture(scene_id, channel_id, player_id=None, furniture_id=None):
+    if not player_id and not furniture_id:
+        cur = db.execute(
+            "SELECT * FROM furnitures WHERE scene_id=? AND channel_id=?",
+            (scene_id, channel_id),
+        )
+        rows = cur.fetchall()
+        furnitures = []
+        if rows:
+            for row in rows:
+                furnitures.append(row)
+        return furnitures
+        
+    else:
+        cur = db.execute(
+            "SELECT * FROM furnitures WHERE scene_id=? AND channel_id=? AND player_id=? AND furniture_id=?",
+            (scene_id, channel_id, player_id, furniture_id),
+        )
+        row = cur.fetchone()
+        if row:
+            return row
+
+
+def del_furniture(
+scene_id, channel_id, player_id, furniture_id
+):
+    db.execute(
+        "DELETE FROM furnitures WHERE scene_id=? AND channel_id=? AND player_id=? AND furniture_id=?",
+        (scene_id, channel_id, player_id, furniture_id),
+    )

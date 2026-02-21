@@ -1,17 +1,10 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
+import random
 
 import proto.OverField_pb2 as HandingFurnitureReq_pb2
 import proto.OverField_pb2 as HandingFurnitureRsp_pb2
-
-
-logger = logging.getLogger(__name__)
-
-
-"""
-# 手持家具 2507 2508
-"""
+import proto.OverField_pb2 as StatusCode_pb2
 
 
 @packet_handler(MsgId.HandingFurnitureReq)
@@ -21,14 +14,9 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = HandingFurnitureRsp_pb2.HandingFurnitureRsp()
-
-        rsp.status = TEST_DATA["status"]
-
-        # 设置家具ID
-        rsp.furniture_id = TEST_DATA["furniture_id"]
+        rsp.status = StatusCode_pb2.StatusCode_OK
+        rsp.furniture_id = random.randint(10000000000000000, 99999999999999999)
 
         session.send(MsgId.HandingFurnitureRsp, rsp, packet_id)
 
 
-# Hardcoded test data
-TEST_DATA = {"status": 1, "furniture_id": 6274502690341576}

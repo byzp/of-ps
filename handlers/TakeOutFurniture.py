@@ -1,17 +1,9 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
 
 import proto.OverField_pb2 as TakeOutFurnitureReq_pb2
 import proto.OverField_pb2 as TakeOutFurnitureRsp_pb2
-
-
-logger = logging.getLogger(__name__)
-
-
-"""
-# 取出家具 1683 1684
-"""
+import proto.OverField_pb2 as StatusCode_pb2
 
 
 @packet_handler(MsgId.TakeOutFurnitureReq)
@@ -21,13 +13,8 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = TakeOutFurnitureRsp_pb2.TakeOutFurnitureRsp()
-
-        # Set data from test data
-        rsp.status = TEST_DATA["status"]
-        rsp.furniture_id = req.furniture_id  # 从请求获取
+        rsp.status = StatusCode_pb2.StatusCode_OK # TODO 验证家具是否存在, 官服也没做这个
+        rsp.furniture_id = req.furniture_id
 
         session.send(MsgId.TakeOutFurnitureRsp, rsp, packet_id)
 
-
-# Hardcoded test data
-TEST_DATA = {"status": 1}
