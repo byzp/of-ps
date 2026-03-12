@@ -3,6 +3,7 @@ from network.msg_id import MsgId
 import logging
 
 from proto.net_pb2 import GetCollectMoonInfoReq, GetCollectMoonInfoRsp, StatusCode
+from utils.res_loader import res
 
 logger = logging.getLogger(__name__)
 

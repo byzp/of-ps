@@ -33,7 +33,7 @@ def get_recorder(scene_id: int, channel_id: int) -> Optional[Any]:
             return {}
         ch = sc.get(channel_id)
         if not ch:
-            return
+            return {}
         return dict(ch)
 
 

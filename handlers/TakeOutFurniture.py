@@ -11,7 +11,7 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = TakeOutFurnitureRsp()
-        rsp.status = StatusCode.StatusCode_OK  # TODO 验证家具是否存在, 官服也没做这个
+        rsp.status = StatusCode.StatusCode_OK
         rsp.furniture_id = req.furniture_id
 
         session.send(MsgId.TakeOutFurnitureRsp, rsp, packet_id)

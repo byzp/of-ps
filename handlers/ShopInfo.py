@@ -17,7 +17,7 @@ class Handler(PacketHandler):
         rsp = ShopInfoRsp()
         rsp.status = StatusCode.StatusCode_OK
         rsp.shop_id = req.shop_id
-        logger.info("ShopInfoReq shop_id=%s", req.shop_id)
+        # logger.info("ShopInfoReq shop_id=%s", req.shop_id)
         for dat in res["Shop"]["grid"]["datas"]:
             if dat.get("i_d") == req.shop_id:
                 for i in dat.get("items"):
