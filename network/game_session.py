@@ -67,6 +67,7 @@ class GameSession:
         "pos",
         "drop_items",
         "color_data",
+        "fishing",
         "running",
         "verified",
         "logged_in",
@@ -114,6 +115,7 @@ class GameSession:
             None,
             PosColor(),
         ]  # SwirlNoiseGenHelper,noise_texture_id,color
+        self.fishing = False
 
         self.running = True
         self.verified = False
