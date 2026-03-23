@@ -257,6 +257,17 @@ def make_item(item_id, num=1, player_id=0) -> list:
                                         group_s["min_level"], group_s["max_level"]
                                     )
                                     return item_detail
+                            # 无属性的,鱼竿,载具等
+                            tmp.is_new = True
+                            item_detail.pack_type = 0
+                            weapon.attack = 1
+                            weapon.damage_balance = 1
+                            weapon.critical_ratio = 1
+                            weapon.level = 1
+                            weapon.star = 1
+                            weapon.durability = 1000
+                            weapon.property_index = 1
+                            return item_detail
                 case EBagItemTag.EBagItemTag_Armor:  # 防具 tag:3
                     for armor_i in res["Armor"]["armor"]["datas"]:
                         if armor_i["i_d"] == item_id:

@@ -2,7 +2,14 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
 
-from proto.net_pb2 import ShopBuyReq, ShopBuyRsp, ItemDetail, PackNotice, StatusCode
+from proto.net_pb2 import (
+    ShopBuyReq,
+    ShopBuyRsp,
+    ItemDetail,
+    PackNotice,
+    StatusCode,
+    EBagItemTag,
+)
 
 import utils.db as db
 from utils.res_loader import res
@@ -134,21 +141,37 @@ class Handler(PacketHandler):
                                         )
                                     else:
                                         tmp1.ParseFromString(item)
-                                    num_t = tmp1.main_item.base_item.num
-                                    tmp1.main_item.base_item.num = item_pool["item_num"]
-                                    rsp.items.add().CopyFrom(tmp1)
-                                    tmp1.main_item.base_item.num = (
-                                        num_t + item_pool["item_num"]
+                                    is_base_item = (
+                                        tmp1.main_item.item_tag
+                                        != EBagItemTag.EBagItemTag_Weapon
                                     )
+                                    if is_base_item:
+                                        num_t = tmp1.main_item.base_item.num
+                                        tmp1.main_item.base_item.num = item_pool[
+                                            "item_num"
+                                        ]
+                                        rsp.items.add().CopyFrom(tmp1)
+                                        tmp1.main_item.base_item.num = (
+                                            num_t + item_pool["item_num"]
+                                        )
+                                    else:
+                                        rsp.items.add().CopyFrom(tmp1)
                                     rsp1.items.add().CopyFrom(
                                         tmp1
                                     )  # TODO 目前是直接给礼包，不会自动开启
-                                    db.set_item_detail(
-                                        session.player_id,
-                                        tmp1.SerializeToString(),
-                                        item_pool["item_i_d"],
-                                        None,
-                                    )
-
+                                    if is_base_item:
+                                        db.set_item_detail(
+                                            session.player_id,
+                                            tmp1.SerializeToString(),
+                                            item_pool["item_i_d"],
+                                            None,
+                                        )
+                                    else:
+                                        db.set_item_detail(
+                                            session.player_id,
+                                            tmp1.SerializeToString(),
+                                            None,
+                                            tmp1.main_item.weapon.instance_id,  # TODO 尚未考虑映像
+                                        )
         session.send(MsgId.ShopBuyRsp, rsp, packet_id)
         session.send(MsgId.PackNotice, rsp1, 0)

@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 def cmd_exec(cmd: str):
     cmds = cmd.split(" ")
+    cmds[:] = [s for s in cmds if s != ""]
     match cmds[0]:
         case "give":  # give player_id/all item_id [num]
             give(cmds)
