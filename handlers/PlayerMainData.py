@@ -1,5 +1,6 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
+import time
 
 from proto.net_pb2 import (
     PlayerMainDataRsp,
@@ -90,8 +91,23 @@ class Handler(PacketHandler):
         rsp.daily_task.tasks[4] = 521007
         rsp.daily_task.exchange_times_left = 0
         rsp.appearance.CopyFrom(PlayerAppearance())
-
         session.send(MsgId.PlayerMainDataRsp, rsp, packet_id)  # 1005,1006
+
+        # 计算体力和精力的回复
+        llt = db.get_players_info(session.player_id, "last_login_time")
+        item = ItemDetail()
+        item_b = db.get_item_detail(session.player_id, 10)  # 体力
+        item.ParseFromString(item_b)
+        item.main_item.base_item.num += int((time.time() - llt) / 300)
+        if item.main_item.base_item.num > 150:
+            item.main_item.base_item.num = 150
+        db.set_item_detail(session.player_id, item.SerializeToString(), 10)
+        item_b = db.get_item_detail(session.player_id, 11)  # 精力
+        item.ParseFromString(item_b)
+        item.main_item.base_item.num += int((time.time() - llt) / 60)
+        if item.main_item.base_item.num > 800:
+            item.main_item.base_item.num = 800
+        db.set_item_detail(session.player_id, item.SerializeToString(), 11)
 
         items_data = db.get_item_detail(session.player_id)
         if items_data:

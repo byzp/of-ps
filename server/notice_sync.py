@@ -13,6 +13,7 @@ from proto.net_pb2 import (
     SceneActionType,
     ChatChannelType,
     PlayerSceneSyncDataNotice,
+    PackNotice,
 )
 from network.msg_id import MsgId
 from network.remote_link import rsend
@@ -39,16 +40,19 @@ max_tps = Config.SERVER_MAX_TPS
 tod_time = 21600.0
 _rel_time = 0.0
 _last_send_time = 0.0
+_last_stamina_sync_time = 0
 
 SPEED_MULTIPLIER = 50.0
 SEND_INTERVAL_REAL = 60.0
+STAMINA_INTERVAL = 300
 
 sync_stop = False
 
 
 def init():
-    global _rel_time
+    global _rel_time, _last_stamina_sync_time
     _rel_time = time.time()
+    _last_stamina_sync_time = _rel_time
     threading.Thread(target=start_loop, daemon=False).start()
 
 
@@ -67,7 +71,7 @@ def start_loop():
 
 
 def notice_sync_loop():
-    global tod_time, _rel_time, _last_send_time
+    global tod_time, _rel_time, _last_send_time, _last_stamina_sync_time
     while True:
         start_t = time.time()
         with lock_session:
@@ -84,7 +88,9 @@ def notice_sync_loop():
                 # 保存玩家数据
                 for session in session_list:
                     if session.logged_in == True:
-                        pass
+                        db.set_players_info(
+                            session.player_id, "last_login_time", int(start_t)
+                        )
                 return
             # 检查并清除掉线玩家
             for session in session_list:
@@ -104,11 +110,10 @@ def notice_sync_loop():
             session_list[:] = [
                 s for s in session_list if getattr(s, "running", False)
             ]  # 清除已断开的连接
-            now = time.time()
-            elapsed_real = now - _rel_time
+            elapsed_real = start_t - _rel_time
             if elapsed_real > 0:
                 tod_time = (tod_time + elapsed_real * SPEED_MULTIPLIER) % 86400.0
-                _rel_time = now
+                _rel_time = start_t
             with lock_action:
                 # 1970 玩家动作广播
                 for ac in action:
@@ -121,9 +126,9 @@ def notice_sync_loop():
                             session.send(MsgId.SendActionNotice, ac[2], 0)
                 action.clear()
             with lock_scene_action:
-                if now - _last_send_time >= SEND_INTERVAL_REAL:
+                if start_t - _last_send_time >= SEND_INTERVAL_REAL:
                     time_sync = True
-                    _last_send_time = now
+                    _last_send_time = start_t
                 else:
                     time_sync = False
                 for session in session_list:
@@ -194,7 +199,11 @@ def notice_sync_loop():
                                     MsgId.PlayerSceneSyncDataNotice, rsp, 0
                                 )  # 1203,1206
                     rec_list.clear()
-
+            if start_t - _last_stamina_sync_time > STAMINA_INTERVAL:
+                threading.Thread(
+                    target=_stamina_sync, args=(session_list.copy(),)
+                ).start()
+                _last_stamina_sync_time = start_t
         use_time = time.time() - start_t
         wait_time = 1.0 / max_tps - use_time
         if use_time > 1:
@@ -203,3 +212,25 @@ def notice_sync_loop():
             continue
         if wait_time > 0:
             time.sleep(wait_time)
+
+
+def _stamina_sync(session_list):
+    for session in session_list:
+        if session.running and session.logged_in:
+            pack = PackNotice()
+            pack.status = StatusCode.StatusCode_OK
+            item = pack.items.add()
+            item_b = db.get_item_detail(session.player_id, 10)  # 体力
+            item.ParseFromString(item_b)
+            item.main_item.base_item.num += 1
+            if item.main_item.base_item.num > 150:
+                item.main_item.base_item.num = 150
+            db.set_item_detail(session.player_id, item.SerializeToString(), 10)
+            item = pack.items.add()
+            item_b = db.get_item_detail(session.player_id, 11)  # 精力
+            item.ParseFromString(item_b)
+            item.main_item.base_item.num += 5
+            if item.main_item.base_item.num > 800:
+                item.main_item.base_item.num = 800
+            db.set_item_detail(session.player_id, item.SerializeToString(), 11)
+            session.send(MsgId.PackNotice, pack, 0)

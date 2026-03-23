@@ -5,7 +5,7 @@ import logging
 import pickle
 import threading
 import secrets
-from contextlib import contextmanager
+from concurrent.futures import ThreadPoolExecutor
 
 from config import Config
 from utils.res_loader import res
@@ -23,6 +23,7 @@ from proto.net_pb2 import (
     Chapter,
     MailContentType,
 )
+from utils.pb_create import make_item
 
 logger = logging.getLogger(__name__)
 
@@ -31,15 +32,19 @@ lock_db = threading.Lock()
 
 
 class db_warp:
-    __slots__ = ("_conn", "_rw_lock")
+    __slots__ = ("_conn", "_rw_lock", "_executor")
 
-    def __init__(self, conn):
+    def __init__(self, conn, max_workers=16):
         self._conn = conn
         self._rw_lock = lock_db
+        self._executor = ThreadPoolExecutor(max_workers=max_workers)
 
     def execute(self, *args, **kwargs):
         with self._rw_lock:
             return self._conn.execute(*args, **kwargs)
+
+    def execute_async(self, *args, **kwargs):
+        return self._executor.submit(self.execute, *args, **kwargs)
 
 
 def exit():
@@ -110,7 +115,8 @@ def init():
             unlock_functions BLOB,
             team BLOB,
             avatar_frame INTEGER DEFAULT 0,
-            pendant INTEGER DEFAULT 0
+            pendant INTEGER DEFAULT 0,
+            last_login_time INTEGER DEFAULT 1700000000
         );
 
         CREATE TABLE IF NOT EXISTS characters (
@@ -378,18 +384,14 @@ def init_player(player_id):
             (player_id, i["i_d"], c.SerializeToString()),
         )
 
-    # 初始化物品(星石+10, 用于第一次改名)
-    item = ItemDetail()
-    tmp = item.main_item
-    tmp.item_id = 102
-    tmp.item_tag = EBagItemTag.EBagItemTag_Currency
-    tmp.base_item.item_id = 102
-    tmp.base_item.num = 10
+    # 初始化必要物品
+    for k, v in {10: 150, 11: 800, 101: 500, 102: 200, 104: 1}.items():
+        item = make_item(k, v)
 
-    db.execute(
-        "INSERT OR REPLACE INTO items (player_id, item_id, item_detail_blob) VALUES (?, ?, ?)",
-        (player_id, 102, item.SerializeToString()),
-    )
+        db.execute(
+            "INSERT OR REPLACE INTO items (player_id, item_id, item_detail_blob) VALUES (?, ?, ?)",
+            (player_id, k, item.SerializeToString()),
+        )
 
     # 初始化 Achieve
     for achieve in res["Achieve"]["achieve"]["datas"]:
