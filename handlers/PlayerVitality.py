@@ -15,11 +15,6 @@ class Handler(PacketHandler):
 
         rsp = PlayerVitalityRsp()
         rsp.status = StatusCode.StatusCode_OK
-        rsp.vitality_buy_num = TEST_DATA["parsed_result"]["vitality_buy_num"]
-        # items is empty as specified in the requirements
+        rsp.vitality_buy_num = 0  # TODO 体力购买限制
 
         session.send(MsgId.PlayerVitalityRsp, rsp, packet_id)
-
-
-# Hardcoded test data
-TEST_DATA = {"parsed_result": {"status": 1, "vitality_buy_num": 0, "items": []}}

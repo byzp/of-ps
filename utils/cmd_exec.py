@@ -8,13 +8,13 @@ from proto.net_pb2 import (
     PackNotice,
     FireworksStartNotice,
     ServerSceneSyncDataNotice,
-    ItemDetail,
     SceneActionType,
     PlayerOfflineRsp,
     DungeonEnterRsp,
     ChangeSceneChannelRsp,
     SceneDataNotice,
     PlayerOfflineReason,
+    EBagItemTag,
 )
 
 from utils.res_loader import res
@@ -88,17 +88,30 @@ def give(cmds: list):
         rsp.status = StatusCode.StatusCode_OK
         for i in res["Item"]["item"]["datas"]:
             if i["i_d"] == cmds[2] or cmds[2] == "all":
-                item = ItemDetail()
-                tmp = db.get_item_detail(session.player_id, i["i_d"])
-                if not tmp:
-                    item.CopyFrom(make_item(i["i_d"], 0, session.player_id))
+                item = rsp.items.add()
+                tmp = make_item(i["i_d"], 0, session.player_id)
+                if tmp.main_item.item_tag not in [
+                    EBagItemTag.EBagItemTag_Weapon,
+                    EBagItemTag.EBagItemTag_Armor,
+                    EBagItemTag.EBagItemTag_Poster,
+                ]:
+                    item_b = db.get_item_detail(session.player_id, i["i_d"])
+                    if not item_b:
+                        item.CopyFrom(tmp)
+                    else:
+                        item.ParseFromString(item_b)
+                    item.main_item.base_item.num += 1 if len(cmds) < 4 else cmds[3]
+                    db.set_item_detail(
+                        session.player_id, item.SerializeToString(), i["i_d"]
+                    )
                 else:
-                    item.ParseFromString(tmp)
-                item.main_item.base_item.num += 1 if len(cmds) < 3 else cmds[3]
-                rsp.items.add().CopyFrom(item)
-                db.set_item_detail(
-                    session.player_id, item.SerializeToString(), i["i_d"]
-                )
+                    item.CopyFrom(tmp)
+                    db.set_item_detail(
+                        session.player_id,
+                        item.SerializeToString(),
+                        0,
+                        item.main_item.weapon.instance_id,
+                    )
                 if not cmds[2] == "all":
                     break
         session.send(MsgId.PackNotice, rsp, 0)
