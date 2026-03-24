@@ -572,6 +572,8 @@ def make_SceneDataNotice(session):
         crd = PBCollectionRewardData()
         crd.ParseFromString(i[1])
         data.collections[i[0]].item_map[crd.item_id].CopyFrom(crd)
+    for i in db.get_challenge(session.player_id, session.scene_id):
+        data.challenges.add().ParseFromString(i)
     for furniture in db.get_furniture(
         session.scene_id, session.channel_id
     ):  # (scene_id, channel_id, player_id, furniture_id,furniture_detail_blob)

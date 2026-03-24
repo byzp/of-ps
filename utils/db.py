@@ -271,6 +271,15 @@ def init():
             PRIMARY KEY (player_id, scene_id, area_id),
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS challenges (
+            player_id INTEGER NOT NULL,
+            scene_id INTEGER NOT NULL,
+            challenge_id INTEGER NOT NULL,
+            challenge_blob BLOB NOT NULL,
+            PRIMARY KEY (player_id, scene_id, challenge_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
         
         CREATE INDEX IF NOT EXISTS idx_gacha_record_player ON gacha_record(player_id, gacha_id, gacha_time);
 
@@ -1240,4 +1249,33 @@ def set_area(player_id, scene_id, area_id, area_blob):
     db.execute(
         "INSERT OR REPLACE INTO areas (player_id, scene_id, area_id, area_blob) VALUES (?, ?, ?, ?)",
         (player_id, scene_id, area_id, area_blob),
+    )
+
+
+def get_challenge(player_id, scene_id, challenge_id=None) -> list:
+    if challenge_id:
+        cur = db.execute(
+            "SELECT challenge_blob FROM challenges WHERE player_id=? AND scene_id=? AND challenge_id=?",
+            (player_id, scene_id, challenge_id),
+        )
+        row = cur.fetchone()
+        if row:
+            return row[0]
+    else:
+        challenges = []
+        cur = db.execute(
+            "SELECT challenge_blob FROM challenges WHERE player_id=? AND scene_id=?",
+            (player_id, scene_id),
+        )
+        rows = cur.fetchall()
+        if rows:
+            for row in rows:
+                challenges.append(row[0])
+        return challenges
+
+
+def set_challenge(player_id, scene_id, challenge_id, challenge_blob):
+    db.execute(
+        "INSERT OR REPLACE INTO challenges (player_id, scene_id, challenge_id, challenge_blob) VALUES (?, ?, ?, ?)",
+        (player_id, scene_id, challenge_id, challenge_blob),
     )
