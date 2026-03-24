@@ -262,6 +262,15 @@ def init():
             PRIMARY KEY (scene_id, channel_id, player_id, furniture_id),
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS areas (
+            player_id INTEGER NOT NULL,
+            scene_id INTEGER NOT NULL,
+            area_id INTEGER NOT NULL,
+            area_blob BLOB NOT NULL,
+            PRIMARY KEY (player_id, scene_id, area_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
         
         CREATE INDEX IF NOT EXISTS idx_gacha_record_player ON gacha_record(player_id, gacha_id, gacha_time);
 
@@ -1202,4 +1211,33 @@ def del_furniture(scene_id, channel_id, player_id, furniture_id):
     db.execute(
         "DELETE FROM furnitures WHERE scene_id=? AND channel_id=? AND player_id=? AND furniture_id=?",
         (scene_id, channel_id, player_id, furniture_id),
+    )
+
+
+def get_area(player_id, scene_id, area_id=None) -> list:
+    if area_id:
+        cur = db.execute(
+            "SELECT area_blob FROM areas WHERE player_id=? AND scene_id=? AND area_id=?",
+            (player_id, scene_id, area_id),
+        )
+        row = cur.fetchone()
+        if row:
+            return row[0]
+    else:
+        areas = []
+        cur = db.execute(
+            "SELECT area_blob FROM areas WHERE player_id=? AND scene_id=?",
+            (player_id, scene_id),
+        )
+        rows = cur.fetchall()
+        if rows:
+            for row in rows:
+                areas.append(row[0])
+        return areas
+
+
+def set_area(player_id, scene_id, area_id, area_blob):
+    db.execute(
+        "INSERT OR REPLACE INTO areas (player_id, scene_id, area_id, area_blob) VALUES (?, ?, ?, ?)",
+        (player_id, scene_id, area_id, area_blob),
     )

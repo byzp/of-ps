@@ -559,6 +559,8 @@ def make_SceneDataNotice(session):
     rsp.status = StatusCode.StatusCode_OK
     data = rsp.data
     data.scene_id = session.scene_id
+    for i in db.get_area(session.player_id, session.scene_id):
+        data.areas.add().ParseFromString(i)
     pos = session.pos.get(session.scene_id)
     if pos:
         session.scene_player.team.char1.pos.CopyFrom(pos)
