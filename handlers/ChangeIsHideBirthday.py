@@ -17,9 +17,9 @@ class Handler(PacketHandler):
         rsp = ChangeIsHideBirthdayRsp()
         rsp.status = StatusCode.StatusCode_OK
 
-        current_status = db.get_players_info(
-            session.player_id, "is_hide_birthday"
-        )  # 获取当前状态
+        current_status = db.get_players_info(session.player_id, "is_hide_birthday")[
+            0
+        ]  # 获取当前状态
         new_status = 0 if current_status else 1
 
         db.set_players_info(session.player_id, "is_hide_birthday", new_status)

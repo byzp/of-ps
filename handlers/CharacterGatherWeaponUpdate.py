@@ -40,7 +40,7 @@ class Handler(PacketHandler):
         db.set_character(session.player_id, character_id, character.SerializeToString())
 
         # 场景同步
-        if character_id in db.get_players_info(session.player_id, "team"):
+        if character_id in db.get_players_info(session.player_id, "team")[0]:
             session.scene_player.team.char1.gather_weapon = weapon_id
 
             sy = ServerSceneSyncDataNotice()

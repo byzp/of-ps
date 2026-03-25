@@ -1,6 +1,7 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import time
+import logging
 
 from proto.net_pb2 import (
     PlayerMainDataRsp,
@@ -23,7 +24,10 @@ from proto.net_pb2 import (
 )
 import utils.db as db
 from utils.res_loader import res
-from utils.pb_create import make_SceneDataNotice
+from utils.pb_create import make_SceneDataNotice, make_ScenePlayer
+from network.remote_link import sync_player
+
+logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.PlayerMainDataReq)
@@ -34,21 +38,36 @@ class Handler(PacketHandler):
         rsp = PlayerMainDataRsp()
         rsp.status = StatusCode.StatusCode_OK
         rsp.player_id = session.player_id
-        rsp.player_name = session.player_name
 
-        rsp.unlock_functions.extend(db.get_players_info(player_id, "unlock_functions"))
-        rsp.level = db.get_players_info(player_id, "level")
-        rsp.exp = db.get_players_info(player_id, "exp")
-        session.avatar_id = db.get_players_info(player_id, "head")
+        infos = db.get_players_info(
+            player_id,
+            "player_name,unlock_functions,level,exp,head,sign,sex,avatar_frame,pendant,world_level,phone_background,create_time,team,birthday,is_hide_birthday,account_type,last_login_time",
+        )
+        rsp.unlock_functions.extend(infos[1])
+        (
+            rsp.player_name,
+            _,
+            rsp.level,
+            rsp.exp,
+            session.avatar_id,
+            rsp.sign,
+            rsp.sex,
+            rsp.appearance.avatar_frame,
+            rsp.appearance.pendant,
+            rsp.world_level,
+            rsp.phone_background,
+            rsp.create_time,
+            [rsp.team.char1, rsp.team.char2, rsp.team.char3],
+            rsp.birthday,
+            rsp.is_hide_birthday,
+            rsp.account_type,
+            llt,
+        ) = infos
         rsp.head = session.avatar_id
-        rsp.sign = db.get_players_info(player_id, "sign")
-        rsp.sex = db.get_players_info(player_id, "sex")
-        rsp.appearance.avatar_frame = db.get_players_info(player_id, "avatar_frame")
-        rsp.appearance.pendant = db.get_players_info(player_id, "pendant")
-        rsp.world_level = db.get_players_info(player_id, "world_level")
-
-        rsp.phone_background = db.get_players_info(player_id, "phone_background")
-        rsp.create_time = db.get_players_info(player_id, "create_time")
+        session.player_name = rsp.player_name
+        logger.info(f"Player login: {session.player_name}({session.player_id})")
+        make_ScenePlayer(session)
+        sync_player(session)
 
         chrp = Character()
         for chr in db.get_characters(player_id):
@@ -56,9 +75,6 @@ class Handler(PacketHandler):
             tmp = rsp.characters.add()
             tmp.CopyFrom(chrp)
 
-        rsp.team.char1, rsp.team.char2, rsp.team.char3 = db.get_players_info(
-            player_id, "team"
-        )
         rsp.scene_id = session.scene_id
         rsp.channel_id = session.channel_id
 
@@ -82,9 +98,6 @@ class Handler(PacketHandler):
         rsp.month_card_over_due_time = db.get_month_card_over_due_time(player_id)
         rsp.garden_likes_num, _, _, _, _ = db.get_garden_info(player_id)
         rsp.month_card_reward_days = db.get_month_card_reward_days(player_id)
-        rsp.birthday = db.get_players_info(player_id, "birthday")
-        rsp.is_hide_birthday = db.get_players_info(player_id, "is_hide_birthday")
-        rsp.account_type = db.get_players_info(player_id, "account_type")
         rsp.daily_task.tasks[1] = 521004  # TODO 随机生成每日月亮任务
         rsp.daily_task.tasks[2] = 521005
         rsp.daily_task.tasks[3] = 521006
@@ -94,7 +107,6 @@ class Handler(PacketHandler):
         session.send(MsgId.PlayerMainDataRsp, rsp, packet_id)  # 1005,1006
 
         # 计算体力和精力的回复
-        llt = db.get_players_info(session.player_id, "last_login_time")
         item = ItemDetail()
         item_b = db.get_item_detail(session.player_id, 10)  # 体力
         item.ParseFromString(item_b)

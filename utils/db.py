@@ -539,29 +539,26 @@ def get_player_id(user_id):
 
 def get_players_info(player_index, info_name):
     """获取玩家信息"""
-    # 如果是BLOB类型字段，需要反序列化
-    is_blob_field = info_name in ["team", "unlock_functions"]
-
     if isinstance(player_index, int):
         cur = db.execute(
             f"SELECT {info_name} FROM players WHERE player_id=?", (player_index,)
         )
-        row = cur.fetchone()
-        if row:
-            if is_blob_field and row[0]:
-                return pickle.loads(row[0])
-            return row[0]
-        return None
     else:
         cur = db.execute(
             f"SELECT {info_name} FROM players WHERE player_name=?", (player_index,)
         )
-        row = cur.fetchone()
-        if row:
-            if is_blob_field and row[0]:
-                return pickle.loads(row[0])
-            return row[0]
-        return None
+    row = cur.fetchone()
+    if row:
+        infos = []
+        # 如果是BLOB类型字段，需要反序列化
+        blob_fields = ["team", "unlock_functions"]
+        info_fields = info_name.split(",")
+        for i, info in enumerate(info_fields):
+            if info in blob_fields:
+                infos.append(pickle.loads(row[i]))
+            else:
+                infos.append(row[i])
+        return infos
 
 
 def get_player_name_exists(player_name):
@@ -839,8 +836,8 @@ def get_friend_info(player_id, friend_id=None, info_name="*"):
         )
         row = cur.fetchone()
         if row:
-            return row[0]
-        return None
+            return row
+        return [None]
     else:
         cur = db.execute(
             f"SELECT {info_name} FROM friend WHERE player_id=?",

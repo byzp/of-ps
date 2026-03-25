@@ -12,7 +12,6 @@ from proto.net_pb2 import (
     SceneActionType,
 )
 import utils.db as db
-import utils.pb_create as pb_create
 from server.scene_data import up_scene_action
 
 logger = logging.getLogger(__name__)
@@ -83,7 +82,7 @@ class Handler(PacketHandler):
         session.send(MsgId.UpdateCharacterAppearanceRsp, rsp, packet_id)
 
         # 如果更换的是badge且req.char_id是队伍角色1，更新数据库的队长徽章ID
-        team = db.get_players_info(session.player_id, "team")
+        team = db.get_players_info(session.player_id, "team")[0]
         if (
             req.HasField("appearance")
             and hasattr(req.appearance, "badge")
@@ -96,7 +95,7 @@ class Handler(PacketHandler):
             )
 
         # 发送场景同步通知
-        if char_id in db.get_players_info(session.player_id, "team"):
+        if char_id in team:
             session.scene_player.team.char1.character_appearance.CopyFrom(
                 req.appearance
             )

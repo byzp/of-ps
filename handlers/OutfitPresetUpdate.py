@@ -7,7 +7,6 @@ from proto.net_pb2 import (
     OutfitPresetUpdateRsp,
     StatusCode,
     Character,
-    OutfitPresetUpdateNotice,
     ServerSceneSyncDataNotice,
     SceneActionType,
 )
@@ -36,14 +35,8 @@ class Handler(PacketHandler):
         chr.outfit_presets[req.preset.preset_index].CopyFrom(req.preset)
         db.set_character(session.player_id, req.char_id, chr.SerializeToString())
 
-        rsp = OutfitPresetUpdateNotice()
-        rsp.status = StatusCode.StatusCode_OK
-        tmp = rsp.chars.add()
-        tmp.CopyFrom(chr)
-        session.send(MsgId.OutfitPresetUpdateNotice, rsp, packet_id)
-
         # 广播场景数据
-        if req.char_id in db.get_players_info(session.player_id, "team"):
+        if req.char_id in db.get_players_info(session.player_id, "team")[0]:
             pb_create.make_ScenePlayer(session)
             sy = ServerSceneSyncDataNotice()
             sy.status = StatusCode.StatusCode_OK

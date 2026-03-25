@@ -5,6 +5,7 @@ import logging
 from proto.net_pb2 import FriendSearchReq, FriendSearchRsp, StatusCode
 
 import utils.db as db
+from server.scene_data import get_session
 
 logger = logging.getLogger(__name__)
 
@@ -27,42 +28,43 @@ class Handler(PacketHandler):
         if isinstance(player_index, int):
             player_info = db.get_players_info(player_index, "player_id")
             if player_info:
-                player_id = player_index
+                player_id = player_index[0]
                 res = True
         else:
             player_info = db.get_players_info(req.search_args, "player_id")
             if player_info:
-                player_id = player_info
+                player_id = player_info[0]
                 res = True
         if res:
-            stat = db.get_friend_info(session.player_id, player_id, "friend_status")
+            other_info = rsp.data
+            (
+                other_info.player_id,
+                other_info.nick_name,
+                other_info.level,
+                other_info.head,
+                other_info.last_login_time,
+                other_info.sex,
+                other_info.phone_background,
+                other_info.sign,
+                other_info.guild_name,
+                other_info.team_leader_badge,
+                other_info.character_id,
+                other_info.create_time,
+                other_info.garden_like_num,
+                other_info.account_type,
+                other_info.birthday,
+                other_info.hide_value,
+                other_info.avatar_frame,
+            ) = db.get_players_info(
+                player_id,
+                "player_id,player_name,level,head,last_login_time,sex,phone_background,sign,guild_name,team_leader_badge,character_id,create_time,garden_like_num,account_type,birthday,hide_value,avatar_frame",
+            )
+            stat = db.get_friend_info(session.player_id, player_id, "friend_status")[0]
             if stat:
                 rsp.friend_status = stat
-            other_info = rsp.data
-            other_info.player_id = db.get_players_info(player_id, "player_id")
-            other_info.nick_name = db.get_players_info(player_id, "player_name")
-            other_info.level = db.get_players_info(player_id, "level")
-            other_info.head = db.get_players_info(player_id, "head")
-            other_info.last_login_time = 0
-            other_info.sex = db.get_players_info(player_id, "sex")
-            other_info.phone_background = db.get_players_info(
-                player_id, "phone_background"
-            )
-            other_info.is_online = db.get_players_info(player_id, "is_online")
-            other_info.sign = db.get_players_info(player_id, "sign")
-            other_info.guild_name = db.get_players_info(player_id, "guild_name")
-            other_info.team_leader_badge = db.get_players_info(
-                player_id, "team_leader_badge"
-            )
-            other_info.character_id = db.get_players_info(player_id, "character_id")
-            other_info.create_time = db.get_players_info(player_id, "create_time")
-            other_info.player_label = db.get_players_info(player_id, "player_id")
-            other_info.garden_like_num = db.get_players_info(
-                player_id, "garden_like_num"
-            )
-            other_info.account_type = db.get_players_info(player_id, "account_type")
-            other_info.birthday = db.get_players_info(player_id, "birthday")
-            other_info.hide_value = db.get_players_info(player_id, "hide_value")
-            other_info.avatar_frame = db.get_players_info(player_id, "avatar_frame")
+            other_info.player_label = other_info.player_id
+            online_sessions = get_session()
+            online_player_ids = [s.player_id for s in online_sessions]
+            other_info.is_online = player_id in online_player_ids
 
         session.send(MsgId.FriendSearchRsp, rsp, packet_id)  # 1739,1740

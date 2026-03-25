@@ -17,9 +17,9 @@ class Handler(PacketHandler):
         rsp = ChangeHideTypeRsp()
         rsp.status = StatusCode.StatusCode_OK
 
-        current_status = db.get_players_info(
-            session.player_id, "hide_value"
-        )  # 获取当前状态
+        current_status = db.get_players_info(session.player_id, "hide_value")[
+            0
+        ]  # 获取当前状态
         new_status = 0 if current_status else 1
 
         db.set_players_info(session.player_id, "hide_value", new_status)

@@ -43,7 +43,7 @@ class Handler(PacketHandler):
             tb.box_id = req.treasure_box_index
             for item in make_treasure_box_item(
                 session.player_id,
-                db.get_players_info(session.player_id, "world_level"),
+                db.get_players_info(session.player_id, "world_level")[0],
             ):
                 tb.rewards.add().CopyFrom(item)
                 rsp.items.add().CopyFrom(item)

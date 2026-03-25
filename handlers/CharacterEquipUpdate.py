@@ -33,7 +33,7 @@ class Handler(PacketHandler):
         chr.ParseFromString(db.get_characters(session.player_id, req.char_id)[0])
         ep1 = chr.equipment_presets[0]  # 装备套装方案目前仅0可用
 
-        if req.char_id in db.get_players_info(session.player_id, "team"):
+        if req.char_id in db.get_players_info(session.player_id, "team")[0]:
             # 场景同步
             sy = ServerSceneSyncDataNotice()
             sy.status = StatusCode.StatusCode_OK

@@ -25,7 +25,7 @@ class Handler(PacketHandler):
         rsp = FriendBlackRsp()
         rsp.status = StatusCode.StatusCode_OK
 
-        stat = db.get_friend_info(req.player_id, session.player_id, "friend_status")
+        stat = db.get_friend_info(req.player_id, session.player_id, "friend_status")[0]
 
         if stat:
             match stat:

@@ -35,9 +35,9 @@ class Handler(PacketHandler):
             session.player_id, item.SerializeToString(), req.item_id, None
         )
 
-        current_intimacy = (
-            db.get_friend_info(session.player_id, req.friend_id, "friend_intimacy") or 0
-        )
+        current_intimacy = db.get_friend_info(
+            session.player_id, req.friend_id, "friend_intimacy"
+        )[0]
         new_intimacy = current_intimacy + intimacy_increase
 
         db.set_friend_info(

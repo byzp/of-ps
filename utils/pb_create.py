@@ -27,7 +27,7 @@ def make_ScenePlayer(session):
     player.food_buff_ids.extend([5013073])  # 食物buff ID
     player.global_buff_ids.extend([481, 491])  # 全局buff ID buff未实现
 
-    birthday_str = db.get_players_info(session.player_id, "birthday")
+    birthday_str, char_ids = db.get_players_info(session.player_id, "birthday,team")
     if birthday_str:
         birthday_date = datetime.strptime(birthday_str, "%Y-%m-%d")
         today = datetime.now()
@@ -37,7 +37,6 @@ def make_ScenePlayer(session):
     else:
         player.is_birthday = False  # 判断生日
 
-    char_ids = db.get_players_info(session.player_id, "team")
     player.team.CopyFrom(make_SceneTeam(session.player_id, char_ids))
 
 
