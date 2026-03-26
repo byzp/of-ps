@@ -22,6 +22,7 @@ from proto.net_pb2 import (
     LifeBaseInfo,
     Chapter,
     MailContentType,
+    PBCollectionRewardData,
 )
 from utils.pb_create import make_item
 
@@ -464,7 +465,7 @@ def init_player(player_id):
         set_bless_tree(player_id, tree["i_d"], tree_id)
     # 初始化空间收集物, 没有就是未收集
     # for collection_t in res["CollectionItem"]["collection_item"]["datas"]:
-    #     collection=pb.PBCollectionRewardData()
+    #     collection=PBCollectionRewardData()
     #     collection.item_id=collection_t["i_d"]
     #     set_collection(player_id,collection_t["i_d"],collection_t["new_collection_type"],collection.SerializeToString())
 

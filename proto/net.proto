@@ -312,7 +312,10 @@ enum EActivityType {
     EActivityType_ActivityJigsaw = 7;
     EActivityType_Invite = 8;
     EActivityType_ActivityFashion = 9;
-    EActivityType_SeasonalMiniGames = 10;
+    EActivityType_ActivityInvitation = 10;
+    EActivityType_ActivityHomecoming = 11;
+    EActivityType_ActivityPile = 12;
+    EActivityType_ActivityJinli = 13;
 }
 
 enum AuditStatus {
@@ -354,14 +357,47 @@ enum EGemDuel_SkillTriggerEffect {
     EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400023 = 22;
     EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400024 = 23;
     EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400025 = 24;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400026 = 25;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400027 = 26;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400028 = 27;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400029 = 28;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400030 = 29;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400031 = 30;
+    EGemDuel_SkillTriggerEffect_GemDuel_SkillTriggerEffect400032 = 31;
 }
 
 enum EGemDuel_SkillAttribute {
     EGemDuel_SkillAttribute_None = 0;
-    EGemDuel_SkillAttribute_HP = 1;
-    EGemDuel_SkillAttribute_Att = 2;
-    EGemDuel_SkillAttribute_Arm = 3;
-    EGemDuel_SkillAttribute_Mag = 4;
+    EGemDuel_SkillAttribute_Phyatk = 1;
+    EGemDuel_SkillAttribute_Magatk = 2;
+    EGemDuel_SkillAttribute_Phydef = 3;
+    EGemDuel_SkillAttribute_Magdef = 4;
+    EGemDuel_SkillAttribute_Hp = 5;
+    EGemDuel_SkillAttribute_Maxhp = 6;
+    EGemDuel_SkillAttribute_Mp = 7;
+    EGemDuel_SkillAttribute_Maxmp = 8;
+    EGemDuel_SkillAttribute_Phyatkinc = 9;
+    EGemDuel_SkillAttribute_Magatkinc = 10;
+    EGemDuel_SkillAttribute_Phydefinc = 11;
+    EGemDuel_SkillAttribute_Magdefinc = 12;
+    EGemDuel_SkillAttribute_Definc = 13;
+    EGemDuel_SkillAttribute_Crit = 14;
+    EGemDuel_SkillAttribute_Critdmg = 15;
+    EGemDuel_SkillAttribute_Shield = 16;
+}
+
+enum EGemDuelDamageType {
+    EGemDuelDamageType_PhysicDamage = 0;
+    EGemDuelDamageType_MagicDamage = 1;
+}
+
+enum EGemDuelElementType {
+    EGemDuelElementType_Nomal = 0;
+    EGemDuelElementType_Windy = 1;
+    EGemDuelElementType_Water = 2;
+    EGemDuelElementType_Fire = 3;
+    EGemDuelElementType_Light = 4;
+    EGemDuelElementType_Dark = 5;
 }
 
 enum GemDuelGamePlayerType {
@@ -407,6 +443,8 @@ enum GemDuelActionType {
     GemDuelActionType_AddCharacter = 20;
     GemDuelActionType_EnergyChange = 21;
     GemDuelActionType_BuffChangeNum = 22;
+    GemDuelActionType_QuestConditionChange = 23;
+    GemDuelActionType_Skip = 24;
 }
 
 enum GemDuelQuestStatus {
@@ -728,6 +766,9 @@ enum StatusCode {
     StatusCode_GEM_DUEL_BUY_STAMINA_LIMIT = 1782;
     StatusCode_GEM_DUEL_TEAM_NOT_UNLOCK = 1783;
     StatusCode_GEM_DUEL_SHOP_REFRESH_LIMIT = 1784;
+    StatusCode_GrowthFund_HasBuy = 1785;
+    StatusCode_GrowthFund_Not_Buy = 1786;
+    StatusCode_GrowthFund_LevelLimit = 1787;
 }
 
 enum PlayerOfflineReason {
@@ -908,6 +949,11 @@ enum EGemDuelQuestType {
     EGemDuelQuestType_GemDuelWeeklyQuest = 3;
     EGemDuelQuestType_GemDuelAchievementQuest = 4;
     EGemDuelQuestType_GemDuelBadgeQuest = 5;
+}
+
+enum ActivitySandbagRewardType {
+    RewardType_Box = 0;
+    RewardType_Server = 1;
 }
 
 enum MPPlayRoomEventType {
@@ -1821,6 +1867,8 @@ message PlayerActivityRegular {
     int64 close_time = 3;
     repeated ActivityRegularAchieve daily_achieve = 4;
     repeated ActivityRegularAchieve pool_achieve = 5;
+    repeated ActivityRegularAchieve daily_refresh_achieve = 6;
+    bool param1 = 7;
 }
 
 message ActivityRegularAchieve {
@@ -2260,6 +2308,17 @@ message GemDuelGameCharacter {
     uint32 player_index = 14;
     uint32 buff_seq = 15;
     uint32 race_tag = 16;
+    uint32 attack_inc = 17;
+    uint32 magic_inc = 18;
+    uint32 atk_def = 19;
+    uint32 mag_def = 20;
+    uint32 atk_def_inc = 21;
+    uint32 mag_def_inc = 22;
+    uint32 definc = 23;
+    uint32 crit = 24;
+    uint32 critmg = 25;
+    EGemDuelDamageType damage_type = 26;
+    EGemDuelElementType element_type = 27;
 }
 
 message GemDueGameCharacterBuff {
@@ -2330,6 +2389,7 @@ message GemDuelAction {
     uint32 value = 15;
     GemDuelGameCharacter character = 16;
     GemDueGameCharacterBuff buff = 17;
+    repeated GemDuelCondition quest_condition = 18;
 }
 
 message GemDuelItem {
@@ -2450,6 +2510,36 @@ message GemDuelBattlePass {
     repeated uint32 pay_lv_reward_lst = 8;
 }
 
+message PlayerActivitySandbag {
+    uint32 activity_id = 1;
+    repeated PlayerActivityDailyBox box_list = 2;
+    repeated uint32 server_reward = 3;
+    int64 server_progress = 4;
+}
+
+message PlayerActivityDailyBox {
+    uint32 seq = 1;
+    uint32 item_id = 2;
+    int64 num = 3;
+    bool use_status = 4;
+    int64 create_time = 5;
+    uint32 pool_id = 6;
+}
+
+message PlayerActivityRecallData {
+    PlayerActivityBase base = 1;
+    repeated uint32 rewarded_tasks = 3;
+    string invite_code = 5;
+    bool been_invited = 6;
+}
+
+message PlayerActivityKoiData {
+    PlayerActivityBase base = 1;
+    repeated string codes = 2;
+    uint32 total_payment_num = 3;
+    uint32 next_reward_payment_num = 4;
+}
+
 message VerifyLoginTokenReq {
     uint32 account_type = 1;
     string sdk_uid = 2;
@@ -2564,6 +2654,7 @@ message PlayerMainDataRsp {
     bool sp_check_status = 40;
     repeated uint32 placed_characters = 41;
     uint32 phone_case = 42;
+    int64 recall_end_time = 43;
     string inherit_code = 80;
     bool has_inherit_gift = 81;
 }
@@ -6728,7 +6819,7 @@ message GemDuelFastFinishQuestReq {
 
 message GemDuelFastFinishQuestRsp {
     StatusCode status = 1;
-    repeated GemDuelQuest quest = 2;
+    GemDuelQuest quest = 2;
 }
 
 message GemDuelQuestDailyUpdateNotice {
@@ -6813,6 +6904,93 @@ message GemDuelBattlePassNotice {
     uint32 battle_pass_id = 2;
     uint32 battle_pass_lv = 3;
     uint32 total_exp = 4;
+}
+
+message ActivitySandbagNotice {
+    StatusCode status = 1;
+    repeated PlayerActivitySandbag info = 2;
+}
+
+message ActivitySandbagRewardReq {
+    uint32 activity_id = 1;
+    ActivitySandbagRewardType reward_type = 2;
+    repeated uint32 seq_list = 3;
+}
+
+message ActivitySandbagRewardRsp {
+    StatusCode status = 1;
+    uint32 activity_id = 2;
+    repeated uint32 seq_list = 3;
+    repeated ItemDetail rewards = 4;
+}
+
+message ActivitySandbagHitReq {
+    uint32 activity_id = 1;
+    uint32 npc_id = 2;
+    uint32 hit_count = 3;
+}
+
+message ActivitySandbagHitRsp {
+    StatusCode status = 1;
+    uint32 activity_id = 2;
+    uint32 npc_id = 3;
+    uint32 hit_count = 4;
+}
+
+message ActivitySandbagDropNotice {
+    StatusCode status = 1;
+    uint32 activity_id = 2;
+    repeated PlayerActivityDailyBox box_list = 3;
+}
+
+message ActivityRecallNotice {
+    StatusCode status = 1;
+    repeated PlayerActivityRecallData info = 2;
+}
+
+message ActivityRecallRewardClaimReq {
+    uint32 activity_id = 1;
+    uint32 condition_id = 2;
+}
+
+message ActivityRecallRewardClaimRsp {
+    StatusCode status = 1;
+    uint32 activity_id = 2;
+    uint32 condition_id = 3;
+    repeated ItemDetail rewards = 4;
+}
+
+message RecallCodeUseReq {
+    string code = 1;
+}
+
+message RecallCodeUseRsp {
+    StatusCode status = 1;
+    repeated ItemDetail rewards = 2;
+}
+
+message ActivityUploadWishTxtReq {
+    string txt = 1;
+}
+
+message ActivityUploadWishTxtRsp {
+    StatusCode status = 1;
+    string txt = 2;
+}
+
+message ActivityKoiNotice {
+    StatusCode status = 1;
+    repeated PlayerActivityKoiData info = 2;
+}
+
+message ActivityKoiUseItemReq {
+    uint32 num = 1;
+}
+
+message ActivityKoiUseItemRsp {
+    StatusCode status = 1;
+    uint32 num = 2;
+    repeated string codes = 3;
 }
 
 ///////////互联模块定义的msg，不属于游戏本身

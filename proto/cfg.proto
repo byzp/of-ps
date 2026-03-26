@@ -7492,3 +7492,89 @@ message WeatherConfigure {
     int32 new_season_type = 2;
 }
 
+message AllActivityJinliDatas {
+    JinliDatas jinli = 1;
+}
+
+message JinliDatas {
+    repeated JinliConfigure datas = 1;
+}
+
+message JinliConfigure {
+    int32 i_d = 1;
+    string settle_time = 2;
+    int32 params1 = 3;
+    int32 params2 = 4;
+    int32 params3 = 5;
+    int32 params4 = 6;
+}
+
+message AllInteractionActivityDatas {
+    ActivityInteractionDatas activity_interaction = 1;
+    FullServerActivityDatas full_server_activity = 2;
+    RecallActivityDatas recall_activity = 3;
+}
+
+message ActivityInteractionDatas {
+    repeated ActivityInteractionConfigure datas = 1;
+}
+
+message ActivityInteractionConfigure {
+    int32 i_d = 1;
+    int32 object_i_d = 2;
+    int32 new_garden_activities = 3;
+    repeated ActivityInteractionItems activity_interaction_item = 4;
+}
+
+message ActivityInteractionItems {
+    int32 index = 1;
+    int32 special_type = 2;
+    int32 reward_pool_group_i_d = 3;
+    int32 output_ceiling = 4;
+    int32 reset_type = 5;
+    int32 daily = 6;
+    int32 weekly = 7;
+    int32 monthly = 8;
+}
+
+message FullServerActivityDatas {
+    repeated FullServerActivityConfigure datas = 1;
+}
+
+message FullServerActivityConfigure {
+    int32 i_d = 1;
+    repeated FullServerActivityItems full_server_activity_item = 2;
+}
+
+message FullServerActivityItems {
+    int32 index = 1;
+    int32 completion_count = 2;
+    repeated FullServerActivityRewardItems full_server_activity_reward_item = 3;
+}
+
+message FullServerActivityRewardItems {
+    int32 item_i_d = 1;
+    int32 item_num = 2;
+}
+
+message RecallActivityDatas {
+    repeated RecallActivityConfigure datas = 1;
+}
+
+message RecallActivityConfigure {
+    int32 i_d = 1;
+    int32 relation_i_d = 2;
+    repeated RecallActivityItems recall_activity_item = 3;
+}
+
+message RecallActivityItems {
+    int32 index = 1;
+    int32 achieve_condition_i_d = 2;
+    bool hidden_state = 3;
+    repeated RecallActivityRewardItems recall_activity_reward_item = 4;
+}
+
+message RecallActivityRewardItems {
+    int32 item_i_d = 1;
+    int32 item_num = 2;
+}

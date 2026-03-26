@@ -104,6 +104,8 @@ class Handler(PacketHandler):
         rsp.daily_task.tasks[4] = 521007
         rsp.daily_task.exchange_times_left = 0
         rsp.appearance.CopyFrom(PlayerAppearance())
+        rsp.sp_open_status = True
+        rsp.sp_check_status = True
         session.send(MsgId.PlayerMainDataRsp, rsp, packet_id)  # 1005,1006
 
         # 计算体力和精力的回复
