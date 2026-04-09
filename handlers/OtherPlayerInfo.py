@@ -61,6 +61,12 @@ class Handler(PacketHandler):
                 rsp.friend_intimacy,
                 rsp.friend_background,
             ) = friend_info
+        if (
+            db.get_friend_info(session.player_id, req.player_id, "friend_status")[0]
+            == 3
+        ):
+            # 任意一方黑名单都导致双方不可加好友
+            rsp.friend_status = 3
         session.send(
             MsgId.OtherPlayerInfoRsp, rsp, packet_id
         )  # 1965 1966 获取其他玩家信息

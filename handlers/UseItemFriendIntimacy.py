@@ -49,7 +49,6 @@ class Handler(PacketHandler):
 
         rsp.intimacy = new_intimacy
         rsp.friend_id = req.friend_id
-        print(rsp)
 
         session.send(
             MsgId.UseItemFriendIntimacyRsp, rsp, packet_id

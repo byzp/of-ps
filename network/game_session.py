@@ -99,8 +99,8 @@ class GameSession:
 
         self._seq_id = 1
 
-        self.player_id = None
-        self.player_name = None
+        self.player_id = 0
+        self.player_name = ""
         self.scene_id = 1
         self.channel_id = 1
         self.chat_channel_id = 1

@@ -2,7 +2,7 @@ class Config:
     # HTTP Server
     HTTP_HOST = "0.0.0.0"
     HTTP_PORT = 21000
-    RES_VERSION = "2026-03-17-09-15-35_2026-03-26-13-05-28"
+    RES_VERSION = "2026-03-17-09-15-35_2026-04-08-14-35-59"
     RES_URL = "http://cdn-of.inutan.com/Resources;https://cdn-of.inutan.com/Resources;http://127.0.0.1:21000/Resources"
 
     GAME_SERVER_GADGET_IP = "127.0.0.1"  # access

@@ -27,10 +27,10 @@ class Handler(PacketHandler):
 
         stat = db.get_friend_info(session.player_id, req.player_id, "friend_status")[0]
 
-        if stat:
+        if stat != None:
             match stat:
-                case 0:  # 存在记录但非好友,正常不可能触发
-                    pass
+                case 0:  # 非好友
+                    rsp.type = StatusCode.StatusCode_FRIEND_NOT_APPLY
                 case 1:  # 已发过申请
                     rsp1 = FriendHandleNotice()
                     rsp1.status = StatusCode.StatusCode_OK
@@ -52,24 +52,19 @@ class Handler(PacketHandler):
                                 s.send(MsgId.FriendHandleNotice, rsp1, 0)
                                 break
                     else:
-                        db.del_friend_info(session.player_id, req.player_id)
+                        db.set_friend_info(
+                            session.player_id, req.player_id, "friend_status", 0
+                        )
                         # 对方不需要知道被拒绝
                         rsp1.type = FriendHandleType.FriendHandleType_DEL
                         rsp1.target_player_id = req.player_id
                         session.send(MsgId.FriendHandleNotice, rsp1, 0)
-                case 2:  # 好友,正常也不可能
-                    rsp.status = StatusCode.StatusCode_FRIEND_EXIST
-                    session.send(MsgId.FriendHandleRsp, rsp, packet_id)
-                    return
-                case 3:  # 黑名单
+                case 2 | 3:  # 好友/黑名单
                     if req.is_agree:
-                        rsp.status = StatusCode.StatusCode_FRIEND_BLACK
-                        session.send(MsgId.FriendHandleRsp, rsp, packet_id)
-                        return
+                        rsp.status = StatusCode.StatusCode_FRIEND_NOT_APPLY
                     else:
                         rsp1 = FriendHandleNotice()
                         rsp1.status = StatusCode.StatusCode_OK
-                        db.del_friend_info(session.player_id, req.player_id)
                         rsp1.type = FriendHandleType.FriendHandleType_DEL
                         rsp1.target_player_id = req.player_id
                         session.send(MsgId.FriendHandleNotice, rsp1, 0)

@@ -27,13 +27,14 @@ class Handler(PacketHandler):
 
         stat = db.get_friend_info(req.player_id, session.player_id, "friend_status")[0]
 
-        if stat:
+        if stat != None:
             match stat:
-                case 0, 1:  # 还不是好友/已发过申请
+                case 0 | 1 | 3:  # 还不是好友/已发过申请/已在黑名单
                     if req.is_remove:
-                        db.del_friend_info(session.player_id, req.player_id)
+                        db.set_friend_info(
+                            session.player_id, req.player_id, "friend_status", 0
+                        )
                     else:
-
                         db.set_friend_info(
                             session.player_id, req.player_id, "friend_status", 3
                         )
@@ -45,7 +46,9 @@ class Handler(PacketHandler):
                         session.player_id, req.player_id, "friend_status", 3
                     )
                     # 从对方好友删除自己
-                    db.del_friend_info(req.player_id, session.player_id)
+                    db.set_friend_info(
+                        req.player_id, session.player_id, "friend_status", 0
+                    )
 
                     rsp1.type = FriendHandleType.FriendHandleType_DEL
                     rsp1.target_player_id == req.player_id
@@ -55,12 +58,8 @@ class Handler(PacketHandler):
                             rsp1.target_player_id == session.player_id
                             s.send(MsgId.FriendHandleNotice, rsp1, 0)
                             break
-                case 3:  # 已在黑名单
-                    db.del_friend_info(session.player_id, req.player_id)
         else:
-            if req.is_remove:
-                db.del_friend_info(session.player_id, req.player_id)
-            else:
-                db.set_friend_info(session.player_id, req.player_id, "friend_status", 3)
+            db.init_friend(req.player_id, session.player_id)
+            db.set_friend_info(session.player_id, req.player_id, "friend_status", 3)
 
         session.send(MsgId.FriendBlackRsp, rsp, packet_id)

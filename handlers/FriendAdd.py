@@ -27,9 +27,9 @@ class Handler(PacketHandler):
 
         stat = db.get_friend_info(req.player_id, session.player_id, "friend_status")[0]
 
-        if stat:
+        if stat != None:
             match stat:
-                case 0:  # 存在记录但非好友,正常不可能触发
+                case 0:  # 曾经是好友
                     pass
                 case 1:  # 已发过申请
                     rsp.status = StatusCode.StatusCode_FRIEND_APPLY_EXIST

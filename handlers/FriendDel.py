@@ -27,18 +27,20 @@ class Handler(PacketHandler):
 
         stat = db.get_friend_info(req.player_id, session.player_id, "friend_status")[0]
 
-        if stat:
+        if stat != None:
             match stat:
-                case 0:  # 存在记录但非好友,正常不可能触发
-                    pass
-                case 1:  # 还不是好友,正常不会触发
+                case 0 | 1 | 3:  # 非好友/申请中/黑名单
                     pass
                 case 2:  # 好友
                     rsp1 = FriendHandleNotice()
                     rsp1.status = StatusCode.StatusCode_OK
                     # 互删
-                    db.del_friend_info(req.player_id, session.player_id)
-                    db.del_friend_info(session.player_id, req.player_id)
+                    db.set_friend_info(
+                        req.player_id, session.player_id, "friend_status", 0
+                    )
+                    db.set_friend_info(
+                        session.player_id, req.player_id, "friend_status", 0
+                    )
 
                     rsp1.type = FriendHandleType.FriendHandleType_DEL
                     rsp1.target_player_id == req.player_id
@@ -48,7 +50,5 @@ class Handler(PacketHandler):
                             rsp1.target_player_id == session.player_id
                             s.send(MsgId.FriendHandleNotice, rsp1, 0)
                             break
-                case 3:  # 黑名单,正常不会触发
-                    pass
 
         session.send(MsgId.FriendDelRsp, rsp, packet_id)
