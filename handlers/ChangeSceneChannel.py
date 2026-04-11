@@ -10,6 +10,7 @@ from proto.net_pb2 import (
     StatusCode,
     PackNotice,
     SceneActionType,
+    ChatMsgRecordInitNotice,
 )
 
 import server.scene_data as scene_data
@@ -41,8 +42,8 @@ class Handler(PacketHandler):
 
         rsp.scene_id = req.scene_id
         rsp.channel_id = session.channel_id
-        rsp.channel_label = session.channel_id
-        rsp.password_allow_time = 0
+        # rsp.channel_label = session.channel_id
+        # rsp.password_allow_time = 0
         rsp.target_player_id = req.target_player_label
 
         session.send(MsgId.ChangeSceneChannelRsp, rsp, packet_id)
@@ -51,6 +52,11 @@ class Handler(PacketHandler):
         rsp = SceneDataNotice()
         rsp.CopyFrom(make_SceneDataNotice(session))
         session.send(MsgId.SceneDataNotice, rsp, 0)
+
+        # TODO 同步聊天记录
+        rsp = ChatMsgRecordInitNotice()
+        rsp.status = StatusCode.StatusCode_OK
+        session.send(MsgId.ChatMsgRecordInitNotice, rsp, 0)
 
         # 回花园时将临时背包物品更新到仓库
         if req.scene_id == 9999:

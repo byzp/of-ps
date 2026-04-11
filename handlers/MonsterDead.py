@@ -17,7 +17,7 @@ class Handler(PacketHandler):
         rsp = MonsterDeadRsp()
         rsp.status = StatusCode.StatusCode_OK
         rsp.monster_index = req.monster_index  # TODO ?
-        if not bool(random.randint(0, 1)) or True:
+        if not bool(random.randint(0, 1)) and session.dungeon[0] == 0:
             if len(session.drop_items) == 0:
                 rsp.drop_item.index = 1
             else:

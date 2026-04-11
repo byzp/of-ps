@@ -22,7 +22,6 @@ from proto.net_pb2 import (
     LifeBaseInfo,
     Chapter,
     MailContentType,
-    PBCollectionRewardData,
 )
 from utils.pb_create import make_item
 
@@ -279,6 +278,14 @@ def init():
             challenge_id INTEGER NOT NULL,
             challenge_blob BLOB NOT NULL,
             PRIMARY KEY (player_id, scene_id, challenge_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS dungeons (
+            player_id INTEGER NOT NULL,
+            dungeon_id INTEGER NOT NULL,
+            dungeon_blob BLOB NOT NULL,
+            PRIMARY KEY (player_id, dungeon_id),
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
         
@@ -1276,4 +1283,34 @@ def set_challenge(player_id, scene_id, challenge_id, challenge_blob):
     db.execute(
         "INSERT OR REPLACE INTO challenges (player_id, scene_id, challenge_id, challenge_blob) VALUES (?, ?, ?, ?)",
         (player_id, scene_id, challenge_id, challenge_blob),
+    )
+
+
+def get_dungeon(player_id, dungeon_id=None) -> list:
+    """team在一个字段存储两位角色, 对应上下间"""
+    if dungeon_id:
+        cur = db.execute(
+            "SELECT dungeon_blob FROM dungeons WHERE player_id=? AND dungeon_id=?",
+            (player_id, dungeon_id),
+        )
+        row = cur.fetchone()
+        if row:
+            return row[0]
+    else:
+        dungeons = {}
+        cur = db.execute(
+            "SELECT dungeon_id, dungeon_blob FROM dungeons WHERE player_id=?",
+            (player_id,),
+        )
+        rows = cur.fetchall()
+        if rows:
+            for row in rows:
+                dungeons[row[0]] = row[1]
+        return dungeons
+
+
+def set_dungeon(player_id, dungeon_id, dungeon_blob):
+    db.execute(
+        "INSERT OR REPLACE INTO dungeons (player_id, dungeon_id, dungeon_blob) VALUES (?, ?, ?)",
+        (player_id, dungeon_id, dungeon_blob),
     )

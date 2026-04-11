@@ -1,6 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
 
 from proto.net_pb2 import (
     DungeonExitReq,
@@ -10,12 +9,12 @@ from proto.net_pb2 import (
     StatusCode,
     SceneActionType,
     ServerSceneSyncDataNotice,
+    DungeonData,
 )
 
 import server.scene_data as scene_data
 from utils.pb_create import make_SceneDataNotice
-
-logger = logging.getLogger(__name__)
+import utils.db as db
 
 
 @packet_handler(MsgId.DungeonExitReq)
@@ -28,6 +27,13 @@ class Handler(PacketHandler):
         rsp.status = StatusCode.StatusCode_OK
         rsp.scene_id = session.scene_id
 
+        dg = DungeonData()
+        dg.ParseFromString(
+            db.get_dungeon(session.player_id, session.dungeon[0])
+        )  # 在更新队伍时初始化，不会为空
+        dg.exit_times += 1
+        db.set_dungeon(session.player_id, dg.dungeon_id, dg.SerializeToString())
+        session.dungeon = [0, 0, 0, -1]
         session.send(MsgId.DungeonExitRsp, rsp, packet_id)
 
         # 更新场景

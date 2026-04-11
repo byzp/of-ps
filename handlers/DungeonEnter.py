@@ -1,6 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
 import time
 
 from proto.net_pb2 import (
@@ -10,12 +9,12 @@ from proto.net_pb2 import (
     ServerSceneSyncDataNotice,
     StatusCode,
     SceneActionType,
+    DungeonData,
 )
 
 import server.scene_data as scene_data
 from utils.pb_create import make_SceneTeam
-
-logger = logging.getLogger(__name__)
+from utils.res_loader import res
 
 
 @packet_handler(MsgId.DungeonEnterReq)
@@ -37,9 +36,20 @@ class Handler(PacketHandler):
         rsp.dungeon_data.char2 = req.char2
         rsp.dungeon_data.char3 = req.char3
         rsp.dungeon_data.last_enter_time = int(time.time())
-        rsp.dungeon_data.pos.CopyFrom(req.pos)
-        rsp.dungeon_data.rot.CopyFrom(req.rot)
+        # rsp.dungeon_data.pos.CopyFrom(req.pos)
+        # rsp.dungeon_data.rot.CopyFrom(req.rot)
+        session.dungeon[0] = req.dungeon_id
 
+        find = False
+        for i in res["Abyss"]["abyss_stage"]["datas"]:
+            for ii in i["abyss_stage_group_info"]:
+                if ii["dungeon_i_d"] == req.dungeon_id:
+                    if ii.get("is_double_team"):
+                        session.dungeon[3] == 0
+                    find = True
+                    break
+            if find:
+                break
         session.send(MsgId.DungeonEnterRsp, rsp, packet_id)
 
         # 向其他玩家广播离开事件

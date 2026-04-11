@@ -579,7 +579,9 @@ def make_SceneDataNotice(session):
         data.scene_garden_data.garden_furniture_info_map[furniture[3]].ParseFromString(
             furniture[4]
         )
-
+    for m in res["Flag"]["flag"]["datas"]:
+        if m["scene_i_d"] == session.scene_id and m["icon_i_d"] in [1, 7]:
+            rsp.data.flag_ids.append(m["i_d"])
     for i in scene_data.get_scene_player(session.scene_id, session.channel_id):
         data.players.add().CopyFrom(i)
     data.channel_id = session.channel_id
