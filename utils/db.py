@@ -288,8 +288,14 @@ def init():
             PRIMARY KEY (player_id, dungeon_id),
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
-        
-        CREATE INDEX IF NOT EXISTS idx_gacha_record_player ON gacha_record(player_id, gacha_id, gacha_time);
+
+        CREATE TABLE IF NOT EXISTS boss_rush_info (
+            player_id INTEGER NOT NULL,
+            season_id INTEGER NOT NULL,
+            info_blob BLOB NOT NULL,
+            PRIMARY KEY (player_id, season_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
 
         INSERT OR IGNORE INTO users (id, username, password, user_token) VALUES (1000000, "", "", "");
     """
@@ -1313,4 +1319,22 @@ def set_dungeon(player_id, dungeon_id, dungeon_blob):
     db.execute(
         "INSERT OR REPLACE INTO dungeons (player_id, dungeon_id, dungeon_blob) VALUES (?, ?, ?)",
         (player_id, dungeon_id, dungeon_blob),
+    )
+
+
+def get_boss_rush_info(player_id, season_id):
+    cur = db.execute(
+        "SELECT info_blob FROM boss_rush_info WHERE player_id=? AND season_id=?",
+        (player_id, season_id),
+    )
+    row = cur.fetchone()
+    if row:
+        return row[0]
+    return None
+
+
+def set_boss_rush_info(player_id, season_id, info_blob):
+    db.execute(
+        "INSERT OR REPLACE INTO boss_rush_info (player_id, season_id, info_blob) VALUES (?, ?, ?)",
+        (player_id, season_id, info_blob),
     )

@@ -9,7 +9,6 @@ from proto.net_pb2 import (
     ServerSceneSyncDataNotice,
     StatusCode,
     SceneActionType,
-    DungeonData,
 )
 
 import server.scene_data as scene_data

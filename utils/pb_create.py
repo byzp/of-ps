@@ -563,6 +563,16 @@ def make_SceneDataNotice(session):
     pos = session.pos.get(session.scene_id)
     if pos:
         session.scene_player.team.char1.pos.CopyFrom(pos)
+    else:
+        pos = session.scene_player.team.char1.pos
+        rot = session.scene_player.team.char1.rot
+        for i in res["ScenesConfigAsset"]["Scenes"]:
+            if i["ID"] == session.scene_id:
+                pos.x = int(i["Born"][0]["Position"]["x"] * 100)
+                pos.y = int(i["Born"][0]["Position"]["y"] * 100)
+                pos.z = int(i["Born"][0]["Position"]["z"] * 100)
+                rot.y = int(i["Born"][0]["Rotation"]["y"] * 100)
+                break
     data.players.add().CopyFrom(session.scene_player)
     for i in range(0, 12):
         tmp = data.collections.add()
