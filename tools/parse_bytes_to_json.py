@@ -4,14 +4,14 @@ bytes_to_json.py
 
 说明:
 - 先运行:
-    protoc --descriptor_set_out=net.desc --include_imports net.proto
-  然后运行本脚本（与 net.desc 同目录或用 --desc 指定路径）。
+    protoc --descriptor_set_out=cfg.desc --include_imports cfg.proto
+  然后运行本脚本（与 cfg.desc 同目录或用 --desc 指定路径）。
 - 默认映射规则: "ActivityGift.bytes" -> message name "AllActivityGiftDatas"
   (即: "All" + <FileStem> + "Datas")。如果规则不适用，可在 mapping.json 指定显式映射。
 
 用法:
     python bytes_to_json.py \
-        --desc net.desc \
+        --desc cfg.desc \
         --indir ./bytes_files \
         --outdir ./out \
         [--mapping mapping.json]
@@ -76,7 +76,7 @@ def find_descriptor(pool: descriptor_pool.DescriptorPool, full_name_guess: str):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--desc", required=True, help="path to descriptor set (net.desc)")
+    ap.add_argument("--desc", required=True, help="path to descriptor set (cfg.desc)")
     ap.add_argument(
         "--indir", default=".", help="input directory containing .bytes files"
     )
