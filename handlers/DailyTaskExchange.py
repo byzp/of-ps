@@ -50,7 +50,7 @@ class Handler(PacketHandler):
         tmp = db.get_item_detail(session.player_id, 125)  # 祈愿石
         tmp1 = ItemDetail()
         if not tmp:
-            tmp1.CopyFrom(make_item(125, 0, session.player_id))
+            make_item(125, 0, session.player_id, tmp1)
         else:
             tmp1.ParseFromString(tmp)
         num_t = tmp1.main_item.base_item.num

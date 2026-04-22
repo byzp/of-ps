@@ -9,6 +9,7 @@ from proto.net_pb2 import (
     StatusCode,
     SceneDataNotice,
     PBCollectionRewardData,
+    PlayerBriefInfo,
 )
 import utils.db as db
 from datetime import datetime
@@ -37,21 +38,22 @@ def make_ScenePlayer(session):
     else:
         player.is_birthday = False  # 判断生日
 
-    player.team.CopyFrom(make_SceneTeam(session.player_id, char_ids))
+    make_SceneTeam(session.player_id, char_ids, player.team)
 
 
-def make_SceneTeam(player_id, char_ids):
-    team = SceneTeam()
+def make_SceneTeam(player_id, char_ids, team=None):
+    if team == None:
+        team = SceneTeam()
     if char_ids[0]:
         char1 = team.char1
         char1.char_id = char_ids[0]
 
         chr = Character()
         chr.ParseFromString(db.get_characters(player_id, char_ids[0])[0])
-        char1.outfit_preset.CopyFrom(
-            make_SceneCharacterOutfitPreset(
-                player_id, chr.outfit_presets[chr.in_use_outfit_preset_index]
-            )
+        make_SceneCharacterOutfitPreset(
+            player_id,
+            chr.outfit_presets[chr.in_use_outfit_preset_index],
+            char1.outfit_preset,
         )
 
         char1.character_appearance.CopyFrom(chr.character_appearance)
@@ -73,10 +75,10 @@ def make_SceneTeam(player_id, char_ids):
 
         chr = Character()
         chr.ParseFromString(db.get_characters(player_id, char_ids[1])[0])
-        char2.outfit_preset.CopyFrom(
-            make_SceneCharacterOutfitPreset(
-                player_id, chr.outfit_presets[chr.in_use_outfit_preset_index]
-            )
+        make_SceneCharacterOutfitPreset(
+            player_id,
+            chr.outfit_presets[chr.in_use_outfit_preset_index],
+            char2.outfit_preset,
         )
 
         char2.character_appearance.CopyFrom(chr.character_appearance)
@@ -97,10 +99,10 @@ def make_SceneTeam(player_id, char_ids):
 
         chr = Character()
         chr.ParseFromString(db.get_characters(player_id, char_ids[2])[0])
-        char3.outfit_preset.CopyFrom(
-            make_SceneCharacterOutfitPreset(
-                player_id, chr.outfit_presets[chr.in_use_outfit_preset_index]
-            )
+        make_SceneCharacterOutfitPreset(
+            player_id,
+            chr.outfit_presets[chr.in_use_outfit_preset_index],
+            char3.outfit_preset,
         )
 
         char3.character_appearance.CopyFrom(chr.character_appearance)
@@ -118,8 +120,9 @@ def make_SceneTeam(player_id, char_ids):
     return team
 
 
-def make_SceneCharacterOutfitPreset(player_id, outfit):
-    sc = SceneCharacterOutfitPreset()
+def make_SceneCharacterOutfitPreset(player_id, outfit, sc=None):
+    if sc == None:
+        sc = SceneCharacterOutfitPreset()
     item = ItemDetail()
     if outfit.hat > 0:
         item.ParseFromString(db.get_item_detail(player_id, outfit.hat))
@@ -206,14 +209,15 @@ def make_SceneCharacterOutfitPreset(player_id, outfit):
     return sc
 
 
-def make_item(item_id, num=1, player_id=0) -> list:
+def make_item(item_id, num=1, player_id=0, item_detail=None) -> list:
+    if item_detail == None:
+        item_detail = ItemDetail()
     for i in res["Item"]["item"]["datas"]:
         if i["i_d"] == item_id:
             match i["new_bag_item_tag"]:
                 case EBagItemTag.EBagItemTag_Weapon:  # 武器 tag:2
                     for weapon_i in res["Weapon"]["weapon"]["datas"]:
                         if weapon_i["i_d"] == item_id:
-                            item_detail = ItemDetail()
                             item_detail.pack_type = (
                                 ItemDetail.PackType.PackType_TempStorageArea
                             )
@@ -270,7 +274,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                 case EBagItemTag.EBagItemTag_Armor:  # 防具 tag:3
                     for armor_i in res["Armor"]["armor"]["datas"]:
                         if armor_i["i_d"] == item_id:
-                            item_detail = ItemDetail()
                             tmp = item_detail.main_item
                             tmp.item_id = armor_i["i_d"]
                             tmp.item_tag = EBagItemTag.EBagItemTag_Armor
@@ -347,7 +350,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                                     return item_detail
 
                 case EBagItemTag.EBagItemTag_Poster:  # 映像 tag:5
-                    item_detail = ItemDetail()
                     tmp = item_detail.main_item
                     tmp.item_id = i["i_d"]
                     tmp.item_tag = i["new_bag_item_tag"]
@@ -358,7 +360,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     return item_detail
 
                 case EBagItemTag.EBagItemTag_Inscription:  # 铭文 tag:17
-                    item_detail = ItemDetail()
                     tmp = item_detail.main_item
                     tmp.item_id = i["i_d"]
                     tmp.item_tag = i["new_bag_item_tag"]
@@ -367,7 +368,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     return item_detail
 
                 case EBagItemTag.EBagItemTag_Card:  # 收藏卡 tag:7
-                    item_detail = ItemDetail()
                     tmp = item_detail.main_item
                     tmp.item_id = i["i_d"]
                     tmp.item_tag = i["new_bag_item_tag"]
@@ -422,7 +422,6 @@ def make_item(item_id, num=1, player_id=0) -> list:
                     # EBagItemTag.EBagItemTag_BattlePassGiftCard # 战斗通行证礼物卡 tag:50
                     # EBagItemTag.EBagItemTag_SeasonalMiniGamesItem:  # 小游戏道具 tag:51
                     # EBagItemTag.EBagItemTag_Vehicle
-                    item_detail = ItemDetail()
                     tmp = item_detail.main_item
                     tmp.item_id = i["i_d"]
                     tmp.item_tag = i["new_bag_item_tag"]
@@ -598,3 +597,36 @@ def make_SceneDataNotice(session):
     data.tod_time = int(notice_sync.tod_time)
     data.channel_label = session.channel_id
     return rsp
+
+
+def make_PlayerBriefInfo(player_id, info=None):
+    # 获取在线玩家列表
+    online_sessions = scene_data.get_session()
+    online_player_ids = [s.player_id for s in online_sessions]
+    if info == None:
+        info = PlayerBriefInfo()
+    info.is_online = player_id in online_player_ids
+    (
+        info.player_id,
+        info.nick_name,
+        info.level,
+        info.head,
+        info.last_login_time,
+        info.sex,
+        info.phone_background,
+        info.sign,
+        info.guild_name,
+        info.team_leader_badge,
+        info.character_id,
+        info.create_time,
+        info.player_label,
+        info.garden_like_num,
+        info.account_type,
+        info.birthday,
+        info.hide_value,
+        info.avatar_frame,
+    ) = db.get_players_info(
+        player_id,
+        "player_id,player_name,level,head,last_login_time,sex,phone_background,sign,guild_name,team_leader_badge,character_id,create_time,player_id,garden_like_num,account_type,birthday,hide_value,avatar_frame",
+    )
+    return info

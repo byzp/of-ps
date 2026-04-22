@@ -32,13 +32,8 @@ class Handler(PacketHandler):
         )  # TODO 暂时不知道具体奖励内容,先给1000个金币
         tmp1 = ItemDetail()
         if not item:
-            tmp1.CopyFrom(
-                make_item(
-                    101,
-                    0,
-                    session.player_id,
-                )
-            )
+            make_item(101, 0, session.player_id, tmp1)
+
         else:
             tmp1.ParseFromString(item)
         num_t = tmp1.main_item.base_item.num

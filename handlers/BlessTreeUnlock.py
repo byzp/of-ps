@@ -69,9 +69,8 @@ class Handler(PacketHandler):
                         if item_b:
                             item.ParseFromString(item_b)
                         else:
-                            item.CopyFrom(
-                                make_item(i["reward_item_i_d"], 0, session.player_id)
-                            )
+                            make_item(i["reward_item_i_d"], 0, session.player_id, item)
+
                         num_t = item.main_item.base_item.num
                         item.main_item.base_item.num = i["reward_item_count"]
                         rsp.rewards.add().CopyFrom(item)

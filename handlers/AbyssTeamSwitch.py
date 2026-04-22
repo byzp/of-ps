@@ -28,5 +28,5 @@ class Handler(PacketHandler):
         char_ids.append(char_unpack(tmp.char1)[1])
         char_ids.append(char_unpack(tmp.char2)[1])
         char_ids.append(char_unpack(tmp.char3)[1])
-        rsp.team.CopyFrom(make_SceneTeam(session.player_id, char_ids))
+        make_SceneTeam(session.player_id, char_ids, rsp.team)
         session.send(MsgId.AbyssTeamSwitchRsp, rsp, packet_id)

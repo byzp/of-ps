@@ -32,13 +32,7 @@ class Handler(PacketHandler):
                 cur_t = db.get_item_detail(session.player_id, 102)
                 cur_item = ItemDetail()
                 if not cur_t:
-                    cur_item.CopyFrom(
-                        make_item(
-                            102,
-                            0,
-                            session.player_id,
-                        )
-                    )
+                    make_item(102, 0, session.player_id, cur_item)
                 else:
                     cur_item.ParseFromString(cur_t)
                 num = cur_item.main_item.base_item.num

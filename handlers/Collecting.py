@@ -49,7 +49,7 @@ class Handler(PacketHandler):
                 if item_b:
                     item.ParseFromString(item_b)
                 else:
-                    item.CopyFrom(make_item(item_t["text_i_d"], 0))
+                    make_item(item_t["text_i_d"], 0, 0, item)
                 num_t = item.main_item.base_item.num
                 item.main_item.base_item.num = 1
                 rsp.items.add().CopyFrom(item)

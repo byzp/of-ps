@@ -47,12 +47,8 @@ class Handler(PacketHandler):
                             )
                             tmp1 = ItemDetail()
                             if not item:
-                                tmp1.CopyFrom(
-                                    make_item(
-                                        item_t["item_i_d"],
-                                        0,
-                                        session.player_id,
-                                    )
+                                make_item(
+                                    item_t["item_i_d"], 0, session.player_id, tmp1
                                 )
                             else:
                                 tmp1.ParseFromString(item)

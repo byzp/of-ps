@@ -28,7 +28,7 @@ class Handler(PacketHandler):
         char_ids.append(req.char1)
         char_ids.append(req.char2)
         char_ids.append(req.char3)
-        rsp.team.CopyFrom(make_SceneTeam(session.player_id, char_ids))
+        make_SceneTeam(session.player_id, char_ids, rsp.team)
         rsp.dungeon_data.dungeon_id = req.dungeon_id
         rsp.dungeon_data.enter_times = 1
         rsp.dungeon_data.char1 = req.char1

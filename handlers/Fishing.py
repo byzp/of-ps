@@ -52,13 +52,7 @@ class Handler(PacketHandler):
                 if fish_b:
                     fish.ParseFromString(fish_b)
                 else:
-                    fish.CopyFrom(
-                        make_item(
-                            fish_id,
-                            0,
-                            session.player_id,
-                        )
-                    )
+                    make_item(fish_id, 0, session.player_id, fish)
                     fish.main_item.is_new = True
                 fish.main_item.base_item.num += 1
                 db.set_item_detail(session.player_id, fish.SerializeToString(), fish_id)

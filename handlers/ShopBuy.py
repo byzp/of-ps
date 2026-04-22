@@ -51,12 +51,11 @@ class Handler(PacketHandler):
                                         )
                                         cur_item = ItemDetail()
                                         if not cur_t:
-                                            cur_item.CopyFrom(
-                                                make_item(
-                                                    currency["currency_i_d"],
-                                                    0,
-                                                    session.player_id,
-                                                )
+                                            make_item(
+                                                currency["currency_i_d"],
+                                                0,
+                                                session.player_id,
+                                                cur_item,
                                             )
                                         else:
                                             cur_item.ParseFromString(cur_t)
@@ -103,7 +102,6 @@ class Handler(PacketHandler):
                                                         currency["price"]
                                                     )
                                                     rsp1.items.add().CopyFrom(item_t)
-
                                         if (
                                             cur_item.main_item.base_item.num
                                             < currency["price"]
@@ -132,12 +130,11 @@ class Handler(PacketHandler):
                                     )
                                     tmp1 = ItemDetail()
                                     if not item:
-                                        tmp1.CopyFrom(
-                                            make_item(
-                                                item_pool["item_i_d"],
-                                                0,
-                                                session.player_id,
-                                            )
+                                        make_item(
+                                            item_pool["item_i_d"],
+                                            0,
+                                            session.player_id,
+                                            tmp1,
                                         )
                                     else:
                                         tmp1.ParseFromString(item)
