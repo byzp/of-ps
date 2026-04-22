@@ -22,6 +22,8 @@ class Handler(PacketHandler):
         rsp.status = StatusCode.StatusCode_OK
         rsp.season_id = req.season_id
 
+        # BossRushStartChallenge/开始->(BossRushEnterStage->BossRushStartBattle->BossRushLeaveStage)/多次分段小战斗->BossRushTerminateChallenge/结束
+
         # 保存队伍信息到BossRushInfo.stage_infos[stage_index].teams
         info_blob = db.get_boss_rush_info(session.player_id, req.season_id)
         if info_blob:
