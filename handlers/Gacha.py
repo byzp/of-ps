@@ -1,51 +1,12 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
 import random
-import time
 
-from proto.net_pb2 import GachaReq, GachaRsp
+from proto.net_pb2 import GachaReq, GachaRsp, StatusCode, PackNotice
 
 from utils.res_loader import res
 import utils.db as db
-
-logger = logging.getLogger(__name__)
-
-
-"""
-# 招募 1445 1446
-"""
-
-
-def get_gacha_info(gacha_id: int):
-    for dat in res["Gacha"]["info"]["datas"]:
-        if dat["i_d"] == gacha_id:
-            return dat
-    return None
-
-
-def get_pool(pool_id: int):
-    for dat in res["Gacha"]["pool"]["datas"]:
-        if dat["i_d"] == pool_id:
-            return dat
-    return None
-
-
-def get_reward_pool(reward_pool_id: int):
-    for dat in res["Gacha"]["reward_pool"]["datas"]:
-        if dat["i_d"] == reward_pool_id:
-            return dat
-    return None
-
-
-def calc_extra_quality(item_id: int) -> int:
-    # 按角色 ID 段位
-    if item_id >= 400000:
-        return 5
-    elif item_id >= 200000:
-        return 4
-    else:
-        return 3
+from utils.pb_create import make_item
 
 
 @packet_handler(MsgId.GachaReq)
@@ -53,71 +14,86 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = GachaReq()
         req.ParseFromString(data)
-        logger.info(f"GachaReq => {req}")
 
         rsp = GachaRsp()
-        rsp.status = 1
-
-        # 抽卡次数
-        draw_times = 1 if req.is_single else 10
-
-        # 找卡池配置
-        gacha_info = get_gacha_info(req.gacha_id)
-        if not gacha_info:
-            logger.error(f"Gacha info not found: {req.gacha_id}")
-            session.send(MsgId.GachaRsp, rsp, packet_id)
-            return
-
-        pool_id = gacha_info.get("big_guarantee_pool_i_d")
-        if pool_id == 400 and req.gacha_id == 2000:
-            pool_id = 2000  # 常驻卡池
-        elif pool_id is None and req.gacha_id == 4000:
-            pool_id = 4000  # 服装卡池
-        pool = get_pool(pool_id)
-        if not pool:
-            logger.error(f"Gacha pool not found: {pool_id}")
-            session.send(MsgId.GachaRsp, rsp, packet_id)
-            return
-
-        # 所有 reward_pool_id
-        reward_pool_ids = [i["free_gacha_pool_i_d"] for i in pool["items"]]
-
-        now_ts = int(time.time())
-
-        # 抽卡
-        for idx in range(draw_times):
-            reward_pool_id = random.choice(reward_pool_ids)
-            reward_pool = get_reward_pool(reward_pool_id)
-            if not reward_pool or not reward_pool["items"]:
-                continue
-
-            reward = random.choice(reward_pool["items"])
-            item_id = reward["item_i_d"]
-
-            # ===== 写入抽卡记录 =====
-            db.add_gacha_record(
-                session.player_id,
-                req.gacha_id,
-                item_id,
-                now_ts,
-            )
-
-            item = rsp.items.add()
-            item.main_item.item_id = item_id
-            item.main_item.item_tag = 7
-            item.main_item.temp_pack_index = idx
-            item.main_item.is_new = True
-            item.main_item.character.character_id = item_id
-
-            item.extra_quality = calc_extra_quality(item_id)
-
-        # 抽卡信息
+        rsp.status = StatusCode.StatusCode_OK
         rsp.info.gacha_id = req.gacha_id
-        rsp.info.gacha_times = draw_times
-        rsp.info.has_full_pick = False
-        rsp.info.is_free = False
-        rsp.info.optional_up_item = 0
-        rsp.info.optional_value = 0
-        rsp.info.guarantee = 0
+        rsp.info.gacha_times = 1 if req.is_single else 10
+        rsp1 = PackNotice()
+        rsp1.status = StatusCode.StatusCode_OK
+        gt = db.get_gacha_guarantee(session.player_id, req.gacha_id)
+        for i in res["Gacha"]["pool"]["datas"]:
+            if i["i_d"] == req.gacha_id:
+                pools = []
+                for i2 in i["items"]:
+                    pools.append(i2["free_gacha_pool_i_d"])
+                rewards = []
+                rewards_gt = []
+                gt_pool = 0
+                for i2 in res["Gacha"]["info"]["datas"]:
+                    if i2["i_d"] == req.gacha_id:
+                        consume_b = db.get_item_detail(
+                            session.player_id, i2["consume_item2_i_d"]
+                        )
+                        if not consume_b:
+                            rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
+                            session.send(MsgId.GachaRsp, rsp, packet_id)
+                            return
+                        item = rsp1.items.add()
+                        item.ParseFromString(consume_b)
+                        item.main_item.base_item.num -= rsp.info.gacha_times
+                        if item.main_item.base_item.num < 0:
+                            rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
+                            session.send(MsgId.GachaRsp, rsp, packet_id)
+                            return
+                        db.set_item_detail(
+                            session.player_id,
+                            item.SerializeToString(),
+                            item.main_item.item_id,
+                        )
+                        gt_pool = i2["big_guarantee_pool_i_d"]
+                        break
+                for i2 in res["Gacha"]["reward_pool"]["datas"]:
+                    if i2["i_d"] in pools:
+                        for i3 in i2["items"]:
+                            rewards.append(i3["item_i_d"])
+                    if i2["i_d"] == gt_pool:
+                        for i3 in i2["items"]:
+                            rewards_gt.append(i3["item_i_d"])
+        for _ in range(10):
+            if gt >= 70:
+                r = random.choice(rewards_gt)
+                gt = 0
+            else:
+                r = random.choice(rewards)
+                gt += 1
+            c = False
+            item = rsp.items.add()
+            for i in res["Character"]["character"]["datas"]:
+                if i["i_d"] == r:
+                    item.main_item.item_id = r
+                    db.add_character(
+                        session.player_id, r, item.main_item.character
+                    )  # TODO 重复角色转换
+                    c = True
+                    for i in res["Item"]["item"]["datas"]:
+                        if i["i_d"] == r:
+                            item.extra_quality = i.get("quality", 0)
+                    break
+            if not c:
+                make_item(r, 1, session.player_id, item)
+                db.set_item_detail(
+                    session.player_id,
+                    item.SerializeToString(),
+                    None,
+                    item.main_item.poster.instance_id,
+                )  # TODO 服装池
+            rsp1.items.add().CopyFrom(item)
+            db.add_gacha_record(session.player_id, req.gacha_id, r)
+            if req.is_single:
+                break
+        db.set_gacha_guarantee(session.player_id, req.gacha_id, gt)
 
+        rsp.info.guarantee = 70 - gt
         session.send(MsgId.GachaRsp, rsp, packet_id)
+        session.send(MsgId.PackNotice, rsp1, 0)

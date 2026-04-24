@@ -3,6 +3,7 @@ from network.msg_id import MsgId
 
 from proto.net_pb2 import GachaListReq, GachaListRsp, StatusCode
 from utils.res_loader import res
+import utils.db as db
 
 
 @packet_handler(MsgId.GachaListReq)
@@ -13,6 +14,6 @@ class Handler(PacketHandler):
         for data in res["Gacha"]["info"]["datas"]:
             tmp = rsp.gachas.add()
             tmp.gacha_id = data["i_d"]
-            tmp.gacha_times = 120
-            tmp.guarantee = 30
+            tmp.gacha_times = db.get_total_gacha_num(session.player_id, data["i_d"])
+            tmp.guarantee = 70 - db.get_gacha_guarantee(session.player_id, data["i_d"])
         session.send(MsgId.GachaListRsp, rsp, packet_id)  # 1443,1444

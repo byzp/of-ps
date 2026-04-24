@@ -2,7 +2,7 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import random
 
-from proto.net_pb2 import MonsterDeadReq, MonsterDeadRsp, StatusCode
+from proto.net_pb2 import MonsterDeadReq, MonsterDeadRsp, StatusCode, ItemDetail
 
 from utils.res_loader import res
 from utils.pb_create import make_item
@@ -28,6 +28,7 @@ class Handler(PacketHandler):
                     random.randint(0, armor_len - 1)
                 ]
                 item = make_item(item_i["i_d"], 1, session.player_id)
+                item.pack_type = ItemDetail.PackType.PackType_TempStorageArea
                 instance_id = item.main_item.armor.instance_id
             else:
                 weapon_len = len(res["Weapon"]["weapon"]["datas"])
@@ -35,6 +36,7 @@ class Handler(PacketHandler):
                     random.randint(0, weapon_len - 1)
                 ]
                 item = make_item(item_i["i_d"], 1, session.player_id)
+                item.pack_type = ItemDetail.PackType.PackType_TempStorageArea
                 instance_id = item.main_item.weapon.instance_id
             rsp.drop_item.items.add().CopyFrom(item)
             session.drop_items[rsp.drop_item.index] = (

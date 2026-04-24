@@ -30,9 +30,12 @@ class Handler(PacketHandler):
             req.page,
         )
 
-        rsp.total_page = db.get_gacha_record_total_page(
-            session.player_id,
-            req.gacha_id,
+        rsp.total_page = int(
+            db.get_total_gacha_num(
+                session.player_id,
+                req.gacha_id,
+            )
+            // 5
         )
 
         for item_id, gacha_time in records:
