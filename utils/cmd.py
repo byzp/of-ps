@@ -163,9 +163,6 @@ def _prompt_loop():
                             "give player_id/all item_id [num]\nfirework id [dur_time] [start_time]\ntime 1-86400\ntp player_id/all scene_id [channel_id]"
                         )
                         continue
-                    if cmd in cmd_h.COMMANDS:
-                        cmd_h.COMMANDS[cmd]()
-                        continue
                     cmd_exec.cmd_exec(cmd)
 
     finally:

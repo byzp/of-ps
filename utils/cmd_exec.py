@@ -86,33 +86,82 @@ def give(cmds: list):
     for session in target_session:
         rsp = PackNotice()
         rsp.status = StatusCode.StatusCode_OK
-        for i in res["Item"]["item"]["datas"]:
-            if i["i_d"] == cmds[2] or cmds[2] == "all":
+        if cmds[2] == "all":
+            for tmp in make_item(0, 1, session.player_id, None, True):
                 item = rsp.items.add()
-                tmp = make_item(i["i_d"], 0, session.player_id)
                 if tmp.main_item.item_tag not in [
                     EBagItemTag.EBagItemTag_Weapon,
                     EBagItemTag.EBagItemTag_Armor,
                     EBagItemTag.EBagItemTag_Poster,
                 ]:
-                    item_b = db.get_item_detail(session.player_id, i["i_d"])
+                    item_b = db.get_item_detail(
+                        session.player_id, tmp.main_item.item_id
+                    )
                     if not item_b:
                         item.CopyFrom(tmp)
                     else:
                         item.ParseFromString(item_b)
-                    item.main_item.base_item.num += 1 if len(cmds) < 4 else cmds[3]
+                    if tmp.main_item.item_tag != EBagItemTag.EBagItemTag_Fashion:
+                        item.main_item.base_item.num += (
+                            0 if len(cmds) < 4 else cmds[3] - 1
+                        )
                     db.set_item_detail(
-                        session.player_id, item.SerializeToString(), i["i_d"]
+                        session.player_id,
+                        item.SerializeToString(),
+                        tmp.main_item.item_id,
                     )
                 else:
+                    match tmp.main_item.item_tag:
+                        case EBagItemTag.EBagItemTag_Weapon:
+                            instance_id = tmp.main_item.weapon.instance_id
+                        case EBagItemTag.EBagItemTag_Armor:
+                            instance_id = tmp.main_item.armor.instance_id
+                        case EBagItemTag.EBagItemTag_Poster:
+                            instance_id = tmp.main_item.poster.instance_id
                     item.CopyFrom(tmp)
                     db.set_item_detail(
                         session.player_id,
                         item.SerializeToString(),
                         0,
-                        item.main_item.weapon.instance_id,
+                        instance_id,
                     )
-                if not cmds[2] == "all":
+        else:
+            for i in res["Item"]["item"]["datas"]:
+                if i["i_d"] == cmds[2]:
+                    item = rsp.items.add()
+                    tmp = make_item(i["i_d"], 0, session.player_id)
+                    if not tmp:
+                        continue
+                    if tmp.main_item.item_tag not in [
+                        EBagItemTag.EBagItemTag_Weapon,
+                        EBagItemTag.EBagItemTag_Armor,
+                        EBagItemTag.EBagItemTag_Poster,
+                    ]:
+                        item_b = db.get_item_detail(session.player_id, i["i_d"])
+                        if not item_b:
+                            item.CopyFrom(tmp)
+                        else:
+                            item.ParseFromString(item_b)
+                        item.main_item.base_item.num += 1 if len(cmds) < 4 else cmds[3]
+                        db.set_item_detail(
+                            session.player_id, item.SerializeToString(), i["i_d"]
+                        )
+                    else:
+                        match tmp.main_item.item_tag:
+                            case EBagItemTag.EBagItemTag_Weapon:
+                                instance_id = tmp.main_item.weapon.instance_id
+                            case EBagItemTag.EBagItemTag_Armor:
+                                instance_id = tmp.main_item.armor.instance_id
+                            case EBagItemTag.EBagItemTag_Poster:
+                                instance_id = tmp.main_item.poster.instance_id
+                        print(tmp)
+                        item.CopyFrom(tmp)
+                        db.set_item_detail(
+                            session.player_id,
+                            item.SerializeToString(),
+                            0,
+                            instance_id,
+                        )
                     break
         session.send(MsgId.PackNotice, rsp, 0)
 

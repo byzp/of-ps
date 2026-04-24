@@ -10,6 +10,8 @@ from proto.net_pb2 import (
     SceneDataNotice,
     PBCollectionRewardData,
     PlayerBriefInfo,
+    Quest,
+    QuestStatus,
 )
 import utils.db as db
 from datetime import datetime
@@ -209,18 +211,17 @@ def make_SceneCharacterOutfitPreset(player_id, outfit, sc=None):
     return sc
 
 
-def make_item(item_id, num=1, player_id=0, item_detail=None) -> list:
+def make_item(item_id, num=1, player_id=0, item_detail=None, is_all=False) -> list:
+    r = []
     if item_detail == None:
         item_detail = ItemDetail()
     for i in res["Item"]["item"]["datas"]:
-        if i["i_d"] == item_id:
+        if is_all or i["i_d"] == item_id:
+            item_detail.extra_quality = i.get("quality", 0)
             match i["new_bag_item_tag"]:
                 case EBagItemTag.EBagItemTag_Weapon:  # 武器 tag:2
                     for weapon_i in res["Weapon"]["weapon"]["datas"]:
-                        if weapon_i["i_d"] == item_id:
-                            item_detail.pack_type = (
-                                ItemDetail.PackType.PackType_TempStorageArea
-                            )
+                        if weapon_i["i_d"] == i["i_d"]:
                             tmp = item_detail.main_item
                             if not weapon_i.get("item_i_d"):
                                 continue
@@ -229,6 +230,7 @@ def make_item(item_id, num=1, player_id=0, item_detail=None) -> list:
                             weapon = tmp.weapon
                             weapon.weapon_id = weapon_i["item_i_d"]
                             weapon.instance_id = db.get_instance_id(player_id)
+                            f = True
                             for prop in res["Weapon"]["weapon_property"]["datas"]:
                                 if weapon_i["weapon_property_i_d"] == prop["i_d"]:
                                     weapon.property_index = random.randint(
@@ -249,31 +251,40 @@ def make_item(item_id, num=1, player_id=0, item_detail=None) -> list:
                                             group_s["min_damage_balance"],
                                             group_s["max_damage_balance"],
                                         )
+                                        * 100
                                     )
                                     weapon.critical_ratio = int(
                                         random.uniform(
                                             group_s["min_critical_ratio"],
                                             group_s["max_critical_ratio"],
                                         )
+                                        * 100
                                     )
                                     weapon.level = random.randint(
                                         group_s["min_level"], group_s["max_level"]
                                     )
-                                    return item_detail
-                            # 无属性的,鱼竿,载具等
-                            tmp.is_new = True
-                            item_detail.pack_type = 0
-                            weapon.attack = 1
-                            weapon.damage_balance = 1
-                            weapon.critical_ratio = 1
-                            weapon.level = 1
-                            weapon.star = 1
-                            weapon.durability = 1000
-                            weapon.property_index = 1
+                                    weapon.star = 1
+                                    f = False
+                                    break
+                            if f:
+                                # 无属性的,鱼竿,载具等
+                                tmp.is_new = True
+                                item_detail.pack_type = 0
+                                weapon.attack = 1
+                                weapon.damage_balance = 1
+                                weapon.critical_ratio = 1
+                                weapon.level = 1
+                                weapon.star = 1
+                                weapon.durability = 1000
+                                weapon.property_index = 1
+                            if is_all:
+                                r.append(item_detail)
+                                item_detail = ItemDetail()
+                                break
                             return item_detail
                 case EBagItemTag.EBagItemTag_Armor:  # 防具 tag:3
                     for armor_i in res["Armor"]["armor"]["datas"]:
-                        if armor_i["i_d"] == item_id:
+                        if armor_i["i_d"] == i["i_d"]:
                             tmp = item_detail.main_item
                             tmp.item_id = armor_i["i_d"]
                             tmp.item_tag = EBagItemTag.EBagItemTag_Armor
@@ -347,7 +358,12 @@ def make_item(item_id, num=1, player_id=0, item_detail=None) -> list:
                                     # armor.strength_exp = 0
                                     # armor.property_index = 0
                                     # armor.is_lock = False
-                                    return item_detail
+                                    break
+                            if is_all:
+                                r.append(item_detail)
+                                item_detail = ItemDetail()
+                                break
+                            return item_detail
 
                 case EBagItemTag.EBagItemTag_Poster:  # 映像 tag:5
                     tmp = item_detail.main_item
@@ -357,6 +373,10 @@ def make_item(item_id, num=1, player_id=0, item_detail=None) -> list:
                     poster.poster_id = i["i_d"]
                     poster.instance_id = db.get_instance_id(player_id)
                     poster.star = 1
+                    if is_all:
+                        r.append(item_detail)
+                        item_detail = ItemDetail()
+                        continue
                     return item_detail
 
                 case EBagItemTag.EBagItemTag_Inscription:  # 铭文 tag:17
@@ -365,6 +385,10 @@ def make_item(item_id, num=1, player_id=0, item_detail=None) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.inscription.inscription_id = i["i_d"]
                     tmp.inscription.level = 1
+                    if is_all:
+                        r.append(item_detail)
+                        item_detail = ItemDetail()
+                        continue
                     return item_detail
 
                 case EBagItemTag.EBagItemTag_Card:  # 收藏卡 tag:7
@@ -372,6 +396,10 @@ def make_item(item_id, num=1, player_id=0, item_detail=None) -> list:
                     tmp.item_id = i["i_d"]
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.character.character_id = i["i_d"]
+                    if is_all:
+                        r.append(item_detail)
+                        item_detail = ItemDetail()
+                        continue
                     return item_detail
                     # 这个好像是多余的角色碎片转换成星辰后，删除角色碎片的通知
                 case _:
@@ -427,8 +455,12 @@ def make_item(item_id, num=1, player_id=0, item_detail=None) -> list:
                     tmp.item_tag = i["new_bag_item_tag"]
                     tmp.base_item.item_id = i["i_d"]
                     tmp.base_item.num = num
-                    item_detail.extra_quality = i.get("quality", 0)
+                    if is_all:
+                        r.append(item_detail)
+                        item_detail = ItemDetail()
+                        continue
                     return item_detail
+    return r
 
 
 def make_treasure_box_item(

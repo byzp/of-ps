@@ -96,12 +96,12 @@
 
 ## 可用控制台命令
 
-- 给予玩家物品, item_id可在resources/data/String_Simplified.json搜索物品名称寻找, (输入1400可导入全部物品)
+- 给予玩家物品, item_id可在resources/data/String_Simplified.json搜索物品名称寻找, (give all all可导入全部物品)
    ```
    give player_id/all item_id [num]
    # give 1000001 102 100
    # give all 108
-   # 1400
+   # give all all
    ```
 - 字面意思, 放烟花, id可在resources/data/FireworksParty.json找到
    ```
