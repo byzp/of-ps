@@ -30,7 +30,7 @@ class Handler(PacketHandler):
         rsp.grids.id = req.shop_id
         rsp.grids.grid_id = req.grid_id
         rsp.grids.pool_index = 1
-        rsp.grids.buy_times = 1
+        rsp.grids.buy_times = req.buy_times
 
         for data in res["Shop"]["grid"]["datas"]:
             if data["i_d"] == req.shop_id:  # TODO 如果含有武器, 可能引起严重错误
@@ -60,8 +60,9 @@ class Handler(PacketHandler):
                                         else:
                                             cur_item.ParseFromString(cur_t)
                                         num = cur_item.main_item.base_item.num
+                                        cur = currency["price"] * req.buy_times
                                         if (
-                                            num < currency["price"]
+                                            num < cur
                                             and currency["currency_i_d"] == 102
                                         ):  # 使用菱石补齐星石
                                             cur_t = db.get_item_detail(
@@ -80,7 +81,7 @@ class Handler(PacketHandler):
                                                 item_t.ParseFromString(cur_t)
                                                 if (
                                                     item_t.main_item.base_item.num + num
-                                                    < currency["price"]
+                                                    < cur
                                                 ):
                                                     rsp.status = (
                                                         StatusCode.StatusCode_ITEM_NOT_ENOUGH
@@ -91,7 +92,7 @@ class Handler(PacketHandler):
                                                     return
                                                 else:
                                                     item_t.main_item.base_item.num -= (
-                                                        currency["price"] - num
+                                                        cur - num
                                                     )
                                                     db.set_item_detail(
                                                         session.player_id,
@@ -99,13 +100,10 @@ class Handler(PacketHandler):
                                                         108,
                                                     )
                                                     cur_item.main_item.base_item.num = (
-                                                        currency["price"]
+                                                        cur
                                                     )
                                                     rsp1.items.add().CopyFrom(item_t)
-                                        if (
-                                            cur_item.main_item.base_item.num
-                                            < currency["price"]
-                                        ):
+                                        if cur_item.main_item.base_item.num < cur:
                                             rsp.status = (
                                                 StatusCode.StatusCode_ITEM_NOT_ENOUGH
                                             )
@@ -113,9 +111,7 @@ class Handler(PacketHandler):
                                                 MsgId.ShopBuyRsp, rsp, packet_id
                                             )
                                             return
-                                        cur_item.main_item.base_item.num -= currency[
-                                            "price"
-                                        ]
+                                        cur_item.main_item.base_item.num -= cur
                                         cur_use[currency["currency_i_d"]] = cur_item
                                     for k, v in cur_use.items():
                                         db.set_item_detail(
@@ -149,9 +145,11 @@ class Handler(PacketHandler):
                                         ]
                                         rsp.items.add().CopyFrom(tmp1)
                                         tmp1.main_item.base_item.num = (
-                                            num_t + item_pool["item_num"]
+                                            num_t
+                                            + item_pool["item_num"] * req.buy_times
                                         )
                                     else:
+                                        # TODO 一次购买多份武器或映像
                                         rsp.items.add().CopyFrom(tmp1)
                                     rsp1.items.add().CopyFrom(
                                         tmp1
