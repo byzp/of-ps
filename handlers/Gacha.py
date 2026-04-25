@@ -2,8 +2,15 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import random
 
-from proto.net_pb2 import GachaReq, GachaRsp, StatusCode, PackNotice
-
+from proto.net_pb2 import (
+    GachaReq,
+    GachaRsp,
+    StatusCode,
+    PackNotice,
+    QuestNotice,
+    QuestStatus,
+)
+from config import Config
 from utils.res_loader import res
 import utils.db as db
 from utils.pb_create import make_item
@@ -67,6 +74,28 @@ class Handler(PacketHandler):
             else:
                 r = random.choice(rewards)
                 gt += 1
+            if (
+                not Config.SKIP_QUESTS
+                and req.gacha_id == 2000
+                and req.is_single
+                and db.get_total_gacha_num(session.player_id, 2000) == 0
+            ):
+                r = 102001
+                rsp2 = QuestNotice()
+                rsp2.status = StatusCode.StatusCode_OK
+                tmp = rsp2.quests.add()
+                # 主线的抽卡引导任务
+                tmp.ParseFromString(db.get_quest(session.player_id, 100013))
+                for ii in tmp.conditions:
+                    ii.status = QuestStatus.QuestStatus_Finish
+                    db.set_quest(
+                        session.player_id,
+                        tmp.quest_id,
+                        tmp.SerializeToString(),
+                    )
+                tmp.status = QuestStatus.QuestStatus_Finish
+                session.send(MsgId.QuestNotice, rsp2, 0)
+
             c = False
             item = rsp.items.add()
             for i in res["Character"]["character"]["datas"]:

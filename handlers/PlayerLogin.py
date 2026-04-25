@@ -2,6 +2,7 @@ import time
 
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
+from config import Config
 
 from proto.net_pb2 import PlayerLoginReq, PlayerLoginRsp, StatusCode
 import utils.db as db
@@ -35,7 +36,10 @@ class Handler(PacketHandler):
         )
         rsp.analysis_account_id = db.get_analysis_account_id(player_id)
         # rsp.server_time_zone # int(datetime.now(timezone.utc).astimezone().utcoffset().total_seconds())
-        session.scene_id = scene_data.get_scene_id(player_id)
+        if rsp.player_name == "" and not Config.SKIP_QUESTS:
+            session.scene_id = 100  # 新玩家
+        else:
+            session.scene_id = scene_data.get_scene_id(player_id)
         session.channel_id = scene_data.get_channel_id(player_id)
         rsp.scene_id = session.scene_id
         rsp.channel_id = session.channel_id

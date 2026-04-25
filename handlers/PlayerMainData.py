@@ -21,11 +21,15 @@ from proto.net_pb2 import (
     PlayerQuestionnaireInfo,
     PlayerAppearance,
     ItemDetail,
+    ServerSceneSyncDataNotice,
+    SceneActionType,
 )
 import utils.db as db
 from utils.res_loader import res
 from utils.pb_create import make_SceneDataNotice, make_ScenePlayer
 from network.remote_link import sync_player
+import server.notice_sync as notice_sync
+from server.scene_data import up_scene_action
 
 logger = logging.getLogger(__name__)
 
@@ -133,16 +137,14 @@ class Handler(PacketHandler):
                 item_tag = item.main_item.item_tag
                 if item_tag not in items_by_tag:
                     items_by_tag[item_tag] = []
-                items_by_tag[item_tag].append(item_blob)
+                items_by_tag[item_tag].append(item)
 
             for item_tag, items_in_tag in items_by_tag.items():
                 rsp = PackNotice()
                 rsp.status = StatusCode.StatusCode_OK
-                for item_blob in items_in_tag:
-                    item_t = ItemDetail()
-                    item_t.ParseFromString(item_blob)
+                for item in items_in_tag:
                     # TODO 临时物品发到邮件
-                    item = rsp.items.add().CopyFrom(item_t)
+                    rsp.items.add().CopyFrom(item)
                 session.send(
                     MsgId.PackNotice, rsp, 0
                 )  # 按物品类型分组发送items物品数据
@@ -179,3 +181,24 @@ class Handler(PacketHandler):
                 for k, v in m.items():
                     setattr(tmp, k, v)
             session.send(MsgId.ChatMsgRecordInitNotice, rsp, packet_id)
+
+        # 视为完成登录，同步场景玩家并广播加入事件
+        if session.logged_in == False:
+            session.logged_in = True
+
+            notice = ServerSceneSyncDataNotice()
+            notice.status = StatusCode.StatusCode_OK
+            d = notice.data.add()
+            d.player_id = session.player_id
+            sd = d.server_data.add()
+            sd.action_type = SceneActionType.SceneActionType_ENTER
+            sd.player.CopyFrom(session.scene_player)
+            up_scene_action(session.scene_id, session.channel_id, notice)
+
+            # 同步时间
+            rsp = ServerSceneSyncDataNotice()
+            rsp.status = StatusCode.StatusCode_OK
+            tmp = rsp.data.add().server_data.add()
+            tmp.action_type = SceneActionType.SceneActionType_TOD_UPDATE
+            tmp.tod_time = int(notice_sync.tod_time)
+            session.send(MsgId.ServerSceneSyncDataNotice, rsp, 0)

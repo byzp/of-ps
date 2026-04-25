@@ -379,6 +379,20 @@ def make_item(item_id, num=1, player_id=0, item_detail=None, is_all=False) -> li
                         continue
                     return item_detail
 
+                case EBagItemTag.EBagItemTag_Fashion:  # 时装 tag:21
+                    tmp = item_detail.main_item
+                    tmp.item_id = i["i_d"]
+                    tmp.item_tag = i["new_bag_item_tag"]
+                    outfit = tmp.outfit
+                    outfit.outfit_id = i["i_d"]
+                    dye_scheme = outfit.dye_schemes.add()
+                    dye_scheme.is_un_lock = True
+                    if is_all:
+                        r.append(item_detail)
+                        item_detail = ItemDetail()
+                        continue
+                    return item_detail
+
                 case EBagItemTag.EBagItemTag_Inscription:  # 铭文 tag:17
                     tmp = item_detail.main_item
                     tmp.item_id = i["i_d"]
@@ -418,7 +432,6 @@ def make_item(item_id, num=1, player_id=0, item_detail=None, is_all=False) -> li
                     # EBagItemTag.EBagItemTag_StrengthStone:  # 强化石 tag:18
                     # EBagItemTag.EBagItemTag_ExpBook:  # 经验书 能量饮料 tag:19
                     # EBagItemTag.EBagItemTag_Head:  # 头像 tag:20
-                    # EBagItemTag.EBagItemTag_Fashion:  # 时装 tag:21
                     # EBagItemTag.EBagItemTag_UnlockItem:  # 解锁道具 tag:22
                     # EBagItemTag.EBagItemTag_AbilityItem:  # 能力道具 tag:23
                     # EBagItemTag.EBagItemTag_UnlockAbilityItem:  # 解锁能力道具 tag:24
@@ -662,3 +675,25 @@ def make_PlayerBriefInfo(player_id, info=None):
         "player_id,player_name,level,head,last_login_time,sex,phone_background,sign,guild_name,team_leader_badge,character_id,create_time,player_id,garden_like_num,account_type,birthday,hide_value,avatar_frame",
     )
     return info
+
+
+def make_Quest(player_id, quest_id, q=None):
+    if q == None:
+        q = Quest()
+    for i in res["Quest"]["quest"]["datas"]:
+        if i["i_d"] == quest_id:
+            q.quest_id = i["i_d"]
+            q.status = QuestStatus.QuestStatus_InProgress
+            q.bonus_times = 1
+            for i2 in res["Quest"]["condition_set_group"]["datas"]:
+                if i2["i_d"] == i["condition_set_group_i_d"]:
+                    for i3 in i2["quest_condition_set"]:
+                        for i4 in i3["achieve_condition_i_d"]:
+                            c = q.conditions.add()
+                            c.condition_id = i4
+                            c.status = QuestStatus.QuestStatus_InProgress
+                        for i4 in i3["resource_i_d"]:
+                            c = q.conditions.add()
+                            c.condition_id = i4
+                            c.status = QuestStatus.QuestStatus_InProgress
+                    return q
