@@ -61,7 +61,7 @@ def start_loop():
     try:
         notice_sync_loop()
     except Exception as e:
-        print(traceback.format_exc())
+        traceback.print_exc()
         logger.error("A fatal error occurred in notice_sync_loop! Clear and exit.")
         status_code = 1
     finally:

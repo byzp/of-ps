@@ -253,6 +253,14 @@ def init():
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS gacha_guarantee (
+            player_id INTEGER NOT NULL,
+            gacha_id INTEGER NOT NULL,
+            guarantee INTEGER DEFAULT 0,
+            PRIMARY KEY (player_id, gacha_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
+
         CREATE TABLE IF NOT EXISTS furnitures (
             scene_id INTEGER NOT NULL,
             channel_id INTEGER NOT NULL,
@@ -333,88 +341,7 @@ def init_player(player_id):
     db.execute("INSERT OR IGNORE INTO garden_info (player_id) VALUES (?)", (player_id,))
 
     # 初始化角色
-    datas = res.get("Character", {}).get("character", {}).get("datas", [])
-    for i in datas:
-        c = Character()
-
-        c.character_id = i["i_d"]
-        c.level = 1
-        c.max_level = 20
-        c.exp = 0
-        c.star = 0
-        c.gather_weapon = 0
-
-        t1 = c.equipment_presets.add()
-        t1.preset_index = 0
-        t1.weapon = 0
-
-        t1.armors.add()
-        t1.armors.add().equip_type = EEquipType.EEquipType_Chest
-        t1.armors.add().equip_type = EEquipType.EEquipType_Hand
-        t1.armors.add().equip_type = EEquipType.EEquipType_Shoes
-        t1.posters.add()
-        t1.posters.add().poster_index = 1
-        t1.posters.add().poster_index = 2
-
-        c.equipment_presets.add().preset_index = 1
-        c.equipment_presets.add().preset_index = 2
-
-        for iter in range(0, 3):
-            o = c.outfit_presets.add()
-            item = ItemDetail()
-            item.main_item.item_tag = EBagItemTag.EBagItemTag_Fashion
-            item.main_item.outfit.dye_schemes.add().is_un_lock = True
-            o.hat = i.get("hat_i_d") or 0
-            if o.hat:
-                item.main_item.item_id = o.hat
-                item.main_item.outfit.outfit_id = o.hat
-                set_item_detail(player_id, item.SerializeToString(), o.hat)
-            o.hair = i.get("hair_i_d") or 0
-            if o.hair:
-                item.main_item.item_id = o.hair
-                item.main_item.outfit.outfit_id = o.hair
-                set_item_detail(player_id, item.SerializeToString(), o.hair)
-            o.clothes = i.get("cloth_i_d") or 0
-            if o.clothes:
-                item.main_item.item_id = o.clothes
-                item.main_item.outfit.outfit_id = o.clothes
-                set_item_detail(player_id, item.SerializeToString(), o.clothes)
-            o.ornament = (i.get("orn_i_d") and i.get("orn_i_d")[0]) or 0
-            if o.ornament:
-                item.main_item.item_id = o.ornament
-                item.main_item.outfit.outfit_id = o.ornament
-                set_item_detail(player_id, item.SerializeToString(), o.ornament)
-            o.preset_index = iter
-            o.outfit_hide_info.CopyFrom(OutfitHideInfo())
-
-        c.character_appearance.badge = 5000
-        c.character_appearance.umbrella_id = 4050
-        c.character_appearance.insect_net_instance_id = 1004001
-        c.character_appearance.logging_axe_instance_id = 1002001
-        c.character_appearance.water_bottle_instance_id = 1005001
-        c.character_appearance.mining_hammer_instance_id = 1003001
-        c.character_appearance.collection_gloves_instance_id = 1001001
-        c.character_appearance.fishing_rod_instance_id = 1006001
-
-        spells = i.get("spell_i_ds", [])
-        ex_spells = i.get("ex_spell_i_ds", [])
-
-        s = c.character_skill_list.add()
-        s.skill_id = spells[0] if len(spells) > 0 else 0
-        s.skill_level = 1
-
-        s = c.character_skill_list.add()
-        s.skill_id = spells[1] if len(spells) > 1 else 0
-        s.skill_level = 1
-
-        s = c.character_skill_list.add()
-        s.skill_id = ex_spells[0] if len(ex_spells) > 0 else 0
-        s.skill_level = 1
-
-        db.execute(
-            "INSERT INTO characters (player_id, character_id, character_blob) VALUES (?, ?, ?)",
-            (player_id, i["i_d"], c.SerializeToString()),
-        )
+    add_character(player_id, 101001)
 
     # 初始化必要物品
     for k, v in {10: 150, 11: 800, 101: 500, 102: 200, 104: 1}.items():
@@ -432,34 +359,35 @@ def init_player(player_id):
             tmp.achieve_id = achieve["i_d"]
             set_achieve(player_id, achieve["i_d"], tmp.SerializeToString())
 
-    # 初始化任务
-    for quest in res["Quest"]["quest"]["datas"]:
-        tmp = Quest()
-        tmp.quest_id = quest["i_d"]
-        if quest.get("condition_set_group_i_d", 0):
-            for condition in res["Quest"]["condition_set_group"]["datas"]:
-                if condition["i_d"] == quest["condition_set_group_i_d"]:
-                    for condition_set in condition["quest_condition_set"]:
-                        for achieve_condition_id in condition_set[
-                            "achieve_condition_i_d"
-                        ]:
-                            tmp1 = tmp.conditions.add()
-                            tmp1.condition_id = achieve_condition_id
-                            for achieve in res["Achieve"]["achieve"]["datas"]:
-                                if achieve["i_d"] == achieve_condition_id:
-                                    tmp1.progress = achieve.get("count_param", 0)
-                                    break
-                            tmp1.status = QuestStatus.QuestStatus_Finish
-                    break
-        tmp.status = QuestStatus.QuestStatus_Finish
-        tmp.bonus_times = 1
-        set_quest(player_id, quest["i_d"], tmp.SerializeToString())
+    # 跳过任务
+    if Config.SKIP_QUESTS:
+        for quest in res["Quest"]["quest"]["datas"]:
+            tmp = Quest()
+            tmp.quest_id = quest["i_d"]
+            if quest.get("condition_set_group_i_d", 0):
+                for condition in res["Quest"]["condition_set_group"]["datas"]:
+                    if condition["i_d"] == quest["condition_set_group_i_d"]:
+                        for condition_set in condition["quest_condition_set"]:
+                            for achieve_condition_id in condition_set[
+                                "achieve_condition_i_d"
+                            ]:
+                                tmp1 = tmp.conditions.add()
+                                tmp1.condition_id = achieve_condition_id
+                                for achieve in res["Achieve"]["achieve"]["datas"]:
+                                    if achieve["i_d"] == achieve_condition_id:
+                                        tmp1.progress = achieve.get("count_param", 0)
+                                        break
+                                tmp1.status = QuestStatus.QuestStatus_Finish
+                        break
+            tmp.status = QuestStatus.QuestStatus_Finish
+            tmp.bonus_times = 1
+            set_quest(player_id, quest["i_d"], tmp.SerializeToString())
     # 初始化任务章节
     for chapter in res["Story"]["story_chapter"]["datas"]:
         tmp = Chapter()
         tmp.chapter_id = chapter["i_d"]
-        for story in chapter["story_list"]:
-            tmp.rewarded_story_ids.append(story)
+        # for story in chapter["story_list"]:
+        #     tmp.rewarded_story_ids.append(story)
         set_chapter(player_id, chapter["i_d"], tmp.SerializeToString())
     # 初始化生活信息
     life_list = {}
@@ -1148,26 +1076,18 @@ def get_collection(player_id, item_id=None):
         return collections
 
 
-def add_gacha_record(player_id, gacha_id, item_id, gacha_time=None):
-    if gacha_time is None:
-        gacha_time = int(time.time())
-
+def add_gacha_record(player_id, gacha_id, item_id):
     db.execute(
         """
         INSERT INTO gacha_record (player_id, gacha_id, item_id, gacha_time)
         VALUES (?, ?, ?, ?)
         """,
-        (player_id, gacha_id, item_id, gacha_time),
+        (player_id, gacha_id, item_id, int(time.time())),
     )
 
 
-def get_gacha_records(player_id, gacha_id, page, page_size=5):
-    # page 从 1 开始
-    if page < 1:
-        page = 1
-
+def get_gacha_records(player_id, gacha_id, page=1, page_size=5):
     offset = (page - 1) * page_size
-
     cur = db.execute(
         """
         SELECT item_id, gacha_time
@@ -1181,20 +1101,31 @@ def get_gacha_records(player_id, gacha_id, page, page_size=5):
     return cur.fetchall()
 
 
-def get_gacha_record_total_page(player_id, gacha_id, page_size=5):
+def get_total_gacha_num(player_id, gacha_id):
     cur = db.execute(
-        """
-        SELECT COUNT(*) FROM gacha_record
-        WHERE player_id=? AND gacha_id=?
-        """,
+        "SELECT COUNT(*) FROM gacha_record WHERE player_id=? AND gacha_id=?",
         (player_id, gacha_id),
     )
-    total = cur.fetchone()[0]
+    return cur.fetchone()[0]
 
-    if total == 0:
+
+def set_gacha_guarantee(player_id, gacha_id, guarantee):
+    db.execute(
+        "INSERT OR REPLACE INTO gacha_guarantee (player_id, gacha_id, guarantee) VALUES (?, ?, ?)",
+        (player_id, gacha_id, guarantee),
+    )
+
+
+def get_gacha_guarantee(player_id, gacha_id):
+    cur = db.execute(
+        "SELECT guarantee FROM gacha_guarantee WHERE player_id=? AND gacha_id=?",
+        (player_id, gacha_id),
+    )
+    row = cur.fetchone()
+    if row:
+        return row[0]
+    else:
         return 0
-
-    return (total + page_size - 1) // page_size
 
 
 def set_furniture(scene_id, channel_id, player_id, furniture_id, furniture_detail_blob):
@@ -1338,3 +1269,100 @@ def set_boss_rush_info(player_id, season_id, info_blob):
         "INSERT OR REPLACE INTO boss_rush_info (player_id, season_id, info_blob) VALUES (?, ?, ?)",
         (player_id, season_id, info_blob),
     )
+
+
+def add_character(player_id, character_id, c=None):
+    for i in res["Character"]["character"]["datas"]:
+        if i["i_d"] == character_id:
+            if c == None:
+                c = Character()
+
+            c.character_id = i["i_d"]
+            c.level = 1
+            c.max_level = 20
+            c.exp = 0
+            c.star = 0
+            c.gather_weapon = 0
+
+            t1 = c.equipment_presets.add()
+            t1.preset_index = 0
+            t1.weapon = 0
+
+            t1.armors.add()
+            t1.armors.add().equip_type = EEquipType.EEquipType_Chest
+            t1.armors.add().equip_type = EEquipType.EEquipType_Hand
+            t1.armors.add().equip_type = EEquipType.EEquipType_Shoes
+            t1.posters.add()
+            t1.posters.add().poster_index = 1
+            t1.posters.add().poster_index = 2
+
+            c.equipment_presets.add().preset_index = 1
+            c.equipment_presets.add().preset_index = 2
+
+            for iter in range(0, 3):
+                o = c.outfit_presets.add()
+                item = ItemDetail()
+                item.main_item.item_tag = EBagItemTag.EBagItemTag_Fashion
+                item.main_item.outfit.dye_schemes.add().is_un_lock = True
+                o.hat = i.get("hat_i_d") or 0
+                if o.hat:
+                    item.main_item.item_id = o.hat
+                    item.main_item.outfit.outfit_id = o.hat
+                    set_item_detail(player_id, item.SerializeToString(), o.hat)
+                o.hair = i.get("hair_i_d") or 0
+                if o.hair:
+                    item.main_item.item_id = o.hair
+                    item.main_item.outfit.outfit_id = o.hair
+                    set_item_detail(player_id, item.SerializeToString(), o.hair)
+                o.clothes = i.get("cloth_i_d") or 0
+                if o.clothes:
+                    item.main_item.item_id = o.clothes
+                    item.main_item.outfit.outfit_id = o.clothes
+                    set_item_detail(player_id, item.SerializeToString(), o.clothes)
+                o.ornament = (i.get("orn_i_d") and i.get("orn_i_d")[0]) or 0
+                if o.ornament:
+                    item.main_item.item_id = o.ornament
+                    item.main_item.outfit.outfit_id = o.ornament
+                    set_item_detail(player_id, item.SerializeToString(), o.ornament)
+                o.preset_index = iter
+                o.outfit_hide_info.CopyFrom(OutfitHideInfo())
+
+            c.character_appearance.badge = 5000
+            c.character_appearance.umbrella_id = 4050
+            c.character_appearance.insect_net_instance_id = 1004001
+            c.character_appearance.logging_axe_instance_id = 1002001
+            c.character_appearance.water_bottle_instance_id = 1005001
+            c.character_appearance.mining_hammer_instance_id = 1003001
+            c.character_appearance.collection_gloves_instance_id = 1001001
+            c.character_appearance.fishing_rod_instance_id = 1006001
+
+            spells = i.get("spell_i_ds", [])
+            ex_spells = i.get("ex_spell_i_ds", [])
+
+            s = c.character_skill_list.add()
+            s.skill_id = spells[0] if len(spells) > 0 else 0
+            s.skill_level = 1
+
+            s = c.character_skill_list.add()
+            s.skill_id = spells[1] if len(spells) > 1 else 0
+            s.skill_level = 1
+
+            s = c.character_skill_list.add()
+            s.skill_id = ex_spells[0] if len(ex_spells) > 0 else 0
+            s.skill_level = 1
+
+            item = make_item(1101104, 1, player_id)
+            item.main_item.weapon.wearer_id = i["i_d"]
+            instance_id = item.main_item.weapon.instance_id
+            set_item_detail(
+                player_id,
+                item.SerializeToString(),
+                None,
+                instance_id,
+            )
+            c.equipment_presets[0].weapon = instance_id
+            db.execute(
+                "INSERT OR IGNORE INTO characters (player_id, character_id, character_blob) VALUES (?, ?, ?)",
+                (player_id, i["i_d"], c.SerializeToString()),
+            )
+            return c

@@ -84,67 +84,37 @@ def give(cmds: list):
         logger.warning("No matching players found.")
         return
     for session in target_session:
-        rsp = PackNotice()
-        rsp.status = StatusCode.StatusCode_OK
+        chrs = []
+        for i in res["Character"]["character"]["datas"]:
+            chrs.append(i["i_d"])
         if cmds[2] == "all":
-            for tmp in make_item(0, 1, session.player_id, None, True):
-                item = rsp.items.add()
-                if tmp.main_item.item_tag not in [
-                    EBagItemTag.EBagItemTag_Weapon,
-                    EBagItemTag.EBagItemTag_Armor,
-                    EBagItemTag.EBagItemTag_Poster,
-                ]:
-                    item_b = db.get_item_detail(
-                        session.player_id, tmp.main_item.item_id
-                    )
-                    if not item_b:
-                        item.CopyFrom(tmp)
-                    else:
-                        item.ParseFromString(item_b)
-                    if tmp.main_item.item_tag != EBagItemTag.EBagItemTag_Fashion:
-                        item.main_item.base_item.num += (
-                            0 if len(cmds) < 4 else cmds[3] - 1
-                        )
-                    db.set_item_detail(
+            items = make_item(0, 0, session.player_id, None, True)
+            for tmp in items:
+                if tmp.main_item.item_id in chrs:
+                    db.add_character(
                         session.player_id,
-                        item.SerializeToString(),
                         tmp.main_item.item_id,
+                        tmp.main_item.character,
                     )
                 else:
-                    match tmp.main_item.item_tag:
-                        case EBagItemTag.EBagItemTag_Weapon:
-                            instance_id = tmp.main_item.weapon.instance_id
-                        case EBagItemTag.EBagItemTag_Armor:
-                            instance_id = tmp.main_item.armor.instance_id
-                        case EBagItemTag.EBagItemTag_Poster:
-                            instance_id = tmp.main_item.poster.instance_id
-                    item.CopyFrom(tmp)
-                    db.set_item_detail(
-                        session.player_id,
-                        item.SerializeToString(),
-                        0,
-                        instance_id,
-                    )
-        else:
-            for i in res["Item"]["item"]["datas"]:
-                if i["i_d"] == cmds[2]:
-                    item = rsp.items.add()
-                    tmp = make_item(i["i_d"], 0, session.player_id)
-                    if not tmp:
-                        continue
                     if tmp.main_item.item_tag not in [
                         EBagItemTag.EBagItemTag_Weapon,
                         EBagItemTag.EBagItemTag_Armor,
                         EBagItemTag.EBagItemTag_Poster,
                     ]:
-                        item_b = db.get_item_detail(session.player_id, i["i_d"])
-                        if not item_b:
-                            item.CopyFrom(tmp)
-                        else:
-                            item.ParseFromString(item_b)
-                        item.main_item.base_item.num += 1 if len(cmds) < 4 else cmds[3]
+                        item_b = db.get_item_detail(
+                            session.player_id, tmp.main_item.item_id
+                        )
+                        if item_b:
+                            tmp.ParseFromString(item_b)
+                        if tmp.main_item.item_tag != EBagItemTag.EBagItemTag_Fashion:
+                            tmp.main_item.base_item.num += (
+                                1 if len(cmds) < 4 else cmds[3]
+                            )
                         db.set_item_detail(
-                            session.player_id, item.SerializeToString(), i["i_d"]
+                            session.player_id,
+                            tmp.SerializeToString(),
+                            tmp.main_item.item_id,
                         )
                     else:
                         match tmp.main_item.item_tag:
@@ -154,16 +124,70 @@ def give(cmds: list):
                                 instance_id = tmp.main_item.armor.instance_id
                             case EBagItemTag.EBagItemTag_Poster:
                                 instance_id = tmp.main_item.poster.instance_id
-                        print(tmp)
-                        item.CopyFrom(tmp)
                         db.set_item_detail(
                             session.player_id,
-                            item.SerializeToString(),
+                            tmp.SerializeToString(),
                             0,
                             instance_id,
                         )
+            items_by_tag = {}
+            for item in items:
+                item_tag = item.main_item.item_tag
+                if item_tag not in items_by_tag:
+                    items_by_tag[item_tag] = []
+                items_by_tag[item_tag].append(item)
+            for item_tag, items_in_tag in items_by_tag.items():
+                rsp = PackNotice()
+                rsp.status = StatusCode.StatusCode_OK
+                for item in items_in_tag:
+                    item = rsp.items.add().CopyFrom(item)
+                session.send(
+                    MsgId.PackNotice, rsp, 0
+                )  # 按物品类型分组发送items物品数据
+        else:
+            for i in res["Item"]["item"]["datas"]:
+                if i["i_d"] == cmds[2]:
+                    rsp = PackNotice()
+                    rsp.status = StatusCode.StatusCode_OK
+                    tmp = rsp.items.add()
+                    make_item(i["i_d"], 0, session.player_id, tmp)
+                    if i["i_d"] in chrs:
+                        db.add_character(
+                            session.player_id,
+                            tmp.main_item.item_id,
+                            tmp.main_item.character,
+                        )
+                    else:
+                        if tmp.main_item.item_tag not in [
+                            EBagItemTag.EBagItemTag_Weapon,
+                            EBagItemTag.EBagItemTag_Armor,
+                            EBagItemTag.EBagItemTag_Poster,
+                        ]:
+                            item_b = db.get_item_detail(session.player_id, i["i_d"])
+                            if item_b:
+                                tmp.ParseFromString(item_b)
+                            tmp.main_item.base_item.num += (
+                                1 if len(cmds) < 4 else cmds[3]
+                            )
+                            db.set_item_detail(
+                                session.player_id, tmp.SerializeToString(), i["i_d"]
+                            )
+                        else:
+                            match tmp.main_item.item_tag:
+                                case EBagItemTag.EBagItemTag_Weapon:
+                                    instance_id = tmp.main_item.weapon.instance_id
+                                case EBagItemTag.EBagItemTag_Armor:
+                                    instance_id = tmp.main_item.armor.instance_id
+                                case EBagItemTag.EBagItemTag_Poster:
+                                    instance_id = tmp.main_item.poster.instance_id
+                            db.set_item_detail(
+                                session.player_id,
+                                tmp.SerializeToString(),
+                                0,
+                                instance_id,
+                            )
+                    session.send(MsgId.PackNotice, rsp, 0)
                     break
-        session.send(MsgId.PackNotice, rsp, 0)
 
 
 def firework(cmds):

@@ -11,7 +11,6 @@ from prompt_toolkit.shortcuts import print_formatted_text
 from prompt_toolkit.application import get_app_or_none
 
 import utils.log as log_module
-import utils.command_handler as cmd_h
 import utils.cmd_exec as cmd_exec
 
 _stop_event = threading.Event()
