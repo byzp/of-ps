@@ -12,6 +12,7 @@ from proto.net_pb2 import (
     PlayerBriefInfo,
     Quest,
     QuestStatus,
+    QuestNotice,
 )
 import utils.db as db
 from datetime import datetime
@@ -692,8 +693,45 @@ def make_Quest(player_id, quest_id, q=None):
                             c = q.conditions.add()
                             c.condition_id = i4
                             c.status = QuestStatus.QuestStatus_InProgress
-                        for i4 in i3["resource_i_d"]:
-                            c = q.conditions.add()
-                            c.condition_id = i4
-                            c.status = QuestStatus.QuestStatus_InProgress
                     return q
+
+
+def make_QuestNotice(player_id, conds, qn=None):
+    if qn == None:
+        qn = QuestNotice()
+    for i in res["Quest"]["condition_set_group"]["datas"]:
+        for i2 in i["quest_condition_set"]:
+            for cond in conds:
+                if cond in i2["achieve_condition_i_d"]:
+                    qn.status = StatusCode.StatusCode_OK
+                    tmp = qn.quests.add()
+                    tmp.ParseFromString(db.get_quest(player_id, i["i_d"]))
+                    sf_cond = True
+                    for i3 in tmp.conditions:
+                        if i3.condition_id == cond:
+                            i3.status = QuestStatus.QuestStatus_Finish
+                        if i3.status != QuestStatus.QuestStatus_Finish:
+                            sf_cond = False
+                    if sf_cond:
+                        tmp.status = QuestStatus.QuestStatus_Finish
+                        # 检查任务组，如果不是最后一个就继续推进
+                        for i4, quest in enumerate(res["Quest"]["quest"]["datas"]):
+                            if quest["i_d"] == i["i_d"]:
+                                tmp1 = res["Quest"]["quest"]["datas"][i4 + 1]
+                                if tmp1["name"] != quest["name"]:
+                                    break
+                                else:
+                                    q = qn.quests.add()
+                                    make_Quest(player_id, tmp1["i_d"], q)
+                                    db.set_quest(
+                                        player_id,
+                                        q.quest_id,
+                                        q.SerializeToString(),
+                                    )
+                                    break
+                    db.set_quest(
+                        player_id,
+                        tmp.quest_id,
+                        tmp.SerializeToString(),
+                    )
+                    return qn

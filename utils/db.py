@@ -386,8 +386,9 @@ def init_player(player_id):
     for chapter in res["Story"]["story_chapter"]["datas"]:
         tmp = Chapter()
         tmp.chapter_id = chapter["i_d"]
-        # for story in chapter["story_list"]:
-        #     tmp.rewarded_story_ids.append(story)
+        if Config.SKIP_QUESTS:
+            for story in chapter["story_list"]:
+                tmp.rewarded_story_ids.append(story)
         set_chapter(player_id, chapter["i_d"], tmp.SerializeToString())
     # 初始化生活信息
     life_list = {}

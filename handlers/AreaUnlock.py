@@ -1,12 +1,11 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
+from config import Config
 
 from proto.net_pb2 import AreaUnlockReq, AreaUnlockRsp, StatusCode, AreaData
 
 import utils.db as db
-
-logger = logging.getLogger(__name__)
+from utils.pb_create import make_QuestNotice
 
 
 @packet_handler(MsgId.AreaUnlockReq)
@@ -30,5 +29,9 @@ class Handler(PacketHandler):
                 req.area_id,
                 rsp.area.SerializeToString(),
             )
+        if not Config.SKIP_QUESTS and req.area_id == 1001:
+            rsp1 = make_QuestNotice(session.player_id, [11000231])
+            if rsp1:
+                session.send(MsgId.QuestNotice, rsp1, 0)
 
         session.send(MsgId.AreaUnlockRsp, rsp, packet_id)

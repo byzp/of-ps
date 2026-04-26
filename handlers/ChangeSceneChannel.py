@@ -1,6 +1,6 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
+from config import Config
 
 from proto.net_pb2 import (
     ChangeSceneChannelReq,
@@ -11,12 +11,13 @@ from proto.net_pb2 import (
     PackNotice,
     SceneActionType,
     ChatMsgRecordInitNotice,
+    Quest,
+    QuestStatus,
 )
 
+import utils.db as db
 import server.scene_data as scene_data
-from utils.pb_create import make_SceneDataNotice
-
-logger = logging.getLogger(__name__)
+from utils.pb_create import make_SceneDataNotice, make_QuestNotice
 
 
 @packet_handler(MsgId.ChangeSceneChannelReq)
@@ -75,3 +76,15 @@ class Handler(PacketHandler):
         sd.action_type = SceneActionType.SceneActionType_ENTER
         sd.player.CopyFrom(session.scene_player)
         scene_data.up_scene_action(session.scene_id, session.channel_id, notice)
+
+        q_b = db.get_quest(session.player_id, 100026)
+        if q_b:
+            tmp = Quest()
+            tmp.ParseFromString(q_b)
+            if (
+                not Config.SKIP_QUESTS
+                and tmp.status == QuestStatus.QuestStatus_InProgress
+            ):
+                rsp1 = make_QuestNotice(session.player_id, [11000261])
+                if rsp1:
+                    session.send(MsgId.QuestNotice, rsp1, 0)

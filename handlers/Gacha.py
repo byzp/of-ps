@@ -7,13 +7,11 @@ from proto.net_pb2 import (
     GachaRsp,
     StatusCode,
     PackNotice,
-    QuestNotice,
-    QuestStatus,
 )
 from config import Config
 from utils.res_loader import res
 import utils.db as db
-from utils.pb_create import make_item
+from utils.pb_create import make_item, make_QuestNotice
 
 
 @packet_handler(MsgId.GachaReq)
@@ -81,21 +79,9 @@ class Handler(PacketHandler):
                 and db.get_total_gacha_num(session.player_id, 2000) == 0
             ):
                 r = 102001
-                rsp2 = QuestNotice()
-                rsp2.status = StatusCode.StatusCode_OK
-                tmp = rsp2.quests.add()
-                # 主线的抽卡引导任务
-                tmp.ParseFromString(db.get_quest(session.player_id, 100013))
-                for ii in tmp.conditions:
-                    ii.status = QuestStatus.QuestStatus_Finish
-                    db.set_quest(
-                        session.player_id,
-                        tmp.quest_id,
-                        tmp.SerializeToString(),
-                    )
-                tmp.status = QuestStatus.QuestStatus_Finish
-                session.send(MsgId.QuestNotice, rsp2, 0)
-
+                rsp2 = make_QuestNotice(session.player_id, [11000131])
+                if rsp2:
+                    session.send(MsgId.QuestNotice, rsp2, 0)
             c = False
             item = rsp.items.add()
             for i in res["Character"]["character"]["datas"]:
