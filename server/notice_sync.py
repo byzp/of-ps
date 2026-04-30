@@ -66,7 +66,6 @@ def start_loop():
         status_code = 1
     finally:
         db.exit()
-        time.sleep(1)
         os._exit(status_code)
 
 
@@ -148,7 +147,7 @@ def notice_sync_loop():
                         for i in channel:
                             for data in i.data:
                                 if data.player_id < 1010000:
-                                    rsend(1208, i, [scene_id, channel_id])
+                                    rsend(MsgId.ServerSceneSyncDataNotice, i, [scene_id, channel_id])
                 scene_action.clear()
             with lock_chat_msg:
                 for session in session_list:

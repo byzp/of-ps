@@ -421,8 +421,9 @@ message ActivityTurntableConfigure {
     int32 first_one_need_item_num = 6;
     int32 one_need_item_num = 7;
     int32 show_bg_index = 8;
-    repeated int32 show_fashions = 9;
-    int32 new_turntable_type = 10;
+    int32 reward5 = 9;
+    repeated int32 show_fashions = 10;
+    int32 new_turntable_type = 11;
 }
 
 message TurntablePoolDatas {
@@ -1810,6 +1811,7 @@ message ExploreIntervalConfigure {
 message AllExpressionDatas {
     ExpressionDatas expression = 1;
     MultiplayerExpressionDatas multiplayer_expression = 2;
+    CatcherDatas catcher = 3;
 }
 
 message ExpressionDatas {
@@ -1850,6 +1852,18 @@ message MultiplayerExpressionConfigure {
     int32 intimacy_limit = 6;
     float requester_play_distance = 7;
     int32 new_multiplayer_expression_type = 8;
+}
+
+message CatcherDatas {
+    repeated CatcherConfigure datas = 1;
+}
+
+message CatcherConfigure {
+    int32 i_d = 1;
+    int32 action_i_d = 2;
+    int32 need_item_i_d = 3;
+    int32 need_item_count = 4;
+    int32 spell_i_d = 5;
 }
 
 message AllFashionDatas {
@@ -2269,917 +2283,6 @@ message CollectionPickLevelItem {
     int32 guide_voice = 3;
 }
 
-message AllGemDuelAchieveDatas {
-    GemDuelAchieveDatas gem_duel_achieve = 1;
-}
-
-message GemDuelAchieveDatas {
-    repeated GemDuelAchieveConfigure datas = 1;
-}
-
-message GemDuelAchieveConfigure {
-    int32 i_d = 1;
-    repeated int32 param = 2;
-    int32 count_param = 3;
-    int32 newe_gem_duel_achieve_condition = 4;
-}
-
-message AllGemDuel_ActivityTaskDatas {
-    GemDuelActivityTaskDatas gem_duel_activity_task = 1;
-    GemDuelActivityLivenessDatas gem_duel_activity_liveness = 2;
-}
-
-message GemDuelActivityTaskDatas {
-    repeated GemDuelActivityTaskConfigure datas = 1;
-}
-
-message GemDuelActivityTaskConfigure {
-    int32 i_d = 1;
-    bool can_fast_finish = 2;
-    int32 weekly_liveness = 3;
-    int32 daily_liveness = 4;
-    int32 pass_exp_reward = 5;
-    int32 quest_i_d = 6;
-}
-
-message GemDuelActivityLivenessDatas {
-    repeated GemDuelActivityLivenessConfigure datas = 1;
-}
-
-message GemDuelActivityLivenessConfigure {
-    int32 i_d = 1;
-    repeated GemDuelActivityLivenessGroupInfo gem_duel_activity_liveness_group_info = 2;
-}
-
-message GemDuelActivityLivenessGroupInfo {
-    int32 liveness = 1;
-    int32 reward = 2;
-}
-
-message AllGemDuel_ArenaDatas {
-    GemDuelArenaDatas gem_duel_arena = 1;
-    GemDuelBotTeamDatas gem_duel_bot_team = 2;
-    GemDuelBotNameDatas gem_duel_bot_name = 3;
-}
-
-message GemDuelArenaDatas {
-    repeated GemDuelArenaConfigure datas = 1;
-}
-
-message GemDuelArenaConfigure {
-    int32 i_d = 1;
-    float fighting_limit = 2;
-    float fighting_max = 3;
-    int32 scorecard_reward_item = 4;
-    int32 scorecard_reward_number = 5;
-}
-
-message GemDuelBotTeamDatas {
-    repeated GemDuelBotTeamConfigure datas = 1;
-}
-
-message GemDuelBotTeamConfigure {
-    int32 i_d = 1;
-    int32 bot_fighting = 2;
-    int32 bot_number = 3;
-    int32 enemy1 = 4;
-    int32 level1 = 5;
-    int32 star1 = 6;
-    repeated int32 enemy_skill_unlock1 = 7;
-    int32 enemy2 = 8;
-    int32 level2 = 9;
-    int32 star2 = 10;
-    repeated int32 enemy_skill_unlock2 = 11;
-    int32 enemy3 = 12;
-    int32 level3 = 13;
-    int32 star3 = 14;
-    repeated int32 enemy_skill_unlock3 = 15;
-    int32 enemy4 = 16;
-    int32 level4 = 17;
-    int32 star4 = 18;
-    repeated int32 enemy_skill_unlock4 = 19;
-}
-
-message GemDuelBotNameDatas {
-    repeated GemDuelBotNameConfigure datas = 1;
-}
-
-message GemDuelBotNameConfigure {
-    int32 i_d = 1;
-    string name = 2;
-    int32 new_gem_duel_bot_name_type = 3;
-}
-
-message AllGemDuel_BattlePassDatas {
-    GemDuelBattlePassDatas gem_duel_battle_pass = 1;
-}
-
-message GemDuelBattlePassDatas {
-    repeated GemDuelBattlePassConfigure datas = 1;
-}
-
-message GemDuelBattlePassConfigure {
-    int32 i_d = 1;
-    string opening_time = 2;
-    string closing_time = 3;
-    int32 shop_i_d = 4;
-    int32 buy_exp = 5;
-    int32 exp_cost_item = 6;
-    int32 exp_cost_number = 7;
-    int32 get_exp = 8;
-    repeated GemDuelBattlePassItem gem_duel_battle_pass_item = 9;
-}
-
-message GemDuelBattlePassItem {
-    int32 level = 1;
-    int32 exp = 2;
-    bool is_expensive = 3;
-    repeated GemDuelBattlePassFreeItem gem_duel_battle_pass_free_item = 4;
-    repeated GemDuelBattlePassNoFreeItem gem_duel_battle_pass_no_free_item = 5;
-}
-
-message GemDuelBattlePassFreeItem {
-    int32 free_item_i_d = 1;
-    int32 free_item_num = 2;
-}
-
-message GemDuelBattlePassNoFreeItem {
-    int32 item_i_d = 1;
-    int32 item_num = 2;
-}
-
-message AllGemDuel_BattleStageDatas {
-    GemDuelBattleStageDatas gem_duel_battle_stage = 1;
-}
-
-message GemDuelBattleStageDatas {
-    repeated GemDuelBattleStageConfigure datas = 1;
-}
-
-message GemDuelBattleStageConfigure {
-    int32 i_d = 1;
-    int32 stage_buff_i_d = 2;
-    int32 turn = 3;
-    int32 gem_mod = 4;
-    int32 enemy1 = 5;
-    int32 level1 = 6;
-    int32 star1 = 7;
-    repeated int32 enemy_skill_unlock1 = 8;
-    int32 enemy2 = 9;
-    int32 level2 = 10;
-    int32 star2 = 11;
-    repeated int32 enemy_skill_unlock2 = 12;
-    int32 enemy3 = 13;
-    int32 level3 = 14;
-    int32 star3 = 15;
-    repeated int32 enemy_skill_unlock3 = 16;
-    int32 enemy4 = 17;
-    int32 level4 = 18;
-    int32 star4 = 19;
-    repeated int32 enemy_skill_unlock4 = 20;
-}
-
-message AllGemDuel_BrenaDatas {
-    GemDuelBrenaDatas gem_duel_brena = 1;
-}
-
-message GemDuelBrenaDatas {
-    repeated GemDuelBrenaConfigure datas = 1;
-}
-
-message GemDuelBrenaConfigure {
-    int32 i_d = 1;
-    int32 type = 2;
-    int32 level = 3;
-    int32 text = 4;
-    int32 unlock_item = 5;
-    int32 composite_item = 6;
-    int32 atk = 7;
-    int32 def = 8;
-    int32 hp = 9;
-    int32 ap = 10;
-    int32 water_energy_double = 11;
-    int32 fire_energy_double = 12;
-    int32 wind_energy_double = 13;
-    int32 dark_energy_double = 14;
-    int32 light_energy_double = 15;
-    int32 viod_energy_double = 16;
-}
-
-message AllGemDuel_BuffDatas {
-    GemDuelBuffDatas gem_duel_buff = 1;
-    GemDuelBuffEffectDatas gem_duel_buff_effect = 2;
-}
-
-message GemDuelBuffDatas {
-    repeated GemDuelBuffConfigure datas = 1;
-}
-
-message GemDuelBuffConfigure {
-    int32 i_d = 1;
-    int32 icon = 2;
-    int32 text = 3;
-    int32 buff_type = 4;
-    int32 buff_tag = 5;
-    int32 self_repair = 6;
-    repeated int32 buff_effect_i_d = 7;
-}
-
-message GemDuelBuffEffectDatas {
-    repeated GemDuelBuffEffectConfigure datas = 1;
-}
-
-message GemDuelBuffEffectConfigure {
-    int32 i_d = 1;
-    int32 param1 = 2;
-    int32 param2 = 3;
-    int32 param3 = 4;
-    int32 param4 = 5;
-    int32 new_i_effect_type = 6;
-}
-
-message AllGemDuel_CharacterDatas {
-    GemDuelCharacterDatas gem_duel_character = 1;
-    GemDuelCharacterAttributeDatas gem_duel_character_attribute = 2;
-    GemDuelCharacterLvUpDatas gem_duel_character_lv_up = 3;
-    GemDuelCharacterStarUpDatas gem_duel_character_star_up = 4;
-    GemDuelCharacterStarResultsDatas gem_duel_character_star_results = 5;
-    GemDuelCharacterSkillUnlockDatas gem_duel_character_skill_unlock = 6;
-}
-
-message GemDuelCharacterDatas {
-    repeated GemDuelCharacterConfigure datas = 1;
-}
-
-message GemDuelCharacterConfigure {
-    int32 i_d = 1;
-    int32 text = 2;
-    int32 icon = 3;
-    int32 item_i_d = 4;
-    int32 initial_star = 5;
-    int32 job_tag = 6;
-    repeated int32 color_type = 7;
-    int32 energy_max = 8;
-    int32 attribute = 9;
-    repeated int32 skill1_i_d = 10;
-    int32 skill2_i_d = 11;
-    int32 skill3_i_d = 12;
-    int32 skill4_i_d = 13;
-    int32 skill_unlock = 14;
-    int32 news_gem_duel_damage_type = 15;
-    int32 news_gem_duel_element_type = 16;
-    int32 news_gem_duel_character_race_tag = 17;
-}
-
-message GemDuelCharacterAttributeDatas {
-    repeated GemDuelCharacterAttributeConfigure datas = 1;
-}
-
-message GemDuelCharacterAttributeConfigure {
-    int32 i_d = 1;
-    repeated GemDuelCharacterAttributeItems gem_duel_character_attribute_item = 2;
-}
-
-message GemDuelCharacterAttributeItems {
-    int32 level = 1;
-    int32 attack = 2;
-    int32 life = 3;
-    int32 shield = 4;
-    int32 magic = 5;
-    int32 magdef = 6;
-    int32 crit = 7;
-    int32 critdmg = 8;
-}
-
-message GemDuelCharacterLvUpDatas {
-    repeated GemDuelCharacterLvUpConfigure datas = 1;
-}
-
-message GemDuelCharacterLvUpConfigure {
-    int32 i_d = 1;
-    int32 need_star = 2;
-    int32 cost_item1 = 3;
-    int32 cost_num1 = 4;
-    int32 cost_item2 = 5;
-    int32 cost_num2 = 6;
-    int32 cost_item3 = 7;
-    int32 cost_num3 = 8;
-    int32 cost_item4 = 9;
-    int32 cost_num4 = 10;
-}
-
-message GemDuelCharacterStarUpDatas {
-    repeated GemDuelCharacterStarUpConfigure datas = 1;
-}
-
-message GemDuelCharacterStarUpConfigure {
-    int32 i_d = 1;
-    int32 need_card_up2_star = 2;
-    int32 need_card_up3_star = 3;
-    int32 need_card_up4_star = 4;
-    int32 need_card_up5_star = 5;
-    int32 need_card_up6_star = 6;
-    int32 need_general_card_up2_star = 7;
-    int32 need_general_card_up3_star = 8;
-    int32 need_general_card_up4_star = 9;
-    int32 need_general_card_up5_star = 10;
-    int32 need_general_card_up6_star = 11;
-}
-
-message GemDuelCharacterStarResultsDatas {
-    repeated GemDuelCharacterStarResultsConfigure datas = 1;
-}
-
-message GemDuelCharacterStarResultsConfigure {
-    int32 i_d = 1;
-    int32 attack = 2;
-    int32 life = 3;
-    int32 shield = 4;
-    int32 magic = 5;
-}
-
-message GemDuelCharacterSkillUnlockDatas {
-    repeated GemDuelCharacterSkillUnlockConfigure datas = 1;
-}
-
-message GemDuelCharacterSkillUnlockConfigure {
-    int32 i_d = 1;
-    repeated GemDuelCharacterSkillUnlockItems gem_duel_character_skill_unlock_item = 2;
-}
-
-message GemDuelCharacterSkillUnlockItems {
-    int32 skill_slot = 1;
-    int32 need_star = 2;
-    int32 cost_general_item_num = 3;
-    int32 cost_item1 = 4;
-    int32 cost_num1 = 5;
-    int32 cost_item2 = 6;
-    int32 cost_num2 = 7;
-    int32 cost_item3 = 8;
-    int32 cost_num3 = 9;
-    int32 cost_item4 = 10;
-    int32 cost_num4 = 11;
-    int32 cost_item5 = 12;
-    int32 cost_num5 = 13;
-    int32 cost_item6 = 14;
-    int32 cost_num6 = 15;
-    int32 cost_item7 = 16;
-    int32 cost_num7 = 17;
-}
-
-message AllGemDuel_GachaDatas {
-    GemDuelGachaInfoDatas gem_duel_gacha_info = 1;
-    GemDuelGachaPoolDatas gem_duel_gacha_pool = 2;
-    GemDuelGachaRewardPoolDatas gem_duel_reward_pool = 3;
-}
-
-message GemDuelGachaInfoDatas {
-    repeated GemDuelGachaInfoConfigure datas = 1;
-}
-
-message GemDuelGachaInfoConfigure {
-    int32 i_d = 1;
-    int32 index = 2;
-    string opening_time = 3;
-    string closing_time = 4;
-    int32 text_i_d = 5;
-    int32 icon_i_d = 6;
-    bool is_free = 7;
-    int32 method1_i_d = 8;
-    int32 consume_item1_i_d = 9;
-    int32 method1_count = 10;
-    int32 consume_item1_num = 11;
-    int32 consume_item2_i_d = 12;
-    int32 method2_count = 13;
-    int32 consume_item2_num = 14;
-    int32 max_times = 15;
-    int32 optional_num = 16;
-    int32 optional_pool_i_d = 17;
-    int32 big_guarantee_num = 18;
-    int32 big_guarantee_pool_i_d = 19;
-    int32 new_gem_duel_show_type = 20;
-    int32 new_gem_duel_u_i_gacha_type = 21;
-}
-
-message GemDuelGachaPoolDatas {
-    repeated GemDuelGachaPoolConfigure datas = 1;
-}
-
-message GemDuelGachaPoolConfigure {
-    int32 i_d = 1;
-    repeated GemDuelGachaPoolItem items = 2;
-}
-
-message GemDuelGachaPoolItem {
-    int32 free_gacha_pool_i_d = 1;
-}
-
-message GemDuelGachaRewardPoolDatas {
-    repeated GemDuelGachaRewardPoolConfigure datas = 1;
-}
-
-message GemDuelGachaRewardPoolConfigure {
-    int32 i_d = 1;
-    repeated GemDuelGachaRewardPoolItem items = 2;
-}
-
-message GemDuelGachaRewardPoolItem {
-    int32 item_i_d = 1;
-    int32 item_min_count = 2;
-    int32 item_max_count = 3;
-    int32 weight = 4;
-}
-
-message AllGemDuel_GemDatas {
-    GemDuelGemDatas gem_duel_gem = 1;
-    GemDuelGemModDatas gem_duel_gem_mod = 2;
-}
-
-message GemDuelGemDatas {
-    repeated GemDuelGemConfigure datas = 1;
-}
-
-message GemDuelGemConfigure {
-    int32 i_d = 1;
-    int32 text = 2;
-    int32 icon = 3;
-}
-
-message GemDuelGemModDatas {
-    repeated GemDuelGemModConfigure datas = 1;
-}
-
-message GemDuelGemModConfigure {
-    int32 i_d = 1;
-    repeated int32 gem1001 = 2;
-    repeated int32 gem1002 = 3;
-    repeated int32 gem1003 = 4;
-    repeated int32 gem1004 = 5;
-    repeated int32 gem1005 = 6;
-    repeated int32 gem1006 = 7;
-    repeated int32 gem1007 = 8;
-    repeated int32 gem1008 = 9;
-    repeated int32 gem1009 = 10;
-    repeated int32 gem2001 = 11;
-    repeated int32 gem2002 = 12;
-}
-
-message AllGemDuel_GiftBagDatas {
-    GemDuelGiftBagDatas gem_duel_gift_bag = 1;
-}
-
-message GemDuelGiftBagDatas {
-    repeated GemDuelGiftBagConfigure datas = 1;
-}
-
-message GemDuelGiftBagConfigure {
-    int32 i_d = 1;
-    int32 player_lv = 2;
-    bool is_auto_open = 3;
-    int32 use_item_i_d = 4;
-    int32 use_item_count = 5;
-    int32 reward_pool_group_i_d = 6;
-    float reward_pool_group_rate = 7;
-    string asset_path = 8;
-}
-
-message AllGemDuel_GlobalConfigDatas {
-    GemDuelGlobalConfigDatas gem_duel_config = 1;
-}
-
-message GemDuelGlobalConfigDatas {
-    repeated GemDuelGlobalConfigConfigure datas = 1;
-}
-
-message GemDuelGlobalConfigConfigure {
-    int32 i_d = 1;
-    string key = 2;
-    repeated string values = 3;
-}
-
-message AllGemDuel_ItemDatas {
-    GemDuelItemDatas gem_duel_item = 1;
-    GemDuelBagDatas gem_duel_bag = 2;
-}
-
-message GemDuelItemDatas {
-    repeated GemDuelItemConfigure datas = 1;
-}
-
-message GemDuelItemConfigure {
-    int32 i_d = 1;
-    int32 text_i_d = 2;
-    int32 icon_i_d = 3;
-    int32 quality = 4;
-    int32 stack_count = 5;
-    bool is_show_num = 6;
-    int32 source_i_d = 7;
-    int32 gm_count = 8;
-    int32 bg_i_d = 9;
-    int32 script_params = 10;
-    int32 new_item_type = 11;
-    int32 new_item_tag = 12;
-    int32 new_item_use_type = 13;
-}
-
-message GemDuelBagDatas {
-    repeated GemDuelBagConfigure datas = 1;
-}
-
-message GemDuelBagConfigure {
-    int32 i_d = 1;
-    repeated GemDuelBagItem gem_duel_bag_item = 2;
-}
-
-message GemDuelBagItem {
-    int32 new_item_tag = 1;
-}
-
-message AllGemDuel_MainDungeonDatas {
-    GemDuelMainDungeonDatas gem_duel_main_dungeon = 1;
-}
-
-message GemDuelMainDungeonDatas {
-    repeated GemDuelMainDungeonConfigure datas = 1;
-}
-
-message GemDuelMainDungeonConfigure {
-    int32 i_d = 1;
-    int32 chapter_icon = 2;
-    int32 chapter_text = 3;
-    repeated GemDuelMainDungeonGroupInfo gem_duel_main_dungeon_group_info = 4;
-}
-
-message GemDuelMainDungeonGroupInfo {
-    int32 dungeon_i_d = 1;
-    int32 item_i_d = 2;
-    int32 item_num = 3;
-    int32 pre_dungeon = 4;
-    int32 system_level = 5;
-    int32 dungeon_moster_type = 6;
-    int32 text = 7;
-    int32 battle_stage = 8;
-    int32 pass_reward = 9;
-    int32 reward = 10;
-    int32 quest_i_d = 11;
-    int32 quest_reward = 12;
-    int32 new_gem_duel_main_dungoen_difficulty = 13;
-}
-
-message AllGemDuel_PlayerLevelDatas {
-    GemDuelPlayerLevelDatas gem_duel_player_level = 1;
-    GemDuelGrowthFundDatas gem_duel_growth_fund = 2;
-}
-
-message GemDuelPlayerLevelDatas {
-    repeated GemDuelPlayerLevelConfigure datas = 1;
-}
-
-message GemDuelPlayerLevelConfigure {
-    int32 i_d = 1;
-    int32 need_exp = 2;
-}
-
-message GemDuelGrowthFundDatas {
-    repeated GemDuelGrowthFundConfigure datas = 1;
-}
-
-message GemDuelGrowthFundConfigure {
-    int32 i_d = 1;
-    int32 text_i_d = 2;
-    int32 icon_i_d = 3;
-    repeated GemDuelGrowthFundItem gem_duel_growth_fund_item = 4;
-}
-
-message GemDuelGrowthFundItem {
-    int32 growth_fund_level = 1;
-    int32 player_level = 2;
-    bool is_expensive = 3;
-    int32 unlock_text = 4;
-    repeated GemDuelGrowthFundFreeItem gem_duel_growth_fund_free_item = 5;
-    repeated GemDuelGrowthFundNoFreeItem gem_duel_growth_fund_no_free_item = 6;
-}
-
-message GemDuelGrowthFundFreeItem {
-    int32 free_item_i_d = 1;
-    int32 free_item_num = 2;
-}
-
-message GemDuelGrowthFundNoFreeItem {
-    int32 item_i_d = 1;
-    int32 item_num = 2;
-}
-
-message AllGemDuel_PlayerUnlockDatas {
-    GemDuelPlayeUnlockDatas gem_duel_playe_unlock = 1;
-}
-
-message GemDuelPlayeUnlockDatas {
-    repeated GemDuelPlayeUnlockConfigure datas = 1;
-}
-
-message GemDuelPlayeUnlockConfigure {
-    int32 i_d = 1;
-    int32 para = 2;
-    int32 item_i_d = 3;
-    bool is_show_tips = 4;
-    bool is_unlock = 5;
-    string unlock_time = 6;
-    int32 new_unlock_function_type = 7;
-}
-
-message AllGemDuel_QuestDatas {
-    GemDuelQuestDatas gem_duel_quest = 1;
-}
-
-message GemDuelQuestDatas {
-    repeated GemDuelQuestConfigure datas = 1;
-}
-
-message GemDuelQuestConfigure {
-    int32 i_d = 1;
-    int32 name = 2;
-    repeated int32 achieve_condition_i_d = 3;
-    int32 reward = 4;
-    int32 first_reward = 5;
-    bool is_immed_reward = 6;
-    int32 new_type = 7;
-}
-
-message AllGemDuel_RewardDatas {
-    GemDuelRewardPoolDatas gem_duel_reward_pool = 1;
-    GemDuelRewardGroupPoolDatas gem_duel_reward_group_pool = 2;
-}
-
-message GemDuelRewardPoolDatas {
-    repeated GemDuelRewardPoolConfigure datas = 1;
-}
-
-message GemDuelRewardPoolConfigure {
-    int32 i_d = 1;
-    repeated GemDuelRewardPoolItem items = 2;
-}
-
-message GemDuelRewardPoolItem {
-    int32 reward_pool_group_i_d = 1;
-    float reward_pool_group_rate = 2;
-}
-
-message GemDuelRewardGroupPoolDatas {
-    repeated GemDuelRewardGroupPoolConfigure datas = 1;
-}
-
-message GemDuelRewardGroupPoolConfigure {
-    int32 i_d = 1;
-    repeated emDuelRewardGroupPoolItem items = 2;
-}
-
-message emDuelRewardGroupPoolItem {
-    int32 item_i_d = 1;
-    int32 item_min_count = 2;
-    int32 item_max_count = 3;
-    int32 weight = 4;
-}
-
-message AllGemDuel_ShopDatas {
-    GemDuelShopInfoDatas gem_duel_shop_info = 1;
-    GemDuelShopGridDatas gem_duel_grid = 2;
-    GemDuelShopPoolDatas gem_duel_pool = 3;
-    GemDuelShopIncreasingDatas gem_duel_increasing = 4;
-    GemDuelShopDatas shop = 5;
-    GemDuelRecommendationDatas gem_duel_recommendation = 6;
-}
-
-message GemDuelShopInfoDatas {
-    repeated GemDuelShopInfoConfigure datas = 1;
-}
-
-message GemDuelShopInfoConfigure {
-    int32 i_d = 1;
-    int32 u_i_index = 2;
-    int32 text_i_d = 3;
-    int32 icon_i_d = 4;
-    string opening_time = 5;
-    string closing_time = 6;
-    int32 grid_i_d = 7;
-    int32 refresh_item_i_d = 8;
-    int32 refresh_item_cost = 9;
-    int32 unlock_item_i_d = 10;
-    int32 refresh_limit = 11;
-    repeated int32 item_i_ds = 12;
-    int32 new_shop_type = 13;
-}
-
-message GemDuelShopGridDatas {
-    repeated GemDuelShopGridConfigure datas = 1;
-}
-
-message GemDuelShopGridConfigure {
-    int32 i_d = 1;
-    repeated GemDuelShopGridConfigureItem items = 2;
-}
-
-message GemDuelShopGridConfigureItem {
-    int32 grid_i_d = 1;
-    int32 index = 2;
-    int32 condition_param = 3;
-    int32 first_buy_shop_pool_i_d = 4;
-    int32 shop_pool_i_d = 5;
-    int32 icon_i_d = 6;
-    int32 buy_max_count = 7;
-    int32 new_shop_refresh_type = 8;
-    repeated int32 refresh_time = 9;
-    string goods_i_d = 10;
-}
-
-message GemDuelShopPoolDatas {
-    repeated GemDuelShopPoolConfigure datas = 1;
-}
-
-message GemDuelShopPoolConfigure {
-    int32 i_d = 1;
-    repeated GemDuelShopPoolConfigureItem items = 2;
-}
-
-message GemDuelShopPoolConfigureItem {
-    int32 item_i_d = 1;
-    bool is_repeated_in_bag = 2;
-    int32 item_num = 3;
-    int32 index = 4;
-    string name = 5;
-    int32 add_item_i_d = 6;
-    int32 add_item_num = 7;
-    string opening_time = 8;
-    string closing_time = 9;
-    float discount = 10;
-    float show_discount = 11;
-    bool is_hide_in_bag = 12;
-    repeated GemDuelShopCurrencyItems gem_duel_shop_currency_item = 13;
-}
-
-message GemDuelShopCurrencyItems {
-    int32 currency_i_d = 1;
-    int32 price = 2;
-    int32 increasing_i_d = 3;
-}
-
-message GemDuelShopIncreasingDatas {
-    repeated GemDuelShopIncreasingConfigure datas = 1;
-}
-
-message GemDuelShopIncreasingConfigure {
-    int32 i_d = 1;
-    repeated GemDuelShopIncreasingConfigureItem items = 2;
-}
-
-message GemDuelShopIncreasingConfigureItem {
-    int32 price = 1;
-}
-
-message GemDuelShopDatas {
-    repeated GemDuelShopConfigure datas = 1;
-}
-
-message GemDuelShopConfigure {
-    int32 i_d = 1;
-}
-
-message GemDuelRecommendationDatas {
-    repeated GemDuelRecommendationConfigure datas = 1;
-}
-
-message GemDuelRecommendationConfigure {
-    int32 i_d = 1;
-    int32 text_i_d = 2;
-    int32 icon_i_d = 3;
-    repeated GemDuelShopRecommendationItem items = 4;
-}
-
-message GemDuelShopRecommendationItem {
-    int32 page_icon_i_d = 1;
-    int32 page_text_i_d = 2;
-    int32 shop_i_d = 3;
-    int32 shop_pool_i_d = 4;
-    string opening_time = 5;
-    string closing_time = 6;
-}
-
-message AllGemDuel_SkillDatas {
-    GemDuelSkillDatas gem_duel_skill = 1;
-    GemDuelSkillTargetSelectionDatas gem_duel_skill_target_selection = 2;
-    GemDuelSkillTriggerEffectDatas gem_duel_skill_trigger_effect = 3;
-    GemDuelSkillConditionalComparisonDatas gem_duel_skill_conditional_comparison = 4;
-    GemDuelSkillSummonDatas gem_duel_skill_summon = 5;
-    GemDuelSkillSceneEventEffcetDatas gem_duel_skill_scene_event_effcet = 6;
-}
-
-message GemDuelSkillDatas {
-    repeated GemDuelSkillConfigure datas = 1;
-}
-
-message GemDuelSkillConfigure {
-    int32 i_d = 1;
-    int32 text_i_d = 2;
-    int32 icon_i_d = 3;
-    string performance = 4;
-    string skill_tag = 5;
-    int32 cast_type = 6;
-    repeated int32 target_selection = 7;
-}
-
-message GemDuelSkillTargetSelectionDatas {
-    repeated GemDuelSkillTargetSelectionConfigure datas = 1;
-}
-
-message GemDuelSkillTargetSelectionConfigure {
-    int32 i_d = 1;
-    int32 target_category = 2;
-    int32 sorting = 3;
-    int32 min_count = 4;
-    int32 max_count = 5;
-    int32 bonus_percentage = 6;
-    repeated int32 rigger_effect = 7;
-    int32 new_select_scope = 8;
-    int32 new_default_target = 9;
-    int32 new_attribute = 10;
-}
-
-message GemDuelSkillTriggerEffectDatas {
-    repeated GemDuelSkillTriggerEffectConfigure datas = 1;
-}
-
-message GemDuelSkillTriggerEffectConfigure {
-    int32 i_d = 1;
-    int32 effect_type = 2;
-    int32 effect_sub_type = 3;
-    int32 effect_feedback = 4;
-    repeated int32 script_params = 5;
-    int32 duration = 6;
-    int32 trigger_timing = 7;
-    int32 trigger_probability = 8;
-    int32 overwrite = 9;
-    int32 new_define_type = 10;
-}
-
-message GemDuelSkillConditionalComparisonDatas {
-    repeated GemDuelSkillConditionalComparisonConfigure datas = 1;
-}
-
-message GemDuelSkillConditionalComparisonConfigure {
-    int32 i_d = 1;
-    int32 value = 2;
-    int32 is_combine = 3;
-    repeated int32 work_conditions = 4;
-    repeated int32 lose_conditions = 5;
-    int32 new_condition_type1 = 6;
-    int32 new_condition_expr1 = 7;
-    int32 new_operation = 8;
-    int32 newcompare = 9;
-    int32 new_condition_type2 = 10;
-    int32 new_condition_expr2 = 11;
-}
-
-message GemDuelSkillSummonDatas {
-    repeated GemDuelSkillSummonConfigure datas = 1;
-}
-
-message GemDuelSkillSummonConfigure {
-    int32 i_d = 1;
-    int32 level1 = 2;
-    int32 star1 = 3;
-    repeated int32 enemy_skill_unlock1 = 4;
-}
-
-message GemDuelSkillSceneEventEffcetDatas {
-    repeated GemDuelSkillSceneEventEffcetConfigure datas = 1;
-}
-
-message GemDuelSkillSceneEventEffcetConfigure {
-    int32 i_d = 1;
-    int32 duration = 2;
-    repeated int32 script_params = 3;
-    repeated int32 rigger_effect = 4;
-    repeated int32 caster_rigger_effect = 5;
-    int32 max_value = 6;
-    int32 text = 7;
-    int32 icon = 8;
-    int32 new_event_type = 9;
-}
-
-message AllGemDuel_TeamDatas {
-    GemDuelTeamDatas gem_duel_team = 1;
-}
-
-message GemDuelTeamDatas {
-    repeated GemDuelTeamConfigure datas = 1;
-}
-
-message GemDuelTeamConfigure {
-    int32 i_d = 1;
-    int32 param = 2;
-    int32 new_gem_duel_team_unlock = 3;
-}
-
 message AllGiftBagDatas {
     GiftBagDatas gift_bag = 1;
 }
@@ -3484,6 +2587,7 @@ message AllInteractionActivityDatas {
     ActivityInteractionDatas activity_interaction = 1;
     FullServerActivityDatas full_server_activity = 2;
     RecallActivityDatas recall_activity = 3;
+    HomecomingRewardDatas homecoming_reward = 4;
 }
 
 message ActivityInteractionDatas {
@@ -3546,6 +2650,20 @@ message RecallActivityItems {
 }
 
 message RecallActivityRewardItems {
+    int32 item_i_d = 1;
+    int32 item_num = 2;
+}
+
+message HomecomingRewardDatas {
+    repeated HomecomingRewardConfigure datas = 1;
+}
+
+message HomecomingRewardConfigure {
+    int32 i_d = 1;
+    repeated HomecomingRewardItems homecoming_reward_item = 2;
+}
+
+message HomecomingRewardItems {
     int32 item_i_d = 1;
     int32 item_num = 2;
 }
@@ -4224,12 +3342,13 @@ message MonsterCharacterConfigure {
     int32 name_i_d = 7;
     int32 character_icon = 8;
     int32 reward_pool_i_d = 9;
-    string asset_full_name = 10;
-    int32 new_sex = 11;
-    int32 new_camp_type = 12;
-    int32 new_tag = 13;
-    int32 new_armor_type = 14;
-    int32 new_element_type = 15;
+    int32 pet_i_d = 10;
+    string asset_full_name = 11;
+    int32 new_sex = 12;
+    int32 new_camp_type = 13;
+    int32 new_tag = 14;
+    int32 new_armor_type = 15;
+    int32 new_element_type = 16;
 }
 
 message MonsterCharacterGrowthModelDatas {
@@ -5222,7 +4341,7 @@ message ShopGridConfigureItem {
     int32 grid_i_d = 1;
     int32 index = 2;
     int32 new_grid_condition_type = 3;
-    int32 condition_param = 4;
+    string condition_param = 4;
     int32 first_buy_shop_pool_i_d = 5;
     int32 shop_pool_i_d = 6;
     int32 icon_i_d = 7;
@@ -5256,16 +4375,16 @@ message ShopPoolConfigureItem {
     string closing_time = 11;
     float discount = 12;
     float show_discount = 13;
-    int32 wishlist_price = 14;
-    float wishlist_discount = 15;
-    bool is_hide_in_bag = 16;
-    repeated ShopCurrencyItems shop_currency_item = 17;
+    bool is_hide_in_bag = 14;
+    repeated ShopCurrencyItems shop_currency_item = 15;
 }
 
 message ShopCurrencyItems {
     int32 currency_i_d = 1;
     int32 price = 2;
-    int32 increasing_i_d = 3;
+    int32 wishlist_price = 3;
+    float wishlist_discount = 4;
+    int32 increasing_i_d = 5;
 }
 
 message ShopIncreasingDatas {
@@ -5639,18 +4758,7 @@ message AllStringDatas {
     StringGuideDatas string_guide = 69;
     RestaurantGameItemDatas restaurant_game_item = 70;
     RestaurantGameTitleDatas restaurant_game_title = 71;
-    StringGemDuelBattleStageDatas string_gem_duel_battle_stage = 72;
-    StringGemDuelSkillDatas string_gem_duel_skill = 73;
-    StringGemDuelCharacterDatas string_gem_duel_character = 74;
-    StringGemDuelQuestDatas string_gem_duel_quest = 75;
-    StringGemDuelMainDungeonDatas string_gem_duel_main_dungeon = 76;
-    StringGemDuelBuffDatas string_gem_duel_buff = 77;
-    StringGemDuelItemDatas string_gem_duel_item = 78;
-    StringGemDuelGemDatas string_gem_duel_gem = 79;
-    StringGemDuelGachaDatas string_gem_duel_gacha = 80;
-    StringGemDuelShopDatas string_gem_duel_shop = 81;
-    StringGemDuelGlobalDatas string_gem_duel_global = 82;
-    StringGemDuelPlayerLevelDatas string_gem_duel_player_level = 83;
+    StringPetDatas string_pet = 72;
 }
 
 message StringItemTextDatas {
@@ -6294,110 +5402,11 @@ message RestaurantGameTitleConfigure {
     repeated string text = 2;
 }
 
-message StringGemDuelBattleStageDatas {
-    repeated StringGemDuelBattleStageConfigure datas = 1;
+message StringPetDatas {
+    repeated StringPetConfigure datas = 1;
 }
 
-message StringGemDuelBattleStageConfigure {
-    int32 i_d = 1;
-    repeated string text = 2;
-}
-
-message StringGemDuelSkillDatas {
-    repeated StringGemDuelSkillConfigure datas = 1;
-}
-
-message StringGemDuelSkillConfigure {
-    int32 i_d = 1;
-    repeated string text = 2;
-}
-
-message StringGemDuelCharacterDatas {
-    repeated StringGemDuelCharacterConfigure datas = 1;
-}
-
-message StringGemDuelCharacterConfigure {
-    int32 i_d = 1;
-    repeated string text = 2;
-}
-
-message StringGemDuelQuestDatas {
-    repeated StringGemDuelQuestConfigure datas = 1;
-}
-
-message StringGemDuelQuestConfigure {
-    int32 i_d = 1;
-    repeated string text = 2;
-}
-
-message StringGemDuelMainDungeonDatas {
-    repeated StringGemDuelMainDungeonConfigure datas = 1;
-}
-
-message StringGemDuelMainDungeonConfigure {
-    int32 i_d = 1;
-    repeated string text = 2;
-}
-
-message StringGemDuelBuffDatas {
-    repeated StringGemDuelBuffConfigure datas = 1;
-}
-
-message StringGemDuelBuffConfigure {
-    int32 i_d = 1;
-    repeated string text = 2;
-}
-
-message StringGemDuelItemDatas {
-    repeated StringGemDuelItemConfigure datas = 1;
-}
-
-message StringGemDuelItemConfigure {
-    int32 i_d = 1;
-    repeated string text = 2;
-}
-
-message StringGemDuelGemDatas {
-    repeated StringGemDuelGemConfigure datas = 1;
-}
-
-message StringGemDuelGemConfigure {
-    int32 i_d = 1;
-    repeated string text = 2;
-}
-
-message StringGemDuelGachaDatas {
-    repeated StringGemDuelGachaConfigure datas = 1;
-}
-
-message StringGemDuelGachaConfigure {
-    int32 i_d = 1;
-    repeated string text = 2;
-}
-
-message StringGemDuelShopDatas {
-    repeated StringGemDuelShopConfigure datas = 1;
-}
-
-message StringGemDuelShopConfigure {
-    int32 i_d = 1;
-    repeated string text = 2;
-}
-
-message StringGemDuelGlobalDatas {
-    repeated StringGemDuelGlobalConfigure datas = 1;
-}
-
-message StringGemDuelGlobalConfigure {
-    int32 i_d = 1;
-    repeated string text = 2;
-}
-
-message StringGemDuelPlayerLevelDatas {
-    repeated StringGemDuelPlayerLevelConfigure datas = 1;
-}
-
-message StringGemDuelPlayerLevelConfigure {
+message StringPetConfigure {
     int32 i_d = 1;
     repeated string text = 2;
 }
@@ -6587,16 +5596,6 @@ message AllUIDatas {
     UIMusicNoteDatas u_i_music_note = 39;
     UIGuideDatas u_i_guide = 40;
     UIBlessingTreeDatas u_i_blessing_tree = 41;
-    UIGemDuelBattleStageDatas u_i_gem_duel_battle_stage = 42;
-    UIGemDuelSkillDatas u_i_gem_duel_skill = 43;
-    UIGemDuelCharacterDatas u_i_gem_duel_character = 44;
-    UIGemDuelMainDungeonDatas u_i_gem_duel_main_dungeon = 45;
-    UIGemDuelBuffDatas u_i_gem_duel_buff = 46;
-    UIGemDuelGemDatas u_i_gem_duel_gem = 47;
-    UIGemDuelItemDatas u_i_gem_duel_item = 48;
-    UIGemDueShopDatas u_i_gem_due_shop = 49;
-    UIGemDueGachaDatas u_i_gem_due_gacha = 50;
-    UIGemDuePlayerLevelDatas u_i_gem_due_player_level = 51;
 }
 
 message UIItemIconDatas {
@@ -6965,96 +5964,6 @@ message UIBlessingTreeDatas {
 }
 
 message UIBlessingTreeConfigure {
-    int32 i_d = 1;
-    repeated string asset_full_name = 2;
-}
-
-message UIGemDuelBattleStageDatas {
-    repeated UIGemDuelBattleStageConfigure datas = 1;
-}
-
-message UIGemDuelBattleStageConfigure {
-    int32 i_d = 1;
-    repeated string asset_full_name = 2;
-}
-
-message UIGemDuelSkillDatas {
-    repeated UIGemDuelSkillConfigure datas = 1;
-}
-
-message UIGemDuelSkillConfigure {
-    int32 i_d = 1;
-    repeated string asset_full_name = 2;
-}
-
-message UIGemDuelCharacterDatas {
-    repeated UIGemDuelCharacterConfigure datas = 1;
-}
-
-message UIGemDuelCharacterConfigure {
-    int32 i_d = 1;
-    repeated string asset_full_name = 2;
-}
-
-message UIGemDuelMainDungeonDatas {
-    repeated UIGemDuelMainDungeonConfigure datas = 1;
-}
-
-message UIGemDuelMainDungeonConfigure {
-    int32 i_d = 1;
-    repeated string asset_full_name = 2;
-}
-
-message UIGemDuelBuffDatas {
-    repeated UIGemDuelBuffConfigure datas = 1;
-}
-
-message UIGemDuelBuffConfigure {
-    int32 i_d = 1;
-    repeated string asset_full_name = 2;
-}
-
-message UIGemDuelGemDatas {
-    repeated UIGemDuelGemConfigure datas = 1;
-}
-
-message UIGemDuelGemConfigure {
-    int32 i_d = 1;
-    repeated string asset_full_name = 2;
-}
-
-message UIGemDuelItemDatas {
-    repeated UIGemDuelItemConfigure datas = 1;
-}
-
-message UIGemDuelItemConfigure {
-    int32 i_d = 1;
-    repeated string asset_full_name = 2;
-}
-
-message UIGemDueShopDatas {
-    repeated UIGemDueShopConfigure datas = 1;
-}
-
-message UIGemDueShopConfigure {
-    int32 i_d = 1;
-    repeated string asset_full_name = 2;
-}
-
-message UIGemDueGachaDatas {
-    repeated UIGemDueGachaConfigure datas = 1;
-}
-
-message UIGemDueGachaConfigure {
-    int32 i_d = 1;
-    repeated string asset_full_name = 2;
-}
-
-message UIGemDuePlayerLevelDatas {
-    repeated UIGemDuePlayerLevelConfigure datas = 1;
-}
-
-message UIGemDuePlayerLevelConfigure {
     int32 i_d = 1;
     repeated string asset_full_name = 2;
 }
