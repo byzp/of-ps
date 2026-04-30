@@ -462,6 +462,25 @@ message TurntableRewardPoolItems {
     int32 reward_item_num = 4;
 }
 
+message AllArchaeologyAchieveDatas {
+    ArchaeologyAchieveDatas archaeology_achieve = 1;
+}
+
+message ArchaeologyAchieveDatas {
+    repeated ArchaeologyAchieveConfigure datas = 1;
+}
+
+message ArchaeologyAchieveConfigure {
+    int32 i_d = 1;
+    int32 new_archaeology_type = 2;
+    repeated ArchaeologyAchieveItem items = 3;
+}
+
+message ArchaeologyAchieveItem {
+    int32 achieve_i_d = 1;
+    int32 reward_i_d = 2;
+}
+
 message AllAreaDatas {
     AreaDataDatas area_data = 1;
     AreaVoiceDatas area_voice = 2;
@@ -957,6 +976,21 @@ message BlessingTreeInfoGroupInfo {
     int32 item_count = 4;
     int32 reward_item_i_d = 5;
     int32 reward_item_count = 6;
+}
+
+message AllBookDatas {
+    BookDatas book = 1;
+}
+
+message BookDatas {
+    repeated BookConfigure datas = 1;
+}
+
+message BookConfigure {
+    int32 i_d = 1;
+    int32 book_i_d = 2;
+    int32 item_i_d = 3;
+    int32 collection_i_d = 4;
 }
 
 message AllBossRushDatas {
@@ -2032,6 +2066,26 @@ message FlagGroupInfo {
     bool is_item_unlock = 2;
     int32 new_mission_type = 3;
     int32 relation_i_d = 4;
+}
+
+message AllFurnitureDatas {
+    FurnitureDatas furniture = 1;
+}
+
+message FurnitureDatas {
+    repeated FurnitureConfigure datas = 1;
+}
+
+message FurnitureConfigure {
+    int32 i_d = 1;
+    int32 item_i_d = 2;
+    int32 collection_i_d = 3;
+    repeated FurnitureItem items = 4;
+}
+
+message FurnitureItem {
+    int32 furniture_fragment_i_d = 1;
+    int32 need_item_count = 2;
 }
 
 message AllGachaDatas {
@@ -3774,6 +3828,78 @@ message PendantConfigure {
     string main_part_name = 4;
 }
 
+message AllPetDatas {
+    PetDatas pet = 1;
+    NatureDatas nature = 2;
+    ReleaseRewardDatas release_reward = 3;
+    CompletenessDatas completeness = 4;
+}
+
+message PetDatas {
+    repeated PetConfigure datas = 1;
+}
+
+message PetConfigure {
+    int32 i_d = 1;
+    int32 monster_i_d = 2;
+    bool decision_capture = 3;
+    int32 rule_i_d = 4;
+    int32 hp = 5;
+    int32 pow = 6;
+    int32 str = 7;
+    int32 int = 8;
+    int32 dex = 9;
+    int32 luc = 10;
+    int32 rarity = 11;
+    repeated int32 release_reward = 12;
+    repeated int32 parma = 13;
+    int32 new_pet_attack_type = 14;
+    int32 new_pet_defend_type = 15;
+    int32 new_special_feature = 16;
+}
+
+message NatureDatas {
+    repeated NatureConfigure datas = 1;
+}
+
+message NatureConfigure {
+    int32 i_d = 1;
+    int32 new_pet_nature_type = 2;
+    int32 new_buff_type = 3;
+    int32 buff_value = 4;
+    int32 new_debuff_type = 5;
+    int32 debuff_value = 6;
+    int32 new_skilled_buff_type = 7;
+    repeated int32 skilled_buff_value = 8;
+    int32 new_lack_buff_type = 9;
+    repeated int32 lack_buff_value = 10;
+}
+
+message ReleaseRewardDatas {
+    repeated ReleaseRewardConfigure datas = 1;
+}
+
+message ReleaseRewardConfigure {
+    int32 i_d = 1;
+    repeated ReleaseRewardItem release_reward_item = 2;
+}
+
+message ReleaseRewardItem {
+    int32 release_reward_i_d = 1;
+    int32 release_reward_count = 2;
+}
+
+message CompletenessDatas {
+    repeated CompletenessConfigure datas = 1;
+}
+
+message CompletenessConfigure {
+    int32 i_d = 1;
+    int32 positive_effect = 2;
+    int32 reverse_effect = 3;
+    int32 text_i_d = 4;
+}
+
 message AllPhoneDatas {
     PhoneDatas phone = 1;
 }
@@ -4426,6 +4552,28 @@ message ShopRecommendationItem {
     int32 shop_pool_i_d = 4;
     string opening_time = 5;
     string closing_time = 6;
+}
+
+message AllShovelDatas {
+    ShovelDatas shovel = 1;
+}
+
+message ShovelDatas {
+    repeated ShovelConfigure datas = 1;
+}
+
+message ShovelConfigure {
+    int32 i_d = 1;
+    int32 item_i_d = 2;
+    int32 excavate_time = 3;
+    int32 success_rate = 4;
+    int32 collection_i_d = 5;
+    repeated ShovelItem items = 6;
+}
+
+message ShovelItem {
+    int32 need_item_i_d = 1;
+    int32 need_item_count = 2;
 }
 
 message AllSpellDatas {
@@ -5491,6 +5639,19 @@ message UITextConfigure {
     string korea = 7;
 }
 
+message AllTreasureDatas {
+    TreasureDatas treasure = 1;
+}
+
+message TreasureDatas {
+    repeated TreasureConfigure datas = 1;
+}
+
+message TreasureConfigure {
+    int32 i_d = 1;
+    int32 collection_i_d = 2;
+}
+
 message AllTreasureBoxDatas {
     TreasureBoxDatas treasure_box = 1;
     CollectionTreasureBoxDatas collection_treasure_box = 2;
@@ -5998,6 +6159,26 @@ message UmbrellaConfigure {
     int32 i_d = 1;
     int32 item_i_d = 2;
     string asset_full_name = 3;
+}
+
+message AllUtensilDatas {
+    UtensilDatas utensil = 1;
+}
+
+message UtensilDatas {
+    repeated UtensilConfigure datas = 1;
+}
+
+message UtensilConfigure {
+    int32 i_d = 1;
+    int32 item_i_d = 2;
+    int32 collection_i_d = 3;
+    repeated UtensilItem items = 4;
+}
+
+message UtensilItem {
+    int32 furniture_fragment_i_d = 1;
+    int32 need_item_count = 2;
 }
 
 message AllVideoDatas {
