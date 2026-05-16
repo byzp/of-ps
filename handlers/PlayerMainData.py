@@ -23,6 +23,7 @@ from proto.net_pb2 import (
     ItemDetail,
     ServerSceneSyncDataNotice,
     SceneActionType,
+    PetWarehouseLimitNotice,
 )
 import utils.db as db
 from utils.res_loader import res
@@ -45,7 +46,7 @@ class Handler(PacketHandler):
 
         infos = db.get_players_info(
             player_id,
-            "player_name,unlock_functions,level,exp,head,sign,sex,avatar_frame,pendant,world_level,phone_background,create_time,team,birthday,is_hide_birthday,account_type,last_login_time",
+            "player_name,unlock_functions,level,exp,head,sign,sex,avatar_frame,pendant,world_level,phone_background,create_time,team,birthday,is_hide_birthday,account_type,pet_instance_id,last_login_time",
         )
         rsp.unlock_functions.extend(infos[1])
         (
@@ -65,6 +66,7 @@ class Handler(PacketHandler):
             rsp.birthday,
             rsp.is_hide_birthday,
             rsp.account_type,
+            rsp.pet_instance_id,
             llt,
         ) = infos
         rsp.head = session.avatar_id
@@ -181,6 +183,11 @@ class Handler(PacketHandler):
                 for k, v in m.items():
                     setattr(tmp, k, v)
             session.send(MsgId.ChatMsgRecordInitNotice, rsp, packet_id)
+
+        rsp = PetWarehouseLimitNotice()
+        rsp.status = StatusCode.StatusCode_OK
+        rsp.warehouse_limit = 65536
+        session.send(MsgId.PetWarehouseLimitNotice, rsp, packet_id)
 
         # 视为完成登录，同步场景玩家并广播加入事件
         if session.logged_in == False:

@@ -116,6 +116,7 @@ def init():
             team BLOB,
             avatar_frame INTEGER DEFAULT 0,
             pendant INTEGER DEFAULT 0,
+            pet_instance_id INTEGER DEFAULT 0,
             last_login_time INTEGER DEFAULT 1700000000
         );
 
@@ -682,6 +683,19 @@ def set_item_detail(player_id, item_detail_blob, item_id=None, instance_id=None)
             "INSERT OR REPLACE INTO items_s (player_id, instance_id, item_detail_blob) VALUES (?, ?, ?)",
             (player_id, instance_id, item_detail_blob),
         )
+
+
+def del_item_detail(
+    player_id,
+    instance_id,
+):
+    db.execute(
+        "DELETE FROM items_s WHERE player_id=? AND instance_id=?",
+        (
+            player_id,
+            instance_id,
+        ),
+    )
 
 
 def get_month_card_over_due_time(player_id):

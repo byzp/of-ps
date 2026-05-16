@@ -1,6 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
 
 from proto.net_pb2 import (
     UpdateCharacterAppearanceReq,
@@ -13,8 +12,6 @@ from proto.net_pb2 import (
 )
 import utils.db as db
 from server.scene_data import up_scene_action
-
-logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.UpdateCharacterAppearanceReq)
@@ -47,6 +44,7 @@ class Handler(PacketHandler):
                 "collection_gloves_instance_id",
                 "fishing_rod_instance_id",
                 "vehicle_instance_id",
+                "shovel_instance_id",
             ]
             for field_name in fields_to_check:
                 if getattr(appearance, field_name) != getattr(
@@ -63,21 +61,7 @@ class Handler(PacketHandler):
         rsp = UpdateCharacterAppearanceRsp()
         rsp.status = StatusCode.StatusCode_OK
         rsp.char_id = char_id
-        rsp.appearance.badge = req.appearance.badge
-        rsp.appearance.umbrella_id = req.appearance.umbrella_id
-        rsp.appearance.insect_net_instance_id = req.appearance.insect_net_instance_id
-        rsp.appearance.logging_axe_instance_id = req.appearance.logging_axe_instance_id
-        rsp.appearance.water_bottle_instance_id = (
-            req.appearance.water_bottle_instance_id
-        )
-        rsp.appearance.mining_hammer_instance_id = (
-            req.appearance.mining_hammer_instance_id
-        )
-        rsp.appearance.collection_gloves_instance_id = (
-            req.appearance.collection_gloves_instance_id
-        )
-        rsp.appearance.fishing_rod_instance_id = req.appearance.fishing_rod_instance_id
-        rsp.appearance.vehicle_instance_id = req.appearance.vehicle_instance_id
+        rsp.appearance.CopyFrom(req.appearance)
 
         session.send(MsgId.UpdateCharacterAppearanceRsp, rsp, packet_id)
 

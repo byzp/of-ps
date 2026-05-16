@@ -101,6 +101,7 @@ def give(cmds: list):
                         EBagItemTag.EBagItemTag_Weapon,
                         EBagItemTag.EBagItemTag_Armor,
                         EBagItemTag.EBagItemTag_Poster,
+                        EBagItemTag.EBagItemTag_Pet,
                     ]:
                         item_b = db.get_item_detail(
                             session.player_id, tmp.main_item.item_id
@@ -124,6 +125,8 @@ def give(cmds: list):
                                 instance_id = tmp.main_item.armor.instance_id
                             case EBagItemTag.EBagItemTag_Poster:
                                 instance_id = tmp.main_item.poster.instance_id
+                            case EBagItemTag.EBagItemTag_Pet:
+                                instance_id = tmp.main_item.pet.instance_id
                         db.set_item_detail(
                             session.player_id,
                             tmp.SerializeToString(),
@@ -162,6 +165,7 @@ def give(cmds: list):
                             EBagItemTag.EBagItemTag_Weapon,
                             EBagItemTag.EBagItemTag_Armor,
                             EBagItemTag.EBagItemTag_Poster,
+                            EBagItemTag.EBagItemTag_Pet,
                         ]:
                             item_b = db.get_item_detail(session.player_id, i["i_d"])
                             if item_b:
@@ -180,6 +184,8 @@ def give(cmds: list):
                                     instance_id = tmp.main_item.armor.instance_id
                                 case EBagItemTag.EBagItemTag_Poster:
                                     instance_id = tmp.main_item.poster.instance_id
+                                case EBagItemTag.EBagItemTag_Pet:
+                                    instance_id = tmp.main_item.pet.instance_id
                             db.set_item_detail(
                                 session.player_id,
                                 tmp.SerializeToString(),

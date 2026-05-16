@@ -1,3 +1,4 @@
+import time
 from proto.net_pb2 import (
     Vector3,
     Character,
@@ -276,7 +277,7 @@ def make_item(item_id, num=1, player_id=0, item_detail=None, is_all=False) -> li
                                 weapon.critical_ratio = 1
                                 weapon.level = 1
                                 weapon.star = 1
-                                weapon.durability = 1000
+                                weapon.durability = 100
                                 weapon.property_index = 1
                             if is_all:
                                 r.append(item_detail)
@@ -417,6 +418,53 @@ def make_item(item_id, num=1, player_id=0, item_detail=None, is_all=False) -> li
                         continue
                     return item_detail
                     # 这个好像是多余的角色碎片转换成星辰后，删除角色碎片的通知
+                case EBagItemTag.EBagItemTag_TreasureMap:  # 藏宝图 tag:53
+                    tmp = item_detail.main_item
+                    tmp.item_id = i["i_d"]
+                    tmp.item_tag = i["new_bag_item_tag"]
+                    treasure = tmp.treasure
+                    treasure.item_id = i["i_d"]
+                    treasure.instance_id = db.get_instance_id(player_id)
+                    treasure.scene_id = 1  # TODO
+                    if is_all:
+                        r.append(item_detail)
+                        item_detail = ItemDetail()
+                        continue
+                    return item_detail
+                case EBagItemTag.EBagItemTag_Pet:  # 宠物 tag:56
+                    tmp = item_detail.main_item
+                    tmp.item_id = i["i_d"]
+                    tmp.item_tag = i["new_bag_item_tag"]
+                    tmp.is_new = True
+                    pet = tmp.pet
+                    pet.item_id = i["i_d"]
+                    pet.instance_id = db.get_instance_id(player_id)
+                    pet.level = 1
+                    nature_datas = res["Pet"]["nature"]["datas"]
+                    pet.nature_id = random.choice(nature_datas)["i_d"]
+                    completeness_datas = res["Pet"]["completeness"]["datas"]
+                    pet.integrity_id = random.choice(completeness_datas)["i_d"]
+                    pet.catch_scene_id = 1
+                    pet.catch_time = int(time.time())
+                    pet.size = random.randint(80, 150)
+                    pet.weight = random.randint(100000, 300000)
+                    attrs = [0, 1, 2, 3, 4, 5]
+                    random.shuffle(attrs)
+                    num_integrity = random.randint(2, 4)
+                    for attr in attrs[:num_integrity]:
+                        integrity = pet.integrity.add()
+                        integrity.attr = attr
+                        base_stat = i.get(
+                            ("hp", "pow", "str", "int", "dex", "luc")[attr], 50
+                        )
+                        integrity.value = random.randint(
+                            max(1, base_stat // 10), max(1, base_stat // 3)
+                        )
+                    if is_all:
+                        r.append(item_detail)
+                        item_detail = ItemDetail()
+                        continue
+                    return item_detail
                 case _:
                     # EBagItemTag.EBagItemTag_Gift:  # 礼包 tag:1
                     # EBagItemTag.EBagItemTag_Fragment:  # 角色碎片 tag:4
