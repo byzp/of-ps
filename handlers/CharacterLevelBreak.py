@@ -6,6 +6,7 @@ from proto.net_pb2 import (
     CharacterLevelBreakRsp,
     StatusCode,
     PackNotice,
+    Character,
 )
 import utils.db as db
 from utils.res_loader import res
@@ -15,8 +16,11 @@ from utils.res_loader import res
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = CharacterLevelBreakReq()
+
         rsp = CharacterLevelBreakRsp()
         req.ParseFromString(data)
+        notice = PackNotice()
+        notice.status = StatusCode.StatusCode_OK
 
         character_data = db.get_characters(session.player_id, req.char_id)
         if not character_data:
@@ -25,7 +29,7 @@ class Handler(PacketHandler):
             session.send(MsgId.CharacterLevelBreakRsp, rsp, packet_id)
             return
 
-        character = CharacterLevelBreakReq.Character()
+        character = Character()
         character.ParseFromString(character_data[0])
 
         # 获取角色当前最大等级
@@ -75,7 +79,7 @@ class Handler(PacketHandler):
                 return
 
             # 解析物品数据
-            item = CharacterLevelBreakReq.ItemDetail()
+            item = notice.items.add()
             item.ParseFromString(item_data)
             current_item_num = item.main_item.base_item.num
 
@@ -91,12 +95,7 @@ class Handler(PacketHandler):
             db.set_item_detail(
                 session.player_id, item.SerializeToString(), item_id, None
             )
-
-            # 发送物品变动通知
-            notice = PackNotice()
-            notice.status = StatusCode.StatusCode_OK
-            notice.items.add().CopyFrom(item)
-            session.send(MsgId.PackNotice, notice, packet_id)
+        session.send(MsgId.PackNotice, notice, packet_id)
 
         character.max_level = next_max_level
         db.set_character(session.player_id, req.char_id, character.SerializeToString())

@@ -11,7 +11,7 @@ from proto.net_pb2 import (
 )
 
 import utils.db as db
-import utils.res_loader as res_loader
+from utils.res_loader import res
 
 
 @packet_handler(MsgId.CharacterLevelUpReq)
@@ -19,23 +19,23 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = CharacterLevelUpReq()
         req.ParseFromString(data)
-        rsp = CharacterLevelUpRsp()
 
-        small_energy_bottle = req.nums[0] if len(req.nums) > 0 else 0
-        medium_energy_bottle = req.nums[1] if len(req.nums) > 1 else 0
-        large_energy_bottle = req.nums[2] if len(req.nums) > 2 else 0
+        rsp = CharacterLevelUpRsp()
+        rsp.status = StatusCode.StatusCode_OK
+        notice = PackNotice()
+        notice.status = StatusCode.StatusCode_OK
 
         energy_items = [
-            (190, small_energy_bottle),  # 小瓶能量饮料
-            (191, medium_energy_bottle),  # 中瓶能量饮料
-            (192, large_energy_bottle),  # 大瓶能量饮料
+            (190, req.nums[0]),  # 小瓶能量饮料
+            (191, req.nums[1]),  # 中瓶能量饮料
+            (192, req.nums[2]),  # 大瓶能量饮料
         ]
 
         for item_id, quantity in energy_items:
             if quantity > 0:
                 item_data = db.get_item_detail(session.player_id, item_id)
                 if item_data:
-                    item = CharacterLevelUpReq.ItemDetail()
+                    item = notice.items.add()
                     item.ParseFromString(item_data)
                     item.main_item.base_item.num = max(
                         0, item.main_item.base_item.num - quantity
@@ -57,18 +57,12 @@ class Handler(PacketHandler):
         current_exp = character.exp
         max_level = character.max_level
 
-        total_exp = (
-            small_energy_bottle * 1000
-            + medium_energy_bottle * 5000
-            + large_energy_bottle * 20000
-        )
-
-        level_configs = res_loader.res["Character"]["level"]["datas"][0]["level_info"]
+        total_exp = req.nums[0] * 1000 + req.nums[1] * 5000 + req.nums[2] * 20000
 
         new_exp = current_exp + total_exp
         new_level = current_level
 
-        for level_config in level_configs:
+        for level_config in res["Character"]["level"]["datas"][0]["level_info"]:
             if (
                 level_config["level"] == new_level
                 and new_exp >= level_config["need_exp"]
@@ -87,8 +81,10 @@ class Handler(PacketHandler):
         character.exp = new_exp
 
         coin_cost = 0
-        if current_level > 0 and current_level <= len(level_configs):
-            for level_config in level_configs:
+        if current_level > 0 and current_level <= len(
+            res["Character"]["level"]["datas"][0]["level_info"]
+        ):
+            for level_config in res["Character"]["level"]["datas"][0]["level_info"]:
                 if level_config["level"] == current_level:
                     coin_cost = int(total_exp * level_config["exp_to_coin"])
                     break
@@ -96,7 +92,7 @@ class Handler(PacketHandler):
             coin_item_id = 101  # 金币ID
             coin_data = db.get_item_detail(session.player_id, coin_item_id)
             if coin_data:
-                coin_item = CharacterLevelUpReq.ItemDetail()
+                coin_item = notice.items.add()
                 coin_item.ParseFromString(coin_data)
                 coin_item.main_item.base_item.num = max(
                     0, coin_item.main_item.base_item.num - coin_cost
@@ -105,15 +101,9 @@ class Handler(PacketHandler):
                     session.player_id, coin_item.SerializeToString(), coin_item_id, None
                 )
 
-                # 更新金币通知
-                notice = PackNotice()
-                notice.status = StatusCode.StatusCode_OK
-                notice.items.add().CopyFrom(coin_item)
                 session.send(MsgId.PackNotice, notice, packet_id)
-
         db.set_character(session.player_id, req.char_id, character.SerializeToString())
 
-        rsp.status = StatusCode.StatusCode_OK
         rsp.char_id = req.char_id
         rsp.level = new_level
         rsp.exp = new_exp

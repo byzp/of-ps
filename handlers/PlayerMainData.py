@@ -1,7 +1,7 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import time
-
+import logging
 
 from proto.net_pb2 import (
     PlayerMainDataRsp,
@@ -31,6 +31,8 @@ from utils.pb_create import make_SceneDataNotice, make_ScenePlayer
 from network.remote_link import sync_player
 import server.notice_sync as notice_sync
 from server.scene_data import up_scene_action
+
+logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.PlayerMainDataReq)
