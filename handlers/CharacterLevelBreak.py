@@ -1,6 +1,6 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
+
 from proto.net_pb2 import (
     CharacterLevelBreakReq,
     CharacterLevelBreakRsp,
@@ -9,8 +9,6 @@ from proto.net_pb2 import (
 )
 import utils.db as db
 from utils.res_loader import res
-
-logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.CharacterLevelBreakReq)

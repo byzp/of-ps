@@ -1,12 +1,10 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
+
 
 import utils.db as db
 from proto.net_pb2 import OtherPlayerInfoReq, OtherPlayerInfoRsp, StatusCode
 from server.scene_data import get_session
-
-logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.OtherPlayerInfoReq)

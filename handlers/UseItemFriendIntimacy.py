@@ -1,7 +1,7 @@
 from starlette.types import Send
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
+
 
 from proto.net_pb2 import (
     UseItemFriendIntimacyReq,
@@ -11,8 +11,6 @@ from proto.net_pb2 import (
     PackNotice,
 )
 import utils.db as db
-
-logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.UseItemFriendIntimacyReq)

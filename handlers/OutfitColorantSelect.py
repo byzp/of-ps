@@ -1,13 +1,11 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
+
 import numpy as np
 import random
 
 from proto.net_pb2 import OutfitColorantSelectReq, OutfitColorantSelectRsp, StatusCode
 from utils.res_loader import res
-
-logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.OutfitColorantSelectReq)

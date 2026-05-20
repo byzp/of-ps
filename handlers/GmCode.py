@@ -1,10 +1,9 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
+
 
 from proto.net_pb2 import GmCodeReq, GmCodeRsp, StatusCode
 
-logger = logging.getLogger(__name__)
 
 """
 # GM代码处理 1013 1014

@@ -1,6 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
 import time
 from datetime import datetime
 
@@ -9,8 +8,6 @@ from proto.net_pb2 import AbyssInfoRsp, StatusCode, DungeonData
 import utils.db as db
 from utils.res_loader import res
 from utils.algo import char_unpack
-
-logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.AbyssInfoReq)

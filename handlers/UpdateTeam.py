@@ -1,6 +1,6 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
+
 
 from proto.net_pb2 import (
     UpdateTeamReq,
@@ -14,8 +14,6 @@ from server.scene_data import up_scene_action
 import utils.pb_create as pb_create
 
 import utils.db as db
-
-logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.UpdateTeamReq)

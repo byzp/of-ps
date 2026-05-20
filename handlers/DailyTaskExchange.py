@@ -1,6 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
 
 from proto.net_pb2 import (
     DailyTaskExchangeReq,
@@ -11,8 +10,6 @@ from proto.net_pb2 import (
 )
 import utils.db as db
 from utils.pb_create import make_item
-
-logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.DailyTaskExchangeReq)
@@ -43,7 +40,7 @@ class Handler(PacketHandler):
                 )
             else:
                 rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
-                session.send(MsgId.ItemUseRsp, rsp, packet_id)
+                session.send(MsgId.DailyTaskExchangeRsp, rsp, packet_id)
                 return
 
         rsp1.items.add().CopyFrom(item_use)

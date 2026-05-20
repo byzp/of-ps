@@ -1,7 +1,7 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 from config import Config
-import logging
+
 
 from proto.net_pb2 import (
     CreatePayOrderReq,
@@ -15,8 +15,6 @@ import utils.db as db
 from utils.res_loader import res
 from utils.pb_create import make_item
 from server.scene_data import get_session
-
-logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.CreatePayOrderReq)

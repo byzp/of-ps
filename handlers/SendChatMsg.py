@@ -1,12 +1,10 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
+
 import time
 
 from proto.net_pb2 import SendChatMsgReq, SendChatMsgRsp, StatusCode, ChatMsgNotice
 from server.scene_data import up_chat_msg
-
-logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.SendChatMsgReq)

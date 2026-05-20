@@ -1,13 +1,11 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
+
 import json
 import os
 
 from proto.net_pb2 import GachaRecordReq, GachaRecordRsp, StatusCode
 import utils.db as db
-
-logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.GachaRecordReq)

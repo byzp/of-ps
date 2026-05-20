@@ -1,13 +1,11 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
+
 
 from proto.net_pb2 import GatherReq, GatherRsp, StatusCode, ItemDetail, PackNotice
 import utils.db as db
 from utils.res_loader import res
 from utils.pb_create import make_item
-
-logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.GatherReq)

@@ -2,9 +2,6 @@ from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 from proto.net_pb2 import PlayerPingReq, PlayerPingRsp, StatusCode
 import time
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.PlayerPingReq)
