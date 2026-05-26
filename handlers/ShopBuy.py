@@ -30,10 +30,10 @@ class Handler(PacketHandler):
         rsp.grids.pool_index = 1
         rsp.grids.buy_times = req.buy_times
 
+        rsp1 = PackNotice()
+        rsp1.status = StatusCode.StatusCode_OK
         for data in res["Shop"]["grid"]["datas"]:
             if data["i_d"] == req.shop_id:  # TODO 如果含有武器, 可能引起严重错误
-                rsp1 = PackNotice()
-                rsp1.status = StatusCode.StatusCode_OK
                 for items in data["items"]:
                     if items["grid_i_d"] == req.grid_id:
                         for pool in res["Shop"]["pool"]["datas"]:

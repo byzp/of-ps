@@ -582,7 +582,8 @@ def get_characters(player_id, character_id=None) -> list:
             (player_id, character_id),
         )
         row = cur.fetchone()
-        chrs.append(row[0])
+        if row:
+            chrs.append(row[0])
         return chrs
 
     else:

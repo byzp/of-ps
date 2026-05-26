@@ -157,9 +157,15 @@ def _prompt_loop():
                         _stop_event.set()
                         return
                     if cmd == "help":
-                        print(",".join(cmd_h.COMMANDS.keys()))
                         print(
-                            "give player_id/all item_id [num]\nfirework id [dur_time] [start_time]\ntime 1-86400\ntp player_id/all scene_id [channel_id]"
+                            "give player_id/all item_id/all [num]\n",
+                            "firework id [dur_time] [start_time]\n",
+                            "time 1-86400\n",
+                            "tp player_id/all scene_id [channel_id]\n",
+                            "tpd player_id/all dungeon_id\n",
+                            "kick player_id/all\n",
+                            "players\n",
+                            "link",
                         )
                         continue
                     cmd_exec.cmd_exec(cmd)
