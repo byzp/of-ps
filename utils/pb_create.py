@@ -343,14 +343,23 @@ def make_item(item_id, num=1, player_id=0, item_detail=None, is_all=False) -> li
                                     armor.main_property_type = random.choice(
                                         list(prop_group.keys())
                                     )
-                                    armor.main_property_val = 0
-                                    random.uniform(
+                                    val = random.uniform(
                                         group_s[
                                             prop_group[armor.main_property_type][0]
                                         ],
                                         group_s[
                                             prop_group[armor.main_property_type][1]
                                         ],
+                                    )
+                                    armor.main_property_val = (
+                                        int(val)
+                                        if armor.main_property_type
+                                        in [
+                                            EPropertyType.EPropertyType_ExtHp,
+                                            EPropertyType.EPropertyType_ExtAttack,
+                                            EPropertyType.EPropertyType_ExtDefense,
+                                        ]
+                                        else int(val * 100)
                                     )
                                     armor.wearer_id = 0
                                     armor.level = random.randint(
