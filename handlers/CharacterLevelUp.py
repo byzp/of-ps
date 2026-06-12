@@ -46,7 +46,7 @@ class Handler(PacketHandler):
 
         character_data_list = db.get_characters(session.player_id, req.char_id)
         if not character_data_list:
-            rsp.status = StatusCode.StatusCode_CHARACTER_NOT_FOUND
+            rsp.status = StatusCode.StatusCode_CharNotExist
             session.send(MsgId.CharacterLevelUpRsp, rsp, packet_id)
             return
 

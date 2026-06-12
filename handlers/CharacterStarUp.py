@@ -26,7 +26,7 @@ class Handler(PacketHandler):
 
         character_data = db.get_characters(session.player_id, req.char_id)
         if not character_data:
-            rsp.status = StatusCode.StatusCode_CHARACTER_NOT_FOUND
+            rsp.status = StatusCode.StatusCode_CharNotExist
             session.send(MsgId.CharacterStarUpRsp, rsp, packet_id)
             return
 
@@ -45,7 +45,7 @@ class Handler(PacketHandler):
                 break
 
         if not char_star_data:
-            rsp.status = StatusCode.StatusCode_CHARACTER_STAR_CONFIG_NOT_FOUND
+            rsp.status = StatusCode.StatusCode_FAIL
             session.send(MsgId.CharacterStarUpRsp, rsp, packet_id)
             return
 
@@ -57,7 +57,7 @@ class Handler(PacketHandler):
                 break
 
         if not star_config:
-            rsp.status = StatusCode.StatusCode_CHARACTER_STAR_MAX_LEVEL
+            rsp.status = StatusCode.StatusCode_FAIL
             session.send(MsgId.CharacterStarUpRsp, rsp, packet_id)
             return
 
@@ -65,7 +65,7 @@ class Handler(PacketHandler):
         item_num = star_config.get("item_num", 0)
 
         if item_id == 0 or item_num == 0:
-            rsp.status = StatusCode.StatusCode_CHARACTER_STAR_CONFIG_ERROR
+            rsp.status = StatusCode.StatusCode_FAIL
             session.send(MsgId.CharacterStarUpRsp, rsp, packet_id)
             return
 
