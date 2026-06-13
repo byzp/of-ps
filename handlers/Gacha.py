@@ -79,7 +79,7 @@ class Handler(PacketHandler):
                 and db.get_total_gacha_num(session.player_id, 2000) == 0
             ):
                 r = 102001
-                rsp2 = make_QuestNotice(session.player_id, [11000131])
+                rsp2 = make_QuestNotice(session, [11000131])
                 if rsp2:
                     session.send(MsgId.QuestNotice, rsp2, 0)
             c = False

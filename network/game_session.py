@@ -69,6 +69,7 @@ class GameSession:
         "color_data",
         "fishing",
         "dungeon",
+        "quests",
         "running",
         "verified",
         "logged_in",
@@ -123,6 +124,7 @@ class GameSession:
             0,
             -1,
         ]  # dungeon_id, start_time, use_time, double_team_iter
+        self.quests = {}
 
         self.running = True
         self.verified = False

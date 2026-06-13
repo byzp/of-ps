@@ -17,6 +17,7 @@ from proto.net_pb2 import (
 
 import utils.db as db
 import server.scene_data as scene_data
+from utils.res_loader import res
 from utils.pb_create import make_SceneDataNotice, make_QuestNotice
 
 
@@ -77,14 +78,13 @@ class Handler(PacketHandler):
         sd.player.CopyFrom(session.scene_player)
         scene_data.up_scene_action(session.scene_id, session.channel_id, notice)
 
-        q_b = db.get_quest(session.player_id, 100026)
-        if q_b:
-            tmp = Quest()
-            tmp.ParseFromString(q_b)
-            if (
-                not Config.SKIP_QUESTS
-                and tmp.status == QuestStatus.QuestStatus_InProgress
-            ):
-                rsp1 = make_QuestNotice(session.player_id, [11000261])
-                if rsp1:
-                    session.send(MsgId.QuestNotice, rsp1, 0)
+        if not Config.SKIP_QUESTS:
+            cid = {}
+            for i, q in session.quests.items():
+                cid[q.conditions[0].condition_id] = i
+            for i in res["Achieve"]["achieve"]["datas"]:
+                if i.get("i_d", 0) in cid.keys():
+                    if i["param"][0] == session.scene_id:
+                        rsp1 = make_QuestNotice(session, [i["i_d"]])
+                        if rsp1:
+                            session.send(MsgId.QuestNotice, rsp1, 0)

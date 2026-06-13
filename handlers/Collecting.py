@@ -57,6 +57,7 @@ class Handler(PacketHandler):
                 db.set_item_detail(
                     session.player_id, item.SerializeToString(), item_t["text_i_d"]
                 )
+                break
 
         session.send(MsgId.CollectingRsp, rsp, packet_id)
         session.send(MsgId.PackNotice, rsp1, 0)

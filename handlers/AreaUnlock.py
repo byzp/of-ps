@@ -30,7 +30,7 @@ class Handler(PacketHandler):
                 rsp.area.SerializeToString(),
             )
         if not Config.SKIP_QUESTS and req.area_id == 1001:
-            rsp1 = make_QuestNotice(session.player_id, [11000231])
+            rsp1 = make_QuestNotice(session, [11000231])
             if rsp1:
                 session.send(MsgId.QuestNotice, rsp1, 0)
 

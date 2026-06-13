@@ -18,7 +18,6 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = AbilityBadgePageBoxActiveReq()
         req.ParseFromString(data)
-        print(req)
 
         rsp = AbilityBadgePageBoxActiveRsp()
         rsp.status = StatusCode.StatusCode_OK
@@ -28,7 +27,7 @@ class Handler(PacketHandler):
         if not req.box_id in ids:
             ids.append(req.box_id)
             db.set_ability_tree(session.player_id, req.page, ids)  # TODO 星符消耗和奖励
-            rsp1 = make_QuestNotice(session.player_id, [11000321])
+            rsp1 = make_QuestNotice(session, [11000321])
             if rsp1:
                 session.send(MsgId.QuestNotice, rsp1, 0)
 

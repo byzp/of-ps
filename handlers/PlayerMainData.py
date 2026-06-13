@@ -12,9 +12,7 @@ from proto.net_pb2 import (
     ActivitySignInDataNotice,
     ChangeChatChannelRsp,
     BlessTreeNotice,
-    Quest,
-    Character,
-    Chapter,
+    QuestStatus,
     RandomQuestBonus,
     PlayerBuff,
     UnSaveOutfitDyeScheme,
@@ -75,24 +73,20 @@ class Handler(PacketHandler):
         make_ScenePlayer(session)
         sync_player(session)
 
-        chrp = Character()
         for chr in db.get_characters(player_id):
-            chrp.ParseFromString(chr)
-            tmp = rsp.characters.add()
-            tmp.CopyFrom(chrp)
+            rsp.characters.add().ParseFromString(chr)
 
         rsp.scene_id = session.scene_id
         rsp.channel_id = session.channel_id
 
         for chapter in db.get_chapter(session.player_id):
-            tmp = Chapter()
-            tmp.ParseFromString(chapter)
-            rsp.quest_detail.chapters.add().CopyFrom(tmp)
+            rsp.quest_detail.chapters.add().ParseFromString(chapter)
         rsp.quest_detail.random_quest_bonus_left.CopyFrom(RandomQuestBonus())
         for quest in db.get_quest(session.player_id):
-            tmp = Quest()
+            tmp = rsp.quest_detail.quests.add()
             tmp.ParseFromString(quest)
-            rsp.quest_detail.quests.add().CopyFrom(tmp)
+            if tmp.status == QuestStatus.QuestStatus_InProgress:
+                session.quests[tmp.quest_id] = tmp
 
         rsp.player_buffs.add().system_type = PlayerBuff.BuffSystemType_GLOBAL
         rsp.un_save_outfit_dye_scheme.CopyFrom(UnSaveOutfitDyeScheme())

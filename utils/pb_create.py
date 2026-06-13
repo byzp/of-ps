@@ -753,7 +753,8 @@ def make_Quest(player_id, quest_id, q=None):
                     return q
 
 
-def make_QuestNotice(player_id, conds, qn=None):
+def make_QuestNotice(session, conds, qn=None):
+    player_id = session.player_id
     if qn == None:
         qn = QuestNotice()
     for i in res["Quest"]["condition_set_group"]["datas"]:
@@ -771,6 +772,7 @@ def make_QuestNotice(player_id, conds, qn=None):
                             sf_cond = False
                     if sf_cond:
                         tmp.status = QuestStatus.QuestStatus_Finish
+                        session.quests.pop(tmp.quest_id, None)
                         # 检查任务组，如果不是最后一个就继续推进
                         for i4, quest in enumerate(res["Quest"]["quest"]["datas"]):
                             if quest["i_d"] == i["i_d"]:
@@ -785,6 +787,7 @@ def make_QuestNotice(player_id, conds, qn=None):
                                         q.quest_id,
                                         q.SerializeToString(),
                                     )
+                                    session.quests[q.quest_id] = q
                                     break
                     db.set_quest(
                         player_id,
