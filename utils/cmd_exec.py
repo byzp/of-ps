@@ -50,6 +50,8 @@ def cmd_exec(cmd: str):
             link(cmds)
         case "players":
             players(cmds)
+        case "save":
+            db.save()
         case _:
             logger.warning("Unknow command.")
 
@@ -193,6 +195,7 @@ def give(cmds: list):
                                 instance_id,
                             )
                     session.send(MsgId.PackNotice, rsp, 0)
+                    print(rsp)
                     break
 
 

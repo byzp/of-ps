@@ -166,6 +166,7 @@ def _prompt_loop():
                             "kick player_id/all\n",
                             "players\n",
                             "link",
+                            "save",
                         )
                         continue
                     cmd_exec.cmd_exec(cmd)

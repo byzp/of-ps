@@ -28,6 +28,7 @@ from utils.pb_create import make_item
 
 logger = logging.getLogger(__name__)
 
+conn = None
 db = None
 lock_db = threading.Lock()
 
@@ -58,6 +59,15 @@ def exit():
             disk.commit()
             disk.close()
         conn.close()
+
+
+def save():
+    with lock_db:
+        conn.commit()
+        if Config.IN_MEMORY:
+            disk = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
+            conn.backup(disk)
+            disk.commit()
 
 
 def init():
@@ -234,6 +244,14 @@ def init():
             def_id INTEGER NOT NULL,
             tree_blob BLOB NOT NULL,
             PRIMARY KEY (player_id, def_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS ability_tree (
+            player_id INTEGER NOT NULL,
+            scene_id INTEGER NOT NULL,
+            tree_blob BLOB NOT NULL,
+            PRIMARY KEY (player_id, scene_id),
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
 
@@ -1047,8 +1065,7 @@ def get_bless_tree(player_id, def_id=0):
             (player_id, def_id),
         )
         row = cur.fetchone()
-        if row:
-            return pickle.loads(row[0])
+        return pickle.loads(row[0]) if row else []
     else:
         cur = db.execute(
             "SELECT def_id,tree_blob FROM bless_tree WHERE player_id=? ",
@@ -1066,6 +1083,34 @@ def set_bless_tree(player_id, def_id, tree_ids: list):
     db.execute(
         "INSERT OR REPLACE INTO bless_tree (player_id, def_id, tree_blob) VALUES (?, ?, ?)",
         (player_id, def_id, pickle.dumps(tree_ids)),
+    )
+
+
+def get_ability_tree(player_id, scene_id=0):
+    if scene_id:
+        cur = db.execute(
+            "SELECT tree_blob FROM ability_tree WHERE player_id=? AND scene_id=?",
+            (player_id, scene_id),
+        )
+        row = cur.fetchone()
+        return pickle.loads(row[0]) if row else []
+    else:
+        cur = db.execute(
+            "SELECT scene_id,tree_blob FROM ability_tree WHERE player_id=? ",
+            (player_id,),
+        )
+        rows = cur.fetchall()
+        trees = {}
+        if rows:
+            for row in rows:
+                trees[row[0]] = pickle.loads(row[1])
+        return trees
+
+
+def set_ability_tree(player_id, scene_id, tree_ids: list):
+    db.execute(
+        "INSERT OR REPLACE INTO ability_tree (player_id, scene_id, tree_blob) VALUES (?, ?, ?)",
+        (player_id, scene_id, pickle.dumps(tree_ids)),
     )
 
 
