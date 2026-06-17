@@ -15,6 +15,8 @@ from proto.net_pb2 import (
     QuestStatus,
     QuestNotice,
 )
+from network.msg_id import MsgId
+from config import Config
 import utils.db as db
 from datetime import datetime
 from utils.res_loader import res
@@ -768,11 +770,14 @@ def make_QuestNotice(session, conds, qn=None):
                     for i3 in tmp.conditions:
                         if i3.condition_id == cond:
                             i3.status = QuestStatus.QuestStatus_Finish
-                        if i3.status != QuestStatus.QuestStatus_Finish:
-                            sf_cond = False
+                        # if i3.status != QuestStatus.QuestStatus_Finish:
+                        #     sf_cond = False
                     if sf_cond:
                         tmp.status = QuestStatus.QuestStatus_Finish
                         session.quests.pop(tmp.quest_id, None)
+                        print(tmp.quest_id)
+                        for s in session.quests.keys():
+                            print(s)
                         # 检查任务组，如果不是最后一个就继续推进
                         for i4, quest in enumerate(res["Quest"]["quest"]["datas"]):
                             if quest["i_d"] == i["i_d"]:
@@ -795,3 +800,16 @@ def make_QuestNotice(session, conds, qn=None):
                         tmp.SerializeToString(),
                     )
                     return qn
+
+
+def make_Achieve(session, params=None):
+    if not Config.SKIP_QUESTS:
+        cid = {}
+        for i, q in session.quests.items():
+            cid[q.conditions[0].condition_id] = i
+        for i in res["Achieve"]["achieve"]["datas"]:
+            if i.get("i_d", 0) in cid.keys():
+                if params in i["param"]:
+                    rsp1 = make_QuestNotice(session, [i["i_d"]])
+                    if rsp1:
+                        session.send(MsgId.QuestNotice, rsp1, 0)

@@ -393,10 +393,10 @@ def init_player(player_id):
                             ]:
                                 tmp1 = tmp.conditions.add()
                                 tmp1.condition_id = achieve_condition_id
-                                for achieve in res["Achieve"]["achieve"]["datas"]:
-                                    if achieve["i_d"] == achieve_condition_id:
-                                        tmp1.progress = achieve.get("count_param", 0)
-                                        break
+                                # for achieve in res["Achieve"]["achieve"]["datas"]:
+                                #     if achieve["i_d"] == achieve_condition_id:
+                                #         tmp1.progress = achieve.get("count_param", 0)
+                                #         break
                                 tmp1.status = QuestStatus.QuestStatus_Finish
                         break
             tmp.status = QuestStatus.QuestStatus_Finish

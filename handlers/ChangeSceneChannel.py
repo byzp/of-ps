@@ -11,14 +11,10 @@ from proto.net_pb2 import (
     PackNotice,
     SceneActionType,
     ChatMsgRecordInitNotice,
-    Quest,
-    QuestStatus,
 )
 
-import utils.db as db
 import server.scene_data as scene_data
-from utils.res_loader import res
-from utils.pb_create import make_SceneDataNotice, make_QuestNotice
+from utils.pb_create import make_SceneDataNotice, make_Achieve
 
 
 @packet_handler(MsgId.ChangeSceneChannelReq)
@@ -78,13 +74,4 @@ class Handler(PacketHandler):
         sd.player.CopyFrom(session.scene_player)
         scene_data.up_scene_action(session.scene_id, session.channel_id, notice)
 
-        if not Config.SKIP_QUESTS:
-            cid = {}
-            for i, q in session.quests.items():
-                cid[q.conditions[0].condition_id] = i
-            for i in res["Achieve"]["achieve"]["datas"]:
-                if i.get("i_d", 0) in cid.keys():
-                    if i["param"][0] == session.scene_id:
-                        rsp1 = make_QuestNotice(session, [i["i_d"]])
-                        if rsp1:
-                            session.send(MsgId.QuestNotice, rsp1, 0)
+        make_Achieve(session, session.scene_id)
