@@ -24,8 +24,12 @@ def char_unpack(v):
 class SwirlNoiseGenHelper:
     def __init__(self):
         self._swirl_params = None
-        self._rotate_coef = 5.0
-        self._radius_coef = 0.5
+        self._rotate_coef = 5.0  # field +14: angle = rotate_coef * |z|
+        self._radius_coef = 0.5  # field +15: radius = radius_coef * w
+        # ColorPower 的指数随 uv_y 在两端之间插值 (field +12 / +13):
+        #   exp = (power_y1 - power_y0) * clamp(uv_y, 0, 1) + power_y0
+        self._color_power_y1 = 0.2  # uv_y == 1 时的指数
+        self._color_power_y0 = 1.5  # uv_y == 0 时的指数
         self._source_texture = None
 
     def set_swirl_params(self, swirl_params, texture):
@@ -37,63 +41,63 @@ class SwirlNoiseGenHelper:
         self._source_texture = arr
         self._source_height, self._source_width = arr.shape[:2]
 
-    def _nearest_sample(self, texture, u, v):
-        h, w = texture.shape[:2]
-        x = np.floor(u * w).astype(int) % w
-        y = np.floor(v * h).astype(int) % h
-        res = texture[y, x]
-        return res
+    def _swirl(self, u, v, cx, cy, angle, radius, sign):
+        """
+        绕 (cx, cy) 做一次衰减旋转。
+        radius <= 0 时 blend 恒为 1, final_angle == 0, 即该项为空操作
+        (原版对负 radius 的行为)。
+        """
+        f = np.float32
+        ox = u - cx
+        oy = v - cy
+        # Vector2.magnitude: 点积用 float32, sqrt 走 float64 再回到 float32
+        dist = np.sqrt((ox * ox + oy * oy).astype(np.float64)).astype(f)
+        rot = angle * np.exp((-dist / radius).astype(f))
+        blend = np.clip(np.minimum(dist, radius) / radius, f(0.0), f(1.0))
+        final = ((f(0.0) - rot) * blend + rot) * sign
+        cos_a = np.cos(final).astype(f)
+        sin_a = np.sin(final).astype(f)
+        return (ox * cos_a - sin_a * oy + cx).astype(f), (
+            ox * sin_a + oy * cos_a + cy
+        ).astype(f)
 
     def get_color_array(self, uv_y, output_color_count):
-        uv_y = 1 - uv_y
-        u = (
-            np.arange(1, output_color_count + 1, dtype=np.float64)
-            / (output_color_count + 1.0)
-        ).astype(np.float64)
-        v = np.full_like(u, uv_y, dtype=np.float64)
-        u = u % 1.0
-        v = v % 1.0
-        u_grid = u
-        v_grid = v
-        inv_v = 1.0 - v_grid
-        u_curr = u_grid.copy()
-        for i in range(self._swirl_params.shape[0]):
-            cx = float(self._swirl_params[i, 0])
-            cy = float(self._swirl_params[i, 1])
-            z = float(self._swirl_params[i, 2])
-            w = float(self._swirl_params[i, 3])
-            ox = u_curr - cx
-            oy = inv_v - cy
-            dist = np.hypot(ox, oy)
-            angle = self._rotate_coef * abs(z)
-            radius = self._radius_coef * w
-            radius_safe = np.where(radius <= 0.0, 1e-9, radius)
-            decay = np.exp(-dist / radius_safe)
-            decay = 0.0 if radius <= 0.0 else decay
-            rotation_amount = angle * decay
-            min_dist = np.minimum(dist, radius_safe)
-            blend = 1.0 if radius <= 0.0 else (min_dist / radius_safe)
-            final_angle = rotation_amount * (1.0 - blend)
-            direction = np.sign(z) if z != 0 else 1.0
-            final_angle = final_angle * direction
-            cos_a = np.cos(final_angle)
-            sin_a = np.sin(final_angle)
-            rx = ox * cos_a - oy * sin_a
-            ry = ox * sin_a + oy * cos_a
-            u_curr = rx + cx
-            inv_v = ry + cy
-        v_final = 1.0 - inv_v
-        u_final = np.mod(u_curr, 1.0)
-        v_final = np.mod(v_final, 1.0)
-        if self._source_texture is None:
-            return [(0.0, 0.0, 0.0, 1.0)] * output_color_count
-        sampled = self._nearest_sample(self._source_texture, u_final, v_final)
+        if self._swirl_params is None or self._source_texture is None:
+            return [(0, 0, 0, 255)] * output_color_count
+        f = np.float32
+        n = int(output_color_count)
+        # GetColor: 第 i 个采样点 u = (i + 1) / (count + 1), v = uv_y
+        u = (np.arange(1, n + 1, dtype=f) / f(n + 1.0)).astype(f)
+        v = np.full(n, f(uv_y), dtype=f)
+        # CalcColor: 依次叠加 16 个 swirl
+        rc = f(self._rotate_coef)
+        dc = f(self._radius_coef)
+        for cx, cy, z, w in self._swirl_params:
+            cx, cy, z, w = f(cx), f(cy), f(z), f(w)
+            angle = f(abs(z)) * rc
+            radius = w * dc
+            sign = f(1.0) if z >= 0 else f(-1.0)
+            u, v = self._swirl(u, v, cx, cy, angle, radius, sign)
+        # UVToPixel: 取小数部分 -> 乘尺寸 -> floor -> clamp。
+        # Unity Texture2D.GetPixel 以左下角为原点, 故行号需翻转。
+        h, wd = self._source_height, self._source_width
+        px = np.clip(np.floor(f(wd) * (u - np.floor(u))).astype(np.int64), 0, wd - 1)
+        py = np.clip(np.floor(f(h) * (v - np.floor(v))).astype(np.int64), 0, h - 1)
+        texel = self._source_texture[(h - 1) - py, px].astype(f) / f(255.0)
+        # ColorPower: 每个 RGB 通道做 channel ** exp
+        t = f(min(max(float(uv_y), 0.0), 1.0))
+        exp = (f(self._color_power_y1) - f(self._color_power_y0)) * t + f(
+            self._color_power_y0
+        )
+        rgb = np.power(texel[:, :3], exp)
         colors = []
-        for i in range(output_color_count):
-            px = sampled[i]
-            r = int(px[0])
-            g = int(px[1])
-            b = int(px[2])
-            a = int(px[3])
-            colors.append((r, g, b, a))
+        for i in range(n):
+            colors.append(
+                (
+                    int(round(float(rgb[i, 0]) * 255.0)),
+                    int(round(float(rgb[i, 1]) * 255.0)),
+                    int(round(float(rgb[i, 2]) * 255.0)),
+                    int(round(float(texel[i, 3]) * 255.0)),
+                )
+            )
         return colors

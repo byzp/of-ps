@@ -29,7 +29,7 @@ class Handler(PacketHandler):
             noise_texture_id = random.randint(1, 4)
             session.color_data[1] = noise_texture_id
 
-            helper = SwirlNoiseGenHelper()  # TODO 颜色仅大致正确, 也许是图片转码导致的
+            helper = SwirlNoiseGenHelper()
             helper.set_swirl_params(swirl_params, res[f"{noise_texture_id}.png"])
             session.color_data[0] = helper
         rsp.param.picture_id = session.color_data[1]
