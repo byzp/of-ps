@@ -20,6 +20,8 @@ class Handler(PacketHandler):
 
         rsp = VerifyLoginTokenRsp()
         rsp.status = StatusCode.StatusCode_OK
+        if not req.sdk_uid:
+            req.sdk_uid = "9000000"
         user_id = int(db.get_user_id(req.sdk_uid))
         if Config.VERIFY_TOKEN and not db.verify_sdk_user_info(
             user_id, req.login_token
