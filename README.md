@@ -1,143 +1,173 @@
 # of-ps
 
-## 部署方法
+[中文介绍](https://github.com/byzp/of-ps/blob/main/README_zh.md)
 
-1. 项目使用 Protocol Buffers 定义网络通信格式。需要先安装 `protoc` 编译器，将项目中的协议文件（`proto/net.proto`）编译为Python可用的代码。
+## Deployment
 
-   1. 下载[protoc](https://github.com/protocolbuffers/protobuf/releases)，选择`protoc-33.2-win64.zip`
+### 1. Install Protocol Buffers
 
-   2. 添加到环境变量，选择PATH，进行编辑（**若原本就有设置过值，请不要替换**，在原本的值后面添加分号`;`即可，表现为：`D:\ffmpeg-8.0-essentials_build\bin;E:\other\protoc-33.2-win64\bin`）
+This project uses Protocol Buffers to define network communication formats. You need to install the `protoc` compiler and compile the protocol file (`proto/net.proto`) to Python code.
 
-   3. 验证
-
-      ```bash
-      (overfield) C:\Users\Admin>protoc --version
-      libprotoc 33.2
-      ```
-
-   4. 在cmd中进入项目的proto文件夹编译net.proto (仅需net.proto，cfg.proto用于转换一些asset)
-
-      ```bash
-      cd proto
-      protoc net.proto --python_out .
-      ```
-
-2. 从[releases](https://github.com/byzp/of-ps/releases)下载最新的data.zip，解压到项目的resources文件夹，请勿使用其他来源的资源，一些字段可能存在差异导致无法运行
-
-   1. 目录结构表现为：
-
-      ```bash
-      of-ps
-      ├─ .gitignore
-      ├─ LICENSE
-      ├─ README.md
-      ├─ Redirect.py
-      ├─ build.bat
-      ├─ config.py
-      ├─ handlers
-      ├─ http_server
-      ├─ main.py
-      ├─ network
-      ├─ proto
-      │    ├─ __init__.py
-      │    ├─ cfg.proto
-      │    ├─ net.proto
-      │    └─ net_pb2.py
-      ├─ requirements-client.txt
-      ├─ requirements-server.txt
-      ├─ resources
-      │    ├─ data
-      │    └─ webstatic
-      ├─ server
-      ├─ tools
-      └─ utils
-      ```
-
-3. 进入项目目录下，创建虚拟环境并安装所需依赖
-
-   1. 使用venv
-
-      ```bash
-      python -m venv venv
-      .\venv\Scripts\Activate.ps1
-      pip install -r requirements-server.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-      pip install -r requirements-client.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-      ```
-
-   2. 使用conda
-
-      ```bash
-      conda create -n overfield python=3.10
-      conda activate overfield
-      pip install -r requirements-server.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-      pip install -r requirements-client.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-      ```
-
-4. 开启一个命令行窗口，启动服务器（不要关闭此命令窗口）
-
+1. Download [protoc](https://github.com/protocolbuffers/protobuf/releases)
+2. Extract and add the `bin` directory to your `PATH` environment variable
+3. Verify installation:
    ```bash
-   (overfield) E:\of-ps>python main.py
+   protoc --version
+   libprotoc 33.2
    ```
-   
-5. 开启一个命令行窗口，启动代理转发（不要关闭此命令窗口）
-
+4. Navigate to the `proto` folder and compile `net.proto` (only `net.proto` is required; `cfg.proto` is used for asset conversion):
    ```bash
-   (overfield) E:\of-ps>mitmdump --mode local -s .\Redirect.py
+   cd proto
+   protoc net.proto --python_out .
    ```
 
-   - 然后浏览器访问mitm.it
-   - 点击Get mitmproxy-ca-cert.p12
-   - 点击这个证书, 安装
+### 2. Download Resources
 
-6. 启动开放空间launcher本体
+Download the latest `data.zip` from the [releases page](https://github.com/byzp/of-ps/releases) and extract it into the `resources` folder. **Do not use resources from other sources**, as field differences may cause runtime errors.
 
-   1. 直接找到taptap的游戏文件夹，选择launcher.exe运行
-   2. 例如`E:\TapTap\PC Games\176228\launcher.exe`
+Expected directory structure:
+```
+of-ps
+├─ .gitignore
+├─ LICENSE
+├─ README.md
+├─ Redirect.py
+├─ build.bat
+├─ config.py
+├─ handlers
+├─ http_server
+├─ main.py
+├─ network
+├─ proto
+│    ├─ __init__.py
+│    ├─ cfg.proto
+│    ├─ net.proto
+│    └─ net_pb2.py
+├─ requirements-client.txt
+├─ requirements-server.txt
+├─ resources
+│    ├─ data
+│    └─ webstatic
+├─ server
+├─ tools
+└─ utils
+```
 
-## 可用控制台命令
+### 3. Create Virtual Environment & Install Dependencies
 
-- 给予玩家物品, item_id可在resources/data/String_Simplified.json搜索物品名称寻找, (give all all可导入全部物品)
+**Using venv:**
+```bash
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements-server.txt
+pip install -r requirements-client.txt
+```
+
+**Using conda:**
+```bash
+conda create -n overfield python=3.10
+conda activate overfield
+pip install -r requirements-server.txt
+pip install -r requirements-client.txt
+```
+
+### 4. Start the Server
+
+Open a terminal and run (keep this window open):
+```bash
+python main.py
+```
+
+### 5. Start the Proxy (mitmproxy)
+
+Open another terminal and run (keep this window open):
+```bash
+mitmdump --mode local -s .\Redirect.py
+```
+
+- Visit `mitm.it` in your browser
+- Click "Get mitmproxy-ca-cert.p12"
+- Install the certificate
+
+### 6. Launch the Game Client
+
+Find `launcher.exe` in the game folder (e.g. from TapTap):
+```
+E:\TapTap\PC Games\176228\launcher.exe
+```
+
+## Available Console Commands
+
+All commands are defined in [`utils/cmd.py`](./utils/cmd.py) and [`utils/cmd_exec.py`](./utils/cmd_exec.py).
+
+> **Conventions:**
+> - `player_id/all` — target a specific player by ID, or `all` for every connected player
+> - `[param]` — optional parameter
+
+- **Give items** — find `item_id` by searching item names in `resources/data/String_Simplified.json` (`give all all` grants every item)
    ```
-   give player_id/all item_id [num]
-   # give 1000001 102 100
-   # give all 108
-   # give all all
+   give player_id/all item_id/all [num]
+   # give 1000001 102 100        # give item 102 to player 1000001 (100 copies)
+   # give all 108                # give item 108 to all players
+   # give all all                # give all items to all players
    ```
-- 字面意思, 放烟花, id可在resources/data/FireworksParty.json找到
+- **Launch fireworks** — find `id` in `resources/data/FireworksParty.json`
    ```
    firework id [dur_time] [start_time]
    ```
-- 设置场景时间, num的值为1-86400
+- **Set scene time** — `num` ranges from 1 to 86400 (seconds)
    ```
    time num
    ```
-- 传送, 常规场景, scene_id可在resources/data/Scene.json找到
+- **Teleport (normal scenes)** — find `scene_id` in `resources/data/Scene.json`
    ```
    tp player_id/all scene_id [channel_id]
    ```
-- 传送, 秘境/副本, dungeon_id可在resources/data/Dungeon.json找到
+- **Teleport (instances/dungeons)** — find `dungeon_id` in `resources/data/Dungeon.json`
    ```
    tpd player_id/all dungeon_id
    ```
-- 踢出玩家
+- **Kick a player**
    ```
    kick player_id/all
    ```
-- 显示已连接的玩家
+- **List connected players**
    ```
    players
    ```
-- 显示互联的其他服务器
+- **List linked (interconnected) servers**
    ```
    link
    ```
+- **Force-save data to database**
+   ```
+   save
+   ```
+- **Stop the server**
+   ```
+   stop
+   ```
+- **Show this help message**
+   ```
+   help
+   ```
 
+## Optional
 
-## 可选操作
+### Free-Threaded Python (3.13t+)
 
-- 项目仅存在一个不支持自由线程的依赖(python-snappy的依赖cramjam), 如果你使用python3.14t+, 可以尝试这个[修改版snappy](https://github.com/byzp/snappy-py)
+The only dependency that does not support free-threaded Python is `python-snappy` (via `cramjam`). If you are using Python 3.14t+, try this [modified snappy](https://github.com/byzp/snappy-py).
 
-- 互联模块允许服务器之间相互发现和连接，各个服务器的玩家可以在同一场景交互, 需要编译utils/kcp的扩展(如果频繁出现断线问题，请增大utils/kcp/_kcp.c第69行的KCP_MINRTO, 然后重新编译)
-    ```
-    python utils/kcp/setup.py build_ext --inplace
-    ```
+### Interconnection / KCP Module
+
+The interconnection module allows servers to discover each other and link, enabling players from different servers to interact in the same scene. You need to compile the KCP extension:
+
+```bash
+python utils/kcp/setup.py build_ext --inplace
+```
+
+If you experience frequent disconnections, increase `KCP_MINRTO` at line 69 in `utils/kcp/_kcp.c`, then recompile.
+
+## 
+
+[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/FvsjdMMCY6)
