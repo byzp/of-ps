@@ -694,7 +694,11 @@ def make_SceneDataNotice(session):
             furniture[4]
         )
     for m in res["Flag"]["flag"]["datas"]:
-        if m["scene_i_d"] == session.scene_id and m["icon_i_d"] in [1, 7]:
+        if m["scene_i_d"] == session.scene_id and m["icon_i_d"] in [
+            1,
+            3,
+            7,
+        ]:  # 战斗任务，美丽景点，副本
             rsp.data.flag_ids.append(m["i_d"])
     for i in scene_data.get_scene_player(session.scene_id, session.channel_id):
         data.players.add().CopyFrom(i)
@@ -770,14 +774,14 @@ def make_QuestNotice(session, conds, qn=None):
                     for i3 in tmp.conditions:
                         if i3.condition_id == cond:
                             i3.status = QuestStatus.QuestStatus_Finish
-                        # if i3.status != QuestStatus.QuestStatus_Finish:
-                        #     sf_cond = False
+                        if i3.status != QuestStatus.QuestStatus_Finish:
+                            sf_cond = False
                     if sf_cond:
                         tmp.status = QuestStatus.QuestStatus_Finish
                         session.quests.pop(tmp.quest_id, None)
-                        print(tmp.quest_id)
-                        for s in session.quests.keys():
-                            print(s)
+                        # print(tmp.quest_id)
+                        # for s in session.quests.keys():
+                        #     print(s)
                         # 检查任务组，如果不是最后一个就继续推进
                         for i4, quest in enumerate(res["Quest"]["quest"]["datas"]):
                             if quest["i_d"] == i["i_d"]:

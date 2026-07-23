@@ -1,6 +1,7 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import random
+from config import Config
 
 from proto.net_pb2 import (
     CookingFoodReq,
@@ -14,6 +15,7 @@ from proto.net_pb2 import (
 import utils.db as db
 from utils.res_loader import res
 from utils.pb_create import make_item
+from utils.pb_create import make_QuestNotice
 
 
 @packet_handler(MsgId.CookingFoodReq)
@@ -95,3 +97,7 @@ class Handler(PacketHandler):
 
         session.send(MsgId.PackNotice, rsp1, 0)
         session.send(MsgId.CookingFoodRsp, rsp, packet_id)
+        if not Config.SKIP_QUESTS and session.quests.get(100086) != None:
+            rsp1 = make_QuestNotice(session, [11000861])
+            if rsp1:
+                session.send(MsgId.QuestNotice, rsp1, 0)

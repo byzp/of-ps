@@ -364,7 +364,16 @@ def init_player(player_id):
     add_character(player_id, 101001)
 
     # 初始化必要物品
-    for k, v in {10: 150, 11: 800, 101: 500, 102: 200, 104: 1}.items():
+    for k, v in {
+        10: 150,
+        11: 800,
+        101: 500,
+        102: 200,
+        104: 1,
+        5012011: 4, # 鸡蛋拌饭原材料, 主线第一章第八话
+        5011001: 6,
+        5011018: 5,
+    }.items():
         item = make_item(k, v)
 
         db.execute(

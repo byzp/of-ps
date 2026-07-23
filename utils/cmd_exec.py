@@ -195,7 +195,6 @@ def give(cmds: list):
                                 instance_id,
                             )
                     session.send(MsgId.PackNotice, rsp, 0)
-                    print(rsp)
                     break
 
 
