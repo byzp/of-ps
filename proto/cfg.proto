@@ -1774,6 +1774,60 @@ message DyeDataConfigure {
     int32 new_dye_type = 5;
 }
 
+message AllExplorationDatas {
+    ExplorationDatas exploration = 1;
+    ExplorationAchieveDatas exploration_achieve = 2;
+    ExplorationItemDatas exploration_item = 3;
+}
+
+message ExplorationDatas {
+    repeated ExplorationConfigure datas = 1;
+}
+
+message ExplorationConfigure {
+    int32 i_d = 1;
+    int32 dungeon_id = 2;
+    int32 quest_achieve_i_d = 3;
+    repeated ExplorationConfigureMaxItem exploration_max_items = 4;
+}
+
+message ExplorationConfigureMaxItem {
+    int32 item_i_d = 1;
+    int32 item_max_num = 2;
+}
+
+message ExplorationAchieveDatas {
+    repeated ExplorationAchieveConfigure datas = 1;
+}
+
+message ExplorationAchieveConfigure {
+    int32 i_d = 1;
+    repeated ExplorationAchieveGroupInfo exploration_achieve_group_info = 2;
+}
+
+message ExplorationAchieveGroupInfo {
+    int32 index = 1;
+    int32 achieve_i_d = 2;
+    int32 reward_i_d = 3;
+}
+
+message ExplorationItemDatas {
+    repeated ExplorationItemConfigure datas = 1;
+}
+
+message ExplorationItemConfigure {
+    int32 i_d = 1;
+    bool can_carry_out = 2;
+    int32 special_drop_id = 3;
+    int32 quantity = 4;
+    repeated ExplorationConfigureItem exploration_items = 5;
+}
+
+message ExplorationConfigureItem {
+    int32 item_i_d = 1;
+    int32 value = 2;
+}
+
 message AllExploreDatas {
     ExploreAreaDatas explore_area = 1;
     ExploreActivityDatas explore_activity = 2;
@@ -2123,11 +2177,12 @@ message GachaInfoConfigure {
     int32 practice_character_i_d1 = 22;
     int32 practice_character_i_d2 = 23;
     int32 practice_character_i_d3 = 24;
-    int32 optional_num = 25;
-    int32 optional_pool_i_d = 26;
-    int32 big_guarantee_pool_i_d = 27;
-    int32 new_u_i_gacha_type = 28;
-    int32 new_show_type = 29;
+    repeated int32 card_pool_range = 25;
+    int32 optional_num = 26;
+    int32 optional_pool_i_d = 27;
+    int32 big_guarantee_pool_i_d = 28;
+    int32 new_u_i_gacha_type = 29;
+    int32 new_show_type = 30;
 }
 
 message GachaPoolDatas {
@@ -2352,6 +2407,7 @@ message GiftBagConfigure {
     int32 use_item_count = 4;
     string asset_path = 5;
     repeated GiftBagGroupInfo gift_bag_group = 6;
+    int32 new_special_gift_bag = 7;
 }
 
 message GiftBagGroupInfo {

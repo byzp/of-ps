@@ -95,10 +95,24 @@ def main():
     args = ap.parse_args()
 
     # load mapping if present
-    mapping = {}
     if args.mapping:
+        mapping = {}
         with open(args.mapping, "r", encoding="utf-8") as mf:
             mapping = json.load(mf)
+    else:
+        mapping = {
+            "String_English.bytes": "AllStringDatas",
+            "String_Japanese.bytes": "AllStringDatas",
+            "String_Korea.bytes": "AllStringDatas",
+            "String_Simplified.bytes": "AllStringDatas",
+            "String_Traditional.bytes": "AllStringDatas",
+            "VoiceRegion.bytes": "AllVoiceDatas",
+            "Voice_English.bytes": "AllVoiceDatas",
+            "Voice_Japanese.bytes": "AllVoiceDatas",
+            "Voice_Korea.bytes": "AllVoiceDatas",
+            "Voice_Simplified.bytes": "AllVoiceDatas",
+            "Voice_Traditional.bytes": "AllVoiceDatas",
+        }
 
     # load descriptor set and build pool
     fds = load_file_descriptor_set(args.desc)
