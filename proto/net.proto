@@ -6404,6 +6404,7 @@ message LinkNegotiate {
     Type type = 1;
     uint32 conv = 2;
     string server_name = 3;
+    bool is_public = 4; // 本机地址是否可被其他服务器直连(用于gossip分享地址)
 }
 
 message LinkPacket {
@@ -6443,5 +6444,9 @@ message LinkMessage {
     repeated uint32 datas = 6;
     uint32 msg_id = 7;
     bytes payload = 8;
+    repeated string relay_to = 9;   // DATA: 要求接收方转发给这些服务器(用于NAT-NAT二跳中转)
+    repeated string peer_names = 10; // HEARTBEAT: 发送方当前直连的服务器名
+    repeated uint64 subs = 11;       // HEARTBEAT: 发送方订阅的场景 (scene_id<<32|channel_id)
+    bool has_state = 12;             // HEARTBEAT: 本条心跳携带 peer_names/subs
 }
 //////////////////////
