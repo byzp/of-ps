@@ -6,10 +6,7 @@ from threading import Lock, Event, Thread
 from google.protobuf.message import Message
 from network.msg_id import MsgId
 
-try:
-    import snappy_py as snappy  # http://github.com/byzp/snappy-py
-except ImportError:
-    import snappy
+from cramjam import snappy
 from config import Config
 from proto.net_pb2 import ScenePlayer, PosColor, PacketHead
 from network.packet_factory import PacketFactory
@@ -183,7 +180,7 @@ class GameSession:
 
             body = bytes(self._recv_mv[hend:pend])
             if head.flag == 1:
-                body = snappy.uncompress(body)
+                body = snappy.decompress_raw(body)
 
             PacketFactory.process_packet(msg_id, body, head.packet_id, self)
             pos = pend
@@ -199,7 +196,7 @@ class GameSession:
             logger.debug(f"Sending message: {id_to_name.get(msg_id)}")
         if not self.running:
             return
-
+        
         # 防止message被修改导致并发问题
         data_bytes = message if is_bin else message.SerializeToString()
 
@@ -250,7 +247,7 @@ class GameSession:
                 flag = 0
                 if body_len > _COMPRESS_THRESHOLD:
                     flag = 1
-                    body = snappy.compress(body)
+                    body = snappy.compress_raw(body)
                     body_len = len(body)
 
                 head_proto.Clear()

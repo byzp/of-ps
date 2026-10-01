@@ -154,10 +154,6 @@ All commands are defined in [`utils/cmd.py`](./utils/cmd.py) and [`utils/cmd_exe
 
 ## Optional
 
-### Free-Threaded Python (3.13t+)
-
-The only dependency that does not support free-threaded Python is `python-snappy` (via `cramjam`). If you are using Python 3.14t+, try this [modified snappy](https://github.com/byzp/snappy-py).
-
 ### Interconnection / KCP Module
 
 The interconnection module allows servers to discover each other and link, enabling players from different servers to interact in the same scene. You need to compile the KCP extension:
