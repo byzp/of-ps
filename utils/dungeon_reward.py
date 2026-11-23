@@ -13,6 +13,7 @@ from utils import item_mgr
 from utils.pb_create import make_item
 from utils.res_loader import res
 from utils.reward_resolver import resolve_reward, resolve_world_reward
+from utils.equipment_pool import random_equipment_ids
 
 
 def dungeon_config(dungeon_id):
@@ -93,7 +94,7 @@ def make_dungeon_rewards(player_id, cfg, multiple=1):
     entries = show.get("manual_reward_items", ())
     tags = {r["i_d"]: r.get("new_bag_item_tag") for r in res["Item"]["item"]["datas"]}
     equipment = [
-        r["item_i_d"] for r in entries if tags.get(r.get("item_i_d")) in (2, 3)
+        r["item_i_d"] for r in entries if r.get("item_i_d") in random_equipment_ids()
     ]
     result = []
     for row in entries:

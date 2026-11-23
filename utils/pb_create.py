@@ -35,6 +35,7 @@ import server.scene_data as scene_data
 import server.notice_sync as notice_sync
 from utils import flag_config, flag_state, collection_state, weather
 from utils import treasure_box as tb_idx
+from utils.equipment_pool import random_equipment_ids
 
 
 def make_ScenePlayer(session):
@@ -697,17 +698,15 @@ def make_treasure_box_item(
         {},
     )
     max_level = max(1, min(player_level, world.get("monster_level", player_level)))
-    weapons = {
-        row["item_i_d"]
-        for row in res["Weapon"]["weapon"]["datas"]
-        if row.get("item_i_d") and row.get("new_weapon_system_type") in (1, 2, 3, 4, 5)
-    }
-    armors = {row["i_d"] for row in res["Armor"]["armor"]["datas"]}
+    equipment = random_equipment_ids()
     pools = {tag: [] for tag in (2, 3)}
     for row in res["Item"]["item"]["datas"]:
         tag, iid = row.get("new_bag_item_tag"), row["i_d"]
-        valid = iid in (weapons if tag == 2 else armors)
-        if tag in pools and valid and row.get("quality", 0) <= max(1, world_level):
+        if (
+            tag in pools
+            and iid in equipment
+            and row.get("quality", 0) <= max(1, world_level)
+        ):
             pools[tag].append(iid)
     items = _make_box_extra(*Config.NORMAL_BOX_CURRENCY, player_id)
     kinds = [tag for tag in pools if pools[tag]]
