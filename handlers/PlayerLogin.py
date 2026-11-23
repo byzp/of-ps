@@ -7,6 +7,7 @@ from config import Config
 from proto.net_pb2 import PlayerLoginReq, PlayerLoginRsp, StatusCode
 import utils.db as db
 import server.scene_data as scene_data
+from utils import achieve_track
 
 
 @packet_handler(MsgId.PlayerLoginReq)
@@ -24,6 +25,13 @@ class Handler(PacketHandler):
             return
         rsp.status = StatusCode.StatusCode_OK
         rsp.server_time_ms = int(time.time() * 1000)
+        # 成就: 每日登录82(每自然日一次) + 队长等级36族同步
+        # , 合并为一个动作帧
+        with achieve_track.batch(session, notify=False):
+            achieve_track.daily_login(session)
+            achieve_track.captain_level(
+                session, int(db.get_players_info(player_id, "level")[0] or 1)
+            )
         (
             rsp.region_name,
             rsp.register_time,
@@ -35,7 +43,7 @@ class Handler(PacketHandler):
             "region_name,register_time,server_time_zone,player_name,client_log_server_token",
         )
         rsp.analysis_account_id = db.get_analysis_account_id(player_id)
-        # rsp.server_time_zone # int(datetime.now(timezone.utc).astimezone().utcoffset().total_seconds())
+        # rsp.server_time_zone # int(datetime.now(timezone.utc).astimezone().utcoffset().total_seconds())。。
         if rsp.player_name == "" and not Config.SKIP_QUESTS:
             session.scene_id = 100  # 新玩家
         else:

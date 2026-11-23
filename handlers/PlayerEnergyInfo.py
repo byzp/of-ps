@@ -4,6 +4,7 @@ from network.msg_id import MsgId
 from proto.net_pb2 import (
     PlayerEnergyInfoRsp,
     StatusCode,
+    EBagItemTag,
 )
 
 import utils.db as db
@@ -17,5 +18,6 @@ class Handler(PacketHandler):
 
         energy_blob = db.get_item_detail(session.player_id, 11)
         rsp.energy_item.ParseFromString(energy_blob)
+        rsp.energy_item.main_item.item_tag = EBagItemTag.EBagItemTag_Energy
 
         session.send(MsgId.PlayerEnergyInfoRsp, rsp, packet_id)
