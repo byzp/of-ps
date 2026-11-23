@@ -1,3 +1,6 @@
+from config import Config
+import time
+
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 
@@ -5,11 +8,12 @@ from proto.net_pb2 import (
     DailyTaskExchangeReq,
     DailyTaskExchangeRsp,
     StatusCode,
-    ItemDetail,
     PackNotice,
 )
 import utils.db as db
-from utils.pb_create import make_item
+from utils import item_mgr
+from utils.res_loader import res
+from utils import refresh
 
 
 @packet_handler(MsgId.DailyTaskExchangeReq)
@@ -21,45 +25,76 @@ class Handler(PacketHandler):
         rsp = DailyTaskExchangeRsp()
         rsp.status = StatusCode.StatusCode_OK
 
-        item = db.get_item_detail(session.player_id, 124)  # 祈愿石碎片
-        if not item:
-            rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
+        # 兑换档位查 DailyTask.daily_task_reward: {i_d(当日第N次), step,
+        _steps = res.get("DailyTask", {}).get("daily_task_reward", {}).get("datas")
+        steps = (
+            sorted(_steps, key=lambda e: e.get("i_d", 0))
+            if isinstance(_steps, (list, tuple))
+            else ()
+        )
+        if not steps:
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
             session.send(MsgId.DailyTaskExchangeRsp, rsp, packet_id)
             return
-        else:
-            item_use = ItemDetail()
-            item_use.ParseFromString(item)
-            if item_use.main_item.base_item.num >= 50:  # TODO 兑换比例
-                exc_num = int(item_use.main_item.base_item.num / 50)
-                item_use.main_item.base_item.num -= exc_num * 50
-                rsp1 = PackNotice()
-                rsp1.status = StatusCode.StatusCode_OK
-                rsp1.items.add().CopyFrom(item_use)
-                db.set_item_detail(
-                    session.player_id, item_use.SerializeToString(), 124, None
-                )
-            else:
-                rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
-                session.send(MsgId.DailyTaskExchangeRsp, rsp, packet_id)
-                return
 
-        rsp1.items.add().CopyFrom(item_use)
-        tmp = db.get_item_detail(session.player_id, 125)  # 祈愿石
-        tmp1 = ItemDetail()
-        if not tmp:
-            make_item(125, 0, session.player_id, tmp1)
-        else:
-            tmp1.ParseFromString(tmp)
-        num_t = tmp1.main_item.base_item.num
-        tmp1.main_item.base_item.num = exc_num
-        rsp.rewards.add().CopyFrom(tmp1)
-        tmp1.main_item.base_item.num = num_t + exc_num
-        rsp1.items.add().CopyFrom(tmp1)
-        db.set_item_detail(
+        # 当日已兑换次数持久化(kv ns=daily, 按天 key 自然过期)
+        day = str(refresh.day_index())
+        count_key = f"exchange:{day}"
+        used = int(db.get_kv(session.player_id, "daily", count_key, 0) or 0)
+        if used >= len(steps):
+            rsp.status = StatusCode.StatusCode_DAILY_WISH_TIMES_NOT_ENOUGH
+            rsp.today_converted = used
+            session.send(MsgId.DailyTaskExchangeRsp, rsp, packet_id)
+            return
+
+        # 逐档兑换: 第 N 次消耗 daily_task_reward[i_d=N].cost_item_num;
+        # exchange_all=True 时连续兑换到碎片不足或次数用尽
+        cost_item_id = steps[0].get("cost_item_i_d", 124)
+        frag_num = item_mgr.get_num(session.player_id, cost_item_id)
+        gained = 0
+        total_cost = 0
+        for idx in range(used, len(steps)):
+            cost = steps[idx].get("cost_item_num", 0)
+            if frag_num < cost:
+                break
+            frag_num -= cost
+            total_cost += cost
+            gained += 1
+            if not req.exchange_all:
+                break
+        if gained == 0:
+            rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
+            rsp.today_converted = used
+            session.send(MsgId.DailyTaskExchangeRsp, rsp, packet_id)
+            return
+
+        rsp1 = PackNotice()
+        rsp1.status = StatusCode.StatusCode_OK
+
+        # 扣祈愿碎片(整体校验后统一扣, 并发下不足则整单失败)
+        if not item_mgr.consume_items(
             session.player_id,
-            tmp1.SerializeToString(),
-            125,
-            None,
+            [(cost_item_id, total_cost)],
+            pack_notice=rsp1,
+            session=session,
+        ):
+            rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
+            rsp.today_converted = used
+            session.send(MsgId.DailyTaskExchangeRsp, rsp, packet_id)
+            return
+
+        converted = db.incr_kv(session.player_id, "daily", count_key, gained)
+
+        # 发放祈愿石(每次兑换 1 个)
+        item_mgr.grant_items(
+            session.player_id,
+            [(Config.WISH_STONE_ITEM_ID, gained)],
+            rsp_items=rsp.rewards,
+            pack_notice=rsp1,
+            session=session,
         )
-        session.send(MsgId.DailyTaskExchangeRsp, rsp, packet_id)
+
+        rsp.today_converted = converted
+
+        session.send(MsgId.DailyTaskExchangeRsp, rsp, packet_id)  # 每日兑换 2602 2603
         session.send(MsgId.PackNotice, rsp1, 0)
