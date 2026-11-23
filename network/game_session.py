@@ -2,7 +2,7 @@ import logging
 import struct
 import socket
 from collections import deque
-from threading import Lock, Event, Thread
+from threading import Lock, RLock, Event, Thread
 from google.protobuf.message import Message
 from network.msg_id import MsgId
 
@@ -63,6 +63,7 @@ class GameSession:
         "temp_pack",
         "pos",
         "drop_items",
+        "drop_lock",
         "color_data",
         "fishing",
         "dungeon",
@@ -109,6 +110,7 @@ class GameSession:
         self.temp_pack = []
         self.pos = {}
         self.drop_items = {}
+        self.drop_lock = RLock()
         self.color_data = [
             None,
             None,
@@ -196,7 +198,7 @@ class GameSession:
             logger.debug(f"Sending message: {id_to_name.get(msg_id)}")
         if not self.running:
             return
-        
+
         # 防止message被修改导致并发问题
         data_bytes = message if is_bin else message.SerializeToString()
 

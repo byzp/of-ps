@@ -90,8 +90,6 @@ class _Link:
 
 # _lock 保护以下所有状态。
 # 加锁纪律: 持有 _lock 期间禁止调用 _kcp 的任何方法、socket 收发、
-# 以及 scene_data / lock_session 相关函数, 只做纯内存读写。
-# 这保证了与 KCP 内部锁和场景锁之间不存在环路, 不可能死锁。
 _links = {}  # addr -> _Link
 _conv_to_addr = {}  # conv -> addr (含握手中预留的conv)
 _server_ids = {}  # server_name -> 玩家id偏移
@@ -324,12 +322,12 @@ def _output(conv):
 
 
 def _pack(msg):
-    return snappy.compress(msg.SerializeToString())
+    return snappy.compress_raw(msg.SerializeToString())
 
 
 def _unpack(data):
     msg = LinkMessage()
-    msg.ParseFromString(snappy.uncompress(data))
+    msg.ParseFromString(snappy.decompress_raw(data))
     return msg
 
 

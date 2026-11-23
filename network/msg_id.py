@@ -709,3 +709,5 @@ class MsgId:
     ChangePetRsp = 4542
     ChooseGachaReq = 4543
     ChooseGachaRsp = 4544
+    GomokuSinglePlayerRewardReq = 4600
+    GomokuSinglePlayerRewardRsp = 4601

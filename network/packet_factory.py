@@ -55,8 +55,10 @@ class PacketFactory:
 
         if handler:
             if msg_id in cls._SYNC_CMDS:
+                # 仅登录链路串行(VerifyLoginToken/PlayerLogin/PlayerMainData)
                 cls._handle_packet(handler, session, data, packet_id, msg_id)
             else:
+                # 其余全部并发(钓鱼等延迟语义由 handler 自行用 Timer 实现)
                 cls._executor.submit(
                     cls._handle_packet, handler, session, data, packet_id, msg_id
                 )

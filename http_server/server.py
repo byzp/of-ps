@@ -138,6 +138,11 @@ async def open_oauth():
     return OAuthHandler.oauth_page(WEBSTATIC_DIR)
 
 
+@app.get("/openapi/oauth")
+async def open_oauth():
+    return OAuthHandler.oauth_page(WEBSTATIC_DIR)
+
+
 @app.post("/api/login")
 async def api_login(login: LoginRequest):
     user = db.get_sdk_user_info(login.username, login.password)
