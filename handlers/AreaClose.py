@@ -4,6 +4,7 @@ from network.msg_id import MsgId
 
 from proto.net_pb2 import AreaCloseReq, AreaCloseRsp, StatusCode, AreaData
 
+import utils.db as db
 
 """
 # 区域关闭 1901 1902
@@ -17,16 +18,22 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = AreaCloseRsp()
+        rsp.status = StatusCode.StatusCode_OK
 
-        # Set data from test data
-        rsp.status = TEST_DATA["status"]
-        area_data = rsp.area
-        area_data.area_id = req.area_id  # 从请求获取
-        area_data.area_state = TEST_DATA["area_state"]
-        area_data.level = TEST_DATA["level"]
+        # 读取玩家真实区域数据, 置为关闭状态后回写
+        area_b = db.get_area(session.player_id, session.scene_id, req.area_id)
+        if area_b:
+            rsp.area.ParseFromString(area_b)
+        else:
+            # 无记录时按 AreaUnlock 惯例从 1 级开始
+            rsp.area.level = 1
+        rsp.area.area_id = req.area_id
+        rsp.area.area_state = AreaData.AreaState.Close
+        db.set_area(
+            session.player_id,
+            session.scene_id,
+            req.area_id,
+            rsp.area.SerializeToString(),
+        )
 
-        session.send(MsgId.AreaCloseRsp, rsp, packet_id)
-
-
-# Hardcoded test data
-TEST_DATA = {"status": 1, "area_state": 1, "level": 5}
+        session.send(MsgId.AreaCloseRsp, rsp, packet_id)  # 1901,1902

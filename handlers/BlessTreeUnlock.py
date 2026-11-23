@@ -13,6 +13,7 @@ from utils.res_loader import res
 from utils.pb_create import make_item
 
 import utils.db as db
+from utils import item_mgr
 
 
 @packet_handler(MsgId.BlessTreeUnlockReq)
@@ -72,6 +73,7 @@ class Handler(PacketHandler):
                             make_item(i["reward_item_i_d"], 0, session.player_id, item)
 
                         num_t = item.main_item.base_item.num
+                        item_mgr.mark_new_item(session.player_id, item)
                         item.main_item.base_item.num = i["reward_item_count"]
                         rsp.rewards.add().CopyFrom(item)
                         item.main_item.base_item.num += num_t
