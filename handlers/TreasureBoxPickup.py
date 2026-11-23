@@ -12,7 +12,7 @@ from proto.net_pb2 import (
     TreasureBoxState_Open,
 )
 import utils.db as db
-from utils import item_mgr, achieve_track
+from utils import item_mgr, achieve_track, dungeon_state
 from utils import treasure_box as tb_idx
 from utils.dungeon_reward import material_dungeon
 
@@ -20,7 +20,10 @@ from utils.dungeon_reward import material_dungeon
 @packet_handler(MsgId.TreasureBoxPickupReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        with tb_idx.player_box_lock(session.player_id):
+        with (
+            dungeon_state.player_lock(session.player_id),
+            tb_idx.player_box_lock(session.player_id),
+        ):
             self._handle(session, data, packet_id)
 
     def _handle(self, session, data: bytes, packet_id: int):

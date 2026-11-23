@@ -1,4 +1,4 @@
-from utils import achieve_track
+from utils import achieve_track, dungeon_state
 
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
@@ -11,6 +11,10 @@ from utils.res_loader import res
 @packet_handler(MsgId.DungeonFinishReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
+        with dungeon_state.player_lock(session.player_id):
+            self._handle(session, data, packet_id)
+
+    def _handle(self, session, data: bytes, packet_id: int):
         req = DungeonFinishReq()
         req.ParseFromString(data)
 
@@ -22,10 +26,13 @@ class Handler(PacketHandler):
             session.send(MsgId.DungeonFinishRsp, rsp, packet_id)
             return
         dg = rsp.dungeon_data
-        dg.ParseFromString(db.get_dungeon(session.player_id, session.dungeon[0]))
+        dg.CopyFrom(dungeon_state.load(session.player_id, session.dungeon[0]))
+        first = db.try_claim(
+            session.player_id, "dungeon_finish_run", f"{dg.dungeon_id}:{dg.enter_times}"
+        )
         # 探索度在首次发现(进入)时已计, 通关不重复计数
-        dg.finish_times += 1
-        db.set_dungeon(session.player_id, dg.dungeon_id, dg.SerializeToString())
+        if first:
+            dg.finish_times += 1
 
         dungeon_cfg = next(
             (
@@ -40,10 +47,12 @@ class Handler(PacketHandler):
         with achieve_track.batch(session):
             # 副本条件按 Dungeon.new_mission_type 分类；普通战斗本计116，
             # 资源获取本计117，指定副本条件仍按 dungeon_id 精确匹配。
-            achieve_track.report(
-                session,
-                "dungeon_finish",
-                match=dg.dungeon_id,
-                mission_type=mission_type,
-            )
+            if first:
+                achieve_track.report(
+                    session,
+                    "dungeon_finish",
+                    match=dg.dungeon_id,
+                    mission_type=mission_type,
+                )
+                dungeon_state.save(session, dg)
             session.send(MsgId.DungeonFinishRsp, rsp, packet_id)

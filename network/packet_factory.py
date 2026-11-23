@@ -54,8 +54,12 @@ class PacketFactory:
         handler = cls._handlers.get(msg_id)
 
         if handler:
-            if msg_id in cls._SYNC_CMDS:
-                # 仅登录链路串行(VerifyLoginToken/PlayerLogin/PlayerMainData)
+            if (
+                msg_id in cls._SYNC_CMDS
+                or msg_id in Config.DUNGEON_ORDERED_MESSAGE_IDS
+                or (session.dungeon[0] and msg_id in Config.DUNGEON_POINT_MESSAGE_IDS)
+            ):
+                # 登录链路及副本状态按收包顺序执行，结算不能被退出/重进抢先。
                 cls._handle_packet(handler, session, data, packet_id, msg_id)
             else:
                 # 其余全部并发(钓鱼等延迟语义由 handler 自行用 Timer 实现)

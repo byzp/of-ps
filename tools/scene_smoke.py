@@ -19,6 +19,10 @@ from google.protobuf import text_format
 from config import Config
 from network.msg_id import MsgId
 from proto import net_pb2 as pb
+from tools.dungeon_capture_test import check as check_dungeon_capture_packets
+from utils import db, refresh, res_loader
+from utils.pb_create import make_item
+from network.game_server import GameServer
 
 
 def serve(
@@ -29,6 +33,7 @@ def serve(
     dungeons=False,
     dungeon_options=False,
     badge_tree=False,
+    dungeon_capture=False,
 ):
     Config.DB_PATH = str(directory / "player.db")
     Config.IN_MEMORY = False
@@ -37,14 +42,15 @@ def serve(
     Config.LINK_OTHER_SERVER = False
     logging.basicConfig(level=logging.INFO)
     random.seed(0)
-    from utils import res_loader, db
-
     res_loader.init()
     db.init()
     db.get_sdk_user_info("scene_smoke", "local")
+    if dungeon_capture:
+        player_id = db.get_player_id(1000001)
+        db.add_character(player_id, 102001)
+        stamina = make_item(10, 150, player_id)
+        db.set_item_detail(player_id, stamina.SerializeToString(), 10, None)
     if badge_tree:
-        from utils.pb_create import make_item
-
         player_id = db.get_player_id(1000001)
         resource = res_loader.res["MoonStone"]
         crystals = make_item(103, 100, player_id)
@@ -62,8 +68,6 @@ def serve(
                 player_id, detail.SerializeToString(), area["item_i_d"], None
             )
     if dungeons or dungeon_options:
-        from utils.pb_create import make_item
-
         player_id = db.get_player_id(1000001)
         stamina = make_item(10, 210 if dungeon_options else 110, player_id)
         db.set_item_detail(player_id, stamina.SerializeToString(), 10, None)
@@ -73,15 +77,11 @@ def serve(
                 progress = pb.DungeonData(dungeon_id=dungeon_id, finish_times=1)
                 db.set_dungeon(player_id, dungeon_id, progress.SerializeToString())
     if shop:
-        from utils import refresh
-
         player_id = db.get_player_id(1000001)
         # 昨日已领过，今天仍可领；不改运行环境时间或真实玩家数据。
         db.set_kv(player_id, "shop_buy", f"401:d{refresh.day_index() - 1}", 1)
     if equipped:
         player_id = db.get_player_id(1000001)
-        from utils.pb_create import make_item
-
         character = pb.Character.FromString(db.get_characters(player_id, 101001)[0])
         armor = make_item(2112005, 1, player_id, equipment_level=1)
         armor.main_item.armor.wearer_id = 101001
@@ -97,8 +97,6 @@ def serve(
         db.set_item_detail(player_id, poster.SerializeToString(), None, poster_id)
         preset.posters.add(poster_id=poster_id)
         db.set_character(player_id, 101001, character.SerializeToString())
-    from network.game_server import GameServer
-
     GameServer().start()
 
 
@@ -191,6 +189,9 @@ def main():
         "--dungeon-options", action="store_true", help="验证副本前置通关、倍率与出生点"
     )
     parser.add_argument(
+        "--dungeon-capture", type=Path, help="回放官服副本请求并对照持久进度"
+    )
+    parser.add_argument(
         "--badge-tree", action="store_true", help="验证所有星云树节点的不同星符代价"
     )
     parser.add_argument(
@@ -217,6 +218,7 @@ def main():
             args.dungeons,
             args.dungeon_options,
             args.badge_tree,
+            bool(args.dungeon_capture),
         )
         return
     directory = Path(tempfile.mkdtemp(prefix="of-scene-smoke-"))
@@ -243,6 +245,8 @@ def main():
             command.append("--dungeon-options")
         if args.badge_tree:
             command.append("--badge-tree")
+        if args.dungeon_capture:
+            command.extend(("--dungeon-capture", str(args.dungeon_capture)))
         process = subprocess.Popen(command, stdout=log, stderr=log)
         try:
             deadline = time.monotonic() + 30
@@ -337,6 +341,9 @@ def main():
                 if args.dungeon_options:
                     check_dungeon_options(sock, directory)
                     return
+                if args.dungeon_capture:
+                    check_dungeon_capture(sock, args.dungeon_capture, directory)
+                    return
                 if args.badge_tree:
                     check_badge_tree(sock, directory)
                     return
@@ -371,6 +378,10 @@ def main():
             print(server_log, flush=True)
             if "ERROR:" in server_log or "Traceback" in server_log:
                 raise AssertionError("服务端出现错误，见保存的server.log")
+
+
+def check_dungeon_capture(sock, capture, directory):
+    check_dungeon_capture_packets(sock, capture, directory, request)
 
 
 def badge_test_nodes(page, rows):

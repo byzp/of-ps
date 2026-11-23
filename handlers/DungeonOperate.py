@@ -1,4 +1,4 @@
-from utils import achieve_track
+from utils import achieve_track, dungeon_state
 
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
@@ -28,6 +28,10 @@ def _star_timers(dungeon_id):
 @packet_handler(MsgId.DungeonOperateReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
+        with dungeon_state.player_lock(session.player_id):
+            self._handle(session, data, packet_id)
+
+    def _handle(self, session, data: bytes, packet_id: int):
         req = DungeonOperateReq()
         req.ParseFromString(data)
 

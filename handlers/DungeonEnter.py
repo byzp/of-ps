@@ -17,7 +17,7 @@ from proto.net_pb2 import (
 import server.scene_data as scene_data
 import utils.db as db
 from utils import achieve_track as _at
-from utils import treasure_box
+from utils import treasure_box, dungeon_state
 from utils.dungeon_reward import dungeon_config, prerequisite_finished
 from utils.pb_create import make_SceneTeam, make_scene_treasure_boxes
 from utils.res_loader import res
@@ -26,6 +26,10 @@ from utils.res_loader import res
 @packet_handler(MsgId.DungeonEnterReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
+        with dungeon_state.player_lock(session.player_id):
+            self._handle(session, data, packet_id)
+
+    def _handle(self, session, data: bytes, packet_id: int):
         req = DungeonEnterReq()
         req.ParseFromString(data)
 
@@ -66,7 +70,7 @@ class Handler(PacketHandler):
         rsp.dungeon_data.CopyFrom(dg)
         rsp.dungeon_data.pos.CopyFrom(req.pos)
         rsp.dungeon_data.rot.CopyFrom(req.rot)
-        session.dungeon[0] = req.dungeon_id
+        session.dungeon = [req.dungeon_id, 0, 0, -1]
         if cfg.get("new_mission_type") == Config.MATERIAL_DUNGEON_TYPE:
             treasure_box.reset_dungeon_boxes(session.player_id, req.dungeon_id)
         # DungeonEnterRsp 必须携带副本宝箱点位, 与通用场景通知共用状态构造。

@@ -9,12 +9,16 @@ from proto.net_pb2 import DungeonRepeatEnterReq, DungeonRepeatEnterRsp, StatusCo
 import utils.db as db
 from utils.pb_create import make_SceneTeam, make_scene_treasure_boxes
 from utils.dungeon_reward import dungeon_config, prerequisite_finished
-from utils import treasure_box
+from utils import treasure_box, dungeon_state
 
 
 @packet_handler(MsgId.DungeonRepeatEnterReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
+        with dungeon_state.player_lock(session.player_id):
+            self._handle(session, data, packet_id)
+
+    def _handle(self, session, data: bytes, packet_id: int):
         req = DungeonRepeatEnterReq()
         req.ParseFromString(data)
 

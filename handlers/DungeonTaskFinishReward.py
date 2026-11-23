@@ -12,13 +12,17 @@ from proto.net_pb2 import (
 
 import utils.db as db
 from utils.res_loader import res
-from utils import item_mgr
+from utils import item_mgr, dungeon_state
 from utils.reward_resolver import resolve_drop
 
 
 @packet_handler(MsgId.DungeonTaskFinishRewardReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
+        with dungeon_state.player_lock(session.player_id):
+            self._handle(session, data, packet_id)
+
+    def _handle(self, session, data: bytes, packet_id: int):
         req = DungeonTaskFinishRewardReq()
         req.ParseFromString(data)
 
@@ -40,6 +44,11 @@ class Handler(PacketHandler):
 
         if dg.task_finish_reward == RewardStatus.Reward:
             rsp.status = StatusCode.StatusCode_REPEAT_GET_REWARD
+            session.send(MsgId.DungeonTaskFinishRewardRsp, rsp, packet_id)
+            return
+
+        if not dungeon_state.task_ids(req.dungeon_id) or not dg.all_task_finished:
+            rsp.status = StatusCode.StatusCode_DungeonCantReward
             session.send(MsgId.DungeonTaskFinishRewardRsp, rsp, packet_id)
             return
 

@@ -17,11 +17,16 @@ from proto.net_pb2 import (
 import server.scene_data as scene_data
 from utils.pb_create import make_SceneDataNotice
 import utils.db as db
+from utils import dungeon_state
 
 
 @packet_handler(MsgId.DungeonExitReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
+        with dungeon_state.player_lock(session.player_id):
+            self._handle(session, data, packet_id)
+
+    def _handle(self, session, data: bytes, packet_id: int):
         req = DungeonExitReq()
         req.ParseFromString(data)
 
