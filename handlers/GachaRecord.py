@@ -19,8 +19,6 @@ class Handler(PacketHandler):
         rsp = GachaRecordRsp()
 
         rsp.status = StatusCode.StatusCode_OK
-        rsp.gacha_id = req.gacha_id
-        rsp.page = req.page
 
         records = db.get_gacha_records(
             session.player_id,
@@ -28,8 +26,8 @@ class Handler(PacketHandler):
             req.page,
         )
 
-        rsp.total_page = int(
-            db.get_total_gacha_num(
+        rsp.total_page = -(
+            -db.get_total_gacha_num(
                 session.player_id,
                 req.gacha_id,
             )

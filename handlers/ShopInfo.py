@@ -3,6 +3,7 @@ from network.msg_id import MsgId
 
 
 from proto.net_pb2 import ShopInfoReq, ShopInfoRsp, StatusCode
+from utils import shop_state
 from utils.res_loader import res
 
 
@@ -13,17 +14,25 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = ShopInfoRsp()
-        rsp.status = StatusCode.StatusCode_OK
         rsp.shop_id = req.shop_id
-        # logger.info("ShopInfoReq shop_id=%s", req.shop_id)
+        shop_cfg = None
         for dat in res["Shop"]["grid"]["datas"]:
             if dat.get("i_d") == req.shop_id:
-                for i in dat.get("items"):
-                    tmp = rsp.grids.add()
-                    tmp.id = req.shop_id
-                    tmp.grid_id = i["grid_i_d"]
-                    tmp.pool_id = i["shop_pool_i_d"]
-                    tmp.pool_index = 1 if req.shop_id != 100 else i.get("index", 1)
+                shop_cfg = dat
+                break
+        if shop_cfg is None:
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+            session.send(MsgId.ShopInfoRsp, rsp, packet_id)
+            return
+
+        rsp.status = StatusCode.StatusCode_OK
+        for i in shop_state.grid_rows(req.shop_id) or ():
+            tmp = rsp.grids.add()
+            tmp.id = req.shop_id
+            tmp.grid_id = i["grid_i_d"]
+            tmp.pool_id = i["shop_pool_i_d"]
+            tmp.pool_index = i["pool_index"]
+            tmp.buy_times = shop_state.buy_times(session.player_id, i)
         session.send(MsgId.ShopInfoRsp, rsp, packet_id)  # 1675,1676
 
 

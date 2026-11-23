@@ -7,11 +7,14 @@ from proto.net_pb2 import (
     GachaRsp,
     StatusCode,
     PackNotice,
+    ItemDetail,
 )
 from config import Config
 from utils.res_loader import res
 import utils.db as db
-from utils.pb_create import make_item, make_QuestNotice
+from utils import item_mgr
+from utils.pb_create import make_item
+from utils import achieve_track
 
 
 @packet_handler(MsgId.GachaReq)
@@ -20,6 +23,11 @@ class Handler(PacketHandler):
         req = GachaReq()
         req.ParseFromString(data)
 
+        with achieve_track.batch(session):
+            self._draw(session, req, packet_id)
+
+    def _draw(self, session, req, packet_id):
+
         rsp = GachaRsp()
         rsp.status = StatusCode.StatusCode_OK
         rsp.info.gacha_id = req.gacha_id
@@ -27,8 +35,18 @@ class Handler(PacketHandler):
         rsp1 = PackNotice()
         rsp1.status = StatusCode.StatusCode_OK
         gt = db.get_gacha_guarantee(session.player_id, req.gacha_id)
+        _gt_cap = next(
+            (
+                int(e.get("max_times") or 70)
+                for e in res["Gacha"]["info"]["datas"]
+                if isinstance(e, dict) and e.get("i_d") == req.gacha_id
+            ),
+            70,
+        )
+        _pool_found = False
         for i in res["Gacha"]["pool"]["datas"]:
             if i["i_d"] == req.gacha_id:
+                _pool_found = True
                 pools = []
                 for i2 in i["items"]:
                     pools.append(i2["free_gacha_pool_i_d"])
@@ -37,16 +55,25 @@ class Handler(PacketHandler):
                 gt_pool = 0
                 for i2 in res["Gacha"]["info"]["datas"]:
                     if i2["i_d"] == req.gacha_id:
-                        consume_b = db.get_item_detail(
-                            session.player_id, i2["consume_item2_i_d"]
-                        )
+                        # 单抽走 consume_item1(招募券), 十连走 consume_item2(星石)
+                        if req.is_single:
+                            cost_id = i2.get("consume_item1_i_d", 0)
+                            cost_num = int(i2.get("method1_count", 0) or 0) * int(
+                                i2.get("consume_item1_num", 1) or 1
+                            )
+                        else:
+                            cost_id = i2.get("consume_item2_i_d", 0)
+                            cost_num = int(i2.get("consume_item2_num", 0) or 0)
+                        if not cost_id or cost_num <= 0:
+                            break
+                        consume_b = db.get_item_detail(session.player_id, cost_id)
                         if not consume_b:
                             rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
                             session.send(MsgId.GachaRsp, rsp, packet_id)
                             return
                         item = rsp1.items.add()
                         item.ParseFromString(consume_b)
-                        item.main_item.base_item.num -= rsp.info.gacha_times
+                        item.main_item.base_item.num -= cost_num
                         if item.main_item.base_item.num < 0:
                             rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
                             session.send(MsgId.GachaRsp, rsp, packet_id)
@@ -56,7 +83,7 @@ class Handler(PacketHandler):
                             item.SerializeToString(),
                             item.main_item.item_id,
                         )
-                        gt_pool = i2["big_guarantee_pool_i_d"]
+                        gt_pool = i2.get("big_guarantee_pool_i_d", 0)
                         break
                 for i2 in res["Gacha"]["reward_pool"]["datas"]:
                     if i2["i_d"] in pools:
@@ -65,8 +92,12 @@ class Handler(PacketHandler):
                     if i2["i_d"] == gt_pool:
                         for i3 in i2["items"]:
                             rewards_gt.append(i3["item_i_d"])
+        if not _pool_found or not rewards:
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+            session.send(MsgId.GachaRsp, rsp, packet_id)
+            return
         for _ in range(10):
-            if gt >= 70:
+            if rewards_gt and gt + 1 >= _gt_cap:
                 r = random.choice(rewards_gt)
                 gt = 0
             else:
@@ -79,36 +110,47 @@ class Handler(PacketHandler):
                 and db.get_total_gacha_num(session.player_id, 2000) == 0
             ):
                 r = 102001
-                rsp2 = make_QuestNotice(session, [11000131])
-                if rsp2:
-                    session.send(MsgId.QuestNotice, rsp2, 0)
             c = False
-            item = rsp.items.add()
             for i in res["Character"]["character"]["datas"]:
                 if i["i_d"] == r:
-                    item.main_item.item_id = r
-                    db.add_character(
-                        session.player_id, r, item.main_item.character
-                    )  # TODO 重复角色转换
+                    item = rsp.items.add()
+                    # 重复角色自动转换为碎片(repeat_item_i_d)
+                    dup = item_mgr.grant_character(
+                        session.player_id, r, item, pack_notice=rsp1
+                    )
+                    if not dup:
+                        extra = ItemDetail()
+                        make_item(107, 500, session.player_id, extra)
+                        item.extras.add().CopyFrom(extra.main_item)
+                        item_mgr.grant_items(
+                            session.player_id,
+                            [(107, 500)],
+                            pack_notice=rsp1,
+                            session=session,
+                        )
+                        for i2 in res["Item"]["item"]["datas"]:
+                            if i2["i_d"] == item.main_item.item_id:
+                                item.extra_quality = i2.get("quality", 0)
+                                break
                     c = True
-                    for i in res["Item"]["item"]["datas"]:
-                        if i["i_d"] == r:
-                            item.extra_quality = i.get("quality", 0)
                     break
             if not c:
-                make_item(r, 1, session.player_id, item)
-                db.set_item_detail(
+                item_mgr.grant_single_item(
                     session.player_id,
-                    item.SerializeToString(),
-                    None,
-                    item.main_item.poster.instance_id,
-                )  # TODO 服装池
-            rsp1.items.add().CopyFrom(item)
+                    r,
+                    num=1,
+                    rsp_items=rsp.items,
+                    pack_notice=rsp1,
+                )
+            else:
+                rsp1.items.add().CopyFrom(item)
             db.add_gacha_record(session.player_id, req.gacha_id, r)
             if req.is_single:
                 break
         db.set_gacha_guarantee(session.player_id, req.gacha_id, gt)
 
-        rsp.info.guarantee = 70 - gt
+        if gt_pool:
+            rsp.info.guarantee = max(0, _gt_cap - gt)
         session.send(MsgId.GachaRsp, rsp, packet_id)
         session.send(MsgId.PackNotice, rsp1, 0)
+        achieve_track.report(session, "gacha", amount=1 if req.is_single else 10)
