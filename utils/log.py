@@ -14,9 +14,9 @@ _formatter = None
 
 
 def _format_record_to_ansi(record):
-    try:
+    if _formatter is not None:
         text = _formatter.format(record)
-    except Exception:
+    else:
         text = f"{record.levelname}: {record.getMessage()}"
     lvl = record.levelno
     if lvl >= logging.ERROR:
@@ -32,27 +32,18 @@ def _format_record_to_ansi(record):
 
 def _log_consumer_loop(q: queue.Queue, stop_event: threading.Event):
     while not stop_event.is_set():
-        try:
-            record = q.get(timeout=0.1)
-        except queue.Empty:
+        if q.empty():
+            stop_event.wait(0.05)
             continue
+        record = q.get_nowait()
 
-        try:
-            msg = _format_record_to_ansi(record)
-            print_formatted_text(ANSI(msg))
-        except Exception:
-            pass
+        msg = _format_record_to_ansi(record)
+        print_formatted_text(ANSI(msg))
 
-    while True:
-        try:
-            record = q.get_nowait()
-        except queue.Empty:
-            break
-        try:
-            msg = _format_record_to_ansi(record)
-            print_formatted_text(ANSI(msg))
-        except Exception:
-            pass
+    while not q.empty():
+        record = q.get_nowait()
+        msg = _format_record_to_ansi(record)
+        print_formatted_text(ANSI(msg))
 
 
 def start(stop_event: threading.Event = None):

@@ -18,7 +18,7 @@ from proto.net_pb2 import (
 )
 
 from utils.res_loader import res
-from server.scene_data import get_session, lock_scene_action
+from server.scene_data import get_session
 import server.scene_data as scene_data
 import server.notice_sync as notice_sync
 import utils.db as db
@@ -224,10 +224,12 @@ def set_time(cmds):
     if not len(cmds) == 2:
         logger.warning("time 1-86400")
         return
-    cmds = list(map(lambda x: int(x) if x.lstrip("+-").isdigit() else x, cmds))
-    with lock_scene_action:
-        notice_sync._last_send_time = 0
-        notice_sync.tod_time = cmds[1]
+    seconds = int(cmds[1])
+    if not 1 <= seconds <= 86400:
+        logger.warning("time 1-86400")
+        return
+    notice_sync.set_time_of_day(seconds)
+    logger.info("Game time set to %s seconds", seconds)
 
 
 def changeScenechannel(cmds):
@@ -343,4 +345,4 @@ def kick(cmds: list):
         rsp.status = StatusCode.StatusCode_OK
         rsp.reason = PlayerOfflineReason.PlayerOfflineReason_KICK
         session.send(MsgId.PlayerOfflineRsp, rsp, 0)
-        # session.close()  # 不能主动断开连接,不然客户端会先提示重连
+        # session.close() # 不能主动断开连接,不然客户端会先提示重连

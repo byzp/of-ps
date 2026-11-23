@@ -1,3 +1,4 @@
+from config import Config
 import sys
 import types
 import logging
@@ -18,7 +19,6 @@ _prompt_thread = None
 _session = None
 _sigint_count = 0
 _sigint_deadline = 0.0
-_SIGINT_WINDOW = 10.0
 
 
 def _print_to_console(text):
@@ -143,11 +143,11 @@ def _prompt_loop():
                     if _sigint_count == 0:
                         logging.warning(
                             "Press Ctrl+C again within "
-                            + str(_SIGINT_WINDOW)
+                            + str(Config.CMD_SIGINT_WINDOW)
                             + " seconds to exit"
                         )
                         _sigint_count = 1
-                        _sigint_deadline = now + _SIGINT_WINDOW
+                        _sigint_deadline = now + Config.CMD_SIGINT_WINDOW
                     else:
                         _stop_event.set()
                     continue

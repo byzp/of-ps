@@ -1,16 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-clean_proto.py
+"""清理 proto 文件，只保留 msg_id 中引用的消息及依赖。
 
-用法：
-    python clean_proto.py --py msg_id.py --proto input.proto --out output.proto
-
-默认：
-    从 py 文件里的 class MsgId: 提取字段名
-    仅保留 proto 中同名 message/enum/service，并递归保留依赖消息
-    enum 统一放在前面
+用法：python clean_proto.py --py msg_id.py --proto input.proto --out output.proto
 """
 
 from __future__ import annotations
@@ -20,7 +13,6 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
-
 
 SCALAR_TYPES = {
     "double",
@@ -326,12 +318,7 @@ def extract_references_from_message_body(body: str) -> Set[str]:
     refs: Set[str] = set()
 
     # 常见字段声明：
-    #   repeated Foo bar = 1;
-    #   optional Foo bar = 1;
-    #   map<string, Foo> bar = 1;
-    #   Foo bar = 1;
-    #
-    # oneof 里的字段也通常能被捕获。
+    # repeated Foo bar = 1;
     field_re = re.compile(
         r"(?m)^\s*(?:repeated|optional|required)?\s*"
         r"(map<[^>]+>|[A-Za-z_][\w\.]*)\s+"

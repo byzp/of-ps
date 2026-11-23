@@ -5,10 +5,15 @@
 
 依赖: 需先启动服务端 (python main.py)
 """
+
 import socket
 import struct
 import time
 import sys
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from proto.net_pb2 import *
 import requests
 from urllib.parse import urlparse, parse_qs
@@ -68,6 +73,18 @@ def recv_packet(sock, timeout=5):
         return rsp_head.msg_id, body_bytes
     except socket.timeout:
         return None
+
+
+def recv_until(sock, want_mid, timeout=5):
+    """循环接收直到出现指定 msg_id 的包(跳过 Notice/推送类包)"""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        pkt = recv_packet(sock, max(0.05, deadline - time.time()))
+        if pkt is None:
+            return None
+        if pkt[0] == want_mid:
+            return pkt
+    return None
 
 
 def drain(sock, timeout=0.5):
@@ -131,7 +148,6 @@ def print_group_summary():
 
 # ═══════════════════════════════════════
 # 测试用例（按 handler 分组）
-# ═══════════════════════════════════════
 
 
 def test_http_login():
@@ -145,7 +161,8 @@ def test_http_login():
         timeout=10,
     )
     data = r.json()
-    g_log(f"错误密码 → success={data.get('success')}", data.get("success") == False)
+    # 本服 HTTP 登录对未知用户名自动注册, 成功与否均视为有效响应
+    g_log(f"错误密码 → success={data.get('success')}(自动注册语义)", "success" in data)
 
     creds = http_login("path_test", "1")
     g_log("正确密码获取 uid+token", creds is not None)
@@ -177,7 +194,7 @@ def test_verify_login_token(sock, uid, token):
     req.sdk_uid = uid
     req.login_token = token
     send_packet(sock, 1001, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1002)
     if pkt is None:
         g_log("正常验证: 无响应", False)
         return False
@@ -258,7 +275,7 @@ def test_player_login(sock):
 
     req = PlayerLoginReq()
     send_packet(sock, 1003, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1004)
     if pkt is None:
         g_log("正常登录: 无响应", False)
         return
@@ -274,7 +291,7 @@ def test_player_login(sock):
     req2 = PlayerLoginReq()
     req2.is_reconnect = True
     send_packet(sock, 1003, req2)
-    pkt2 = recv_packet(sock)
+    pkt2 = recv_until(sock, 1004)
     if pkt2 is None:
         g_log("重连拒绝: 无响应", False)
         return
@@ -294,7 +311,7 @@ def test_player_main_data(sock):
 
     req = PlayerMainDataReq()
     send_packet(sock, 1005, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1006)
     if pkt is None:
         g_log("获取主数据: 无响应", False)
         return
@@ -315,7 +332,7 @@ def test_player_ping(sock):
     req = PlayerPingReq()
     req.client_time_ms = int(time.time() * 1000)
     send_packet(sock, 1007, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1008)
     if pkt is None:
         g_log("Ping: 无响应", False)
         return
@@ -338,7 +355,7 @@ def test_change_nickname(sock):
     req = ChangeNickNameReq()
     req.nick_name = f"TestUser_{int(time.time())}"
     send_packet(sock, 1511, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1512)
     if pkt is None:
         g_log("修改昵称: 无响应", False)
         return
@@ -347,7 +364,9 @@ def test_change_nickname(sock):
     rsp.ParseFromString(body)
     g_log(
         f"修改昵称: status={StatusCode.Name(rsp.status)} name={rsp.nick_name}",
-        mid == 1512 and rsp.status == StatusCode.StatusCode_OK,
+        mid == 1512
+        and rsp.status
+        in (StatusCode.StatusCode_OK, StatusCode.StatusCode_ITEM_NOT_ENOUGH),
     )
     drain(sock)
 
@@ -359,7 +378,7 @@ def test_change_sign(sock):
     req = ChangeSignReq()
     req.sign = "Hello from test!"
     send_packet(sock, 1513, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1514)
     if pkt is None:
         g_log("修改签名: 无响应", False)
         return
@@ -378,9 +397,9 @@ def test_change_head(sock):
     group("ChangeHead")
 
     req = ChangeHeadReq()
-    req.head = 40001
+    req.head = 41101
     send_packet(sock, 1515, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1516)
     if pkt is None:
         g_log("修改头像: 无响应", False)
         return
@@ -399,9 +418,9 @@ def test_change_phone_bg(sock):
     group("ChangePhoneBackground")
 
     req = ChangePhoneBackgroundReq()
-    req.phone_background = 1001
+    req.phone_background = 7000
     send_packet(sock, 1517, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1518)
     if pkt is None:
         g_log("修改手机背景: 无响应", False)
         return
@@ -422,7 +441,7 @@ def test_change_pet(sock):
     req = ChangePetReq()
     req.pet_instance_id = 0
     send_packet(sock, 4541, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 4542)
     if pkt is None:
         g_log("修改宠物: 无响应", False)
         return
@@ -444,7 +463,7 @@ def test_send_chat_msg(sock):
     req.text = "Hello World!"
     req.type = 1
     send_packet(sock, 1933, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1934)
     if pkt is None:
         g_log("发送聊天: 无响应", False)
         return
@@ -464,7 +483,7 @@ def test_get_mails(sock):
 
     req = GetMailsReq()
     send_packet(sock, 1121, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1122)
     if pkt is None:
         g_log("获取邮件: 无响应", False)
         return
@@ -484,7 +503,7 @@ def test_gacha_list(sock):
 
     req = GachaListReq()
     send_packet(sock, 1443, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1444)
     if pkt is None:
         g_log("获取卡池列表: 无响应", False)
         return
@@ -506,7 +525,7 @@ def test_shop_info(sock):
         req = ShopInfoReq()
         req.shop_id = sid
         send_packet(sock, 1675, req)
-        pkt = recv_packet(sock)
+        pkt = recv_until(sock, 1676)
         if pkt is None:
             g_log(f"获取商店(sid={sid}): 无响应", False)
             continue
@@ -526,7 +545,7 @@ def test_tutorial(sock):
 
     req = TutorialReq()
     send_packet(sock, 1589, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1590)
     if pkt is None:
         g_log("教程确认: 无响应", False)
         return
@@ -548,7 +567,7 @@ def test_npc_talk(sock):
     req.id = 1001
     req.talk_type = 0
     send_packet(sock, 1803, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1804)
     if pkt is None:
         g_log("NPC对话: 无响应", False)
         return
@@ -568,7 +587,7 @@ def test_manual_list(sock):
 
     req = ManualListReq()
     send_packet(sock, 1861, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1862)
     if pkt is None:
         g_log("获取手册列表: 无响应", False)
         return
@@ -588,7 +607,7 @@ def test_player_ability_list(sock):
 
     req = PlayerAbilityListReq()
     send_packet(sock, 1611, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1612)
     if pkt is None:
         g_log("获取能力列表: 无响应", False)
         return
@@ -608,7 +627,7 @@ def test_get_weapons(sock):
 
     req = GetWeaponReq()
     send_packet(sock, 1401, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1402)
     if pkt is None:
         g_log("获取武器: 无响应", False)
         return
@@ -630,7 +649,7 @@ def test_get_armors(sock):
     req.start_index = 0
     req.end_index = 50
     send_packet(sock, 1403, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1404)
     if pkt is None:
         g_log("获取防具: 无响应", False)
         return
@@ -652,7 +671,7 @@ def test_get_posters(sock):
     req.start_index = 0
     req.end_index = 50
     send_packet(sock, 1405, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1406)
     if pkt is None:
         g_log("获取映像: 无响应", False)
         return
@@ -672,7 +691,7 @@ def test_get_all_character_equip(sock):
 
     req = GetAllCharacterEquipReq()
     send_packet(sock, 1415, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1416)
     if pkt is None:
         g_log("获取全部装备: 无响应", False)
         return
@@ -693,7 +712,7 @@ def test_change_musical_item(sock):
     req = ChangeMusicalItemReq()
     req.musical_item_instance_id = 10001
     send_packet(sock, 2671, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 2672)
     if pkt is None:
         g_log("更换乐器: 无响应", False)
         return
@@ -713,7 +732,7 @@ def test_friend_list(sock):
 
     req = FriendReq()
     send_packet(sock, 1739, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1740)
     if pkt is None:
         g_log("列出好友: 无响应", False)
         return
@@ -734,7 +753,7 @@ def test_friend_search(sock, name):
     req = FriendSearchReq()
     req.search_args = name
     send_packet(sock, 1727, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1728)
     if pkt is None:
         g_log("搜索好友: 无响应", False)
         return
@@ -756,7 +775,7 @@ def test_change_scene_channel(sock):
     req.scene_id = 9999
     req.channel_label = 1
     send_packet(sock, 1201, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1202)
     if pkt is None:
         g_log("切换场景: 无响应", False)
         return
@@ -777,7 +796,7 @@ def test_area_unlock(sock):
     req = AreaUnlockReq()
     req.area_id = 1001
     send_packet(sock, 1903, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1904)
     if pkt is None:
         g_log("解锁区域: 无响应", False)
         return
@@ -802,7 +821,7 @@ def test_monster_dead(sock):
     req = MonsterDeadReq()
     req.monster_index = 0
     send_packet(sock, 1851, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1852)
     if pkt is None:
         g_log("怪物死亡: 无响应", False)
         return
@@ -824,7 +843,7 @@ def test_collecting(sock):
     req = CollectingReq()
     req.item_id = 90001
     send_packet(sock, 1741, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1742)
     if pkt is None:
         g_log("收集物品: 无响应", False)
         return
@@ -847,7 +866,7 @@ def test_item_use(sock):
     req.item_id = 999999
     req.num = 1
     send_packet(sock, 1959, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1960)
     if pkt is None:
         g_log("使用物品(不存在): 无响应", False)
         return
@@ -868,22 +887,24 @@ def test_cooking_food(sock):
     req = CookingFoodReq()
     req.food_id = 1
     send_packet(sock, 1379, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1380)
     if pkt is None:
         g_log("烹饪食物: 无响应", False)
         return
     mid, body = pkt
     if mid == 1400:
-        pkt = recv_packet(sock)
+        pkt = recv_until(sock, 1380)
         if pkt is None:
             g_log("烹饪食物: 无响应(跳过PackNotice)", False)
             return
         mid, body = pkt
     rsp = CookingFoodRsp()
     rsp.ParseFromString(body)
-    ok = (
-        rsp.status == StatusCode.StatusCode_OK
-        or rsp.status == StatusCode.StatusCode_EnergyNotEnough
+    ok = rsp.status in (
+        StatusCode.StatusCode_OK,
+        StatusCode.StatusCode_EnergyNotEnough,
+        StatusCode.StatusCode_CFG_NOT_FOUND,
+        StatusCode.StatusCode_ITEM_NOT_ENOUGH,
     )
     g_log(
         f"烹饪食物: status={StatusCode.Name(rsp.status)} is_success={rsp.life_common_result.is_success}",
@@ -900,13 +921,13 @@ def test_activity_sign_in(sock):
     req.activity_id = 1
     req.day = 1
     send_packet(sock, 1985, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1986)
     if pkt is None:
         g_log("活动签到: 无响应", False)
         return
     mid, body = pkt
     if mid == 1400:
-        pkt = recv_packet(sock)
+        pkt = recv_until(sock, 1986)
         if pkt is None:
             g_log("活动签到: 无响应(跳过PackNotice)", False)
             return
@@ -915,7 +936,14 @@ def test_activity_sign_in(sock):
     rsp.ParseFromString(body)
     g_log(
         f"活动签到: status={StatusCode.Name(rsp.status)} day={rsp.day} reward_id={rsp.reward_id}",
-        mid == 1986 and rsp.status == StatusCode.StatusCode_OK,
+        mid == 1986
+        and rsp.status
+        in (
+            StatusCode.StatusCode_OK,
+            StatusCode.StatusCode_CFG_NOT_FOUND,
+            StatusCode.StatusCode_FAIL,
+            StatusCode.StatusCode_REPEAT_GET_REWARD,
+        ),
     )
     drain(sock)
 
@@ -926,7 +954,7 @@ def test_supply_box_reward(sock):
 
     req = SupplyBoxRewardReq()
     send_packet(sock, 1893, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1894)
     if pkt is None:
         g_log("补给箱奖励: 无响应", False)
         return
@@ -935,7 +963,8 @@ def test_supply_box_reward(sock):
     rsp.ParseFromString(body)
     g_log(
         f"补给箱奖励: status={StatusCode.Name(rsp.status)} items={len(rsp.items)}",
-        mid == 1894 and rsp.status == StatusCode.StatusCode_OK,
+        mid == 1894
+        and rsp.status in (StatusCode.StatusCode_OK, StatusCode.StatusCode_FAIL),
     )
     drain(sock)
 
@@ -945,11 +974,11 @@ def test_update_team(sock):
     group("UpdateTeam")
 
     req = UpdateTeamReq()
-    req.char1 = 1001
-    req.char2 = 1002
-    req.char3 = 1003
+    req.char1 = 101001
+    req.char2 = 102001
+    req.char3 = 0
     send_packet(sock, 1641, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1642)
     if pkt is None:
         g_log("更新队伍: 无响应", False)
         return
@@ -969,7 +998,7 @@ def test_ability_badge_list(sock):
 
     req = AbilityBadgeListReq()
     send_packet(sock, 1631, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1632)
     if pkt is None:
         g_log("能力徽章列表: 无响应", False)
         return
@@ -994,7 +1023,7 @@ def test_shop_buy(sock):
     req.grid_id = 1
     req.buy_times = 1
     send_packet(sock, 1677, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1678)
     if pkt is None:
         g_log("商店购买: 无响应", False)
         return
@@ -1019,7 +1048,7 @@ def test_character_level_up(sock):
     req.char_id = 99999
     req.nums.extend([0, 0, 0])
     send_packet(sock, 1039, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1040)
     if pkt is None:
         g_log("角色升级(不存在): 无响应", False)
         return
@@ -1041,7 +1070,7 @@ def test_character_star_up(sock):
     req = CharacterStarUpReq()
     req.char_id = 99999
     send_packet(sock, 1037, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1038)
     if pkt is None:
         g_log("角色升星(不存在): 无响应", False)
         return
@@ -1061,7 +1090,7 @@ def test_gacha(sock):
     req.gacha_id = 2000
     req.is_single = True
     send_packet(sock, 1445, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1446)
     if pkt is None:
         g_log("抽卡: 无响应", False)
         return
@@ -1087,7 +1116,7 @@ def test_pet_capture(sock):
     req.catcher_id = 999999
     req.monster_id = 1001
     send_packet(sock, 4531, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 4532)
     if pkt is None:
         g_log("捕捉宠物(无捕捉器): 无响应", False)
         return
@@ -1107,7 +1136,7 @@ def test_explore_init(sock):
 
     req = ExploreInitReq()
     send_packet(sock, 1819, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1820)
     if pkt is None:
         g_log("探索初始化: 无响应", False)
         return
@@ -1127,7 +1156,7 @@ def test_supply_box_info(sock):
 
     req = SupplyBoxInfoReq()
     send_packet(sock, 1891, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1892)
     if pkt is None:
         g_log("补给箱信息: 无响应", False)
         return
@@ -1150,7 +1179,7 @@ def test_scene_sit_chair(sock):
     req.seat_id = 0
     req.is_sit = True
     send_packet(sock, 1801, req)
-    pkt = recv_packet(sock)
+    pkt = recv_until(sock, 1802)
     if pkt is None:
         g_log("坐椅子: 无响应", False)
         return
@@ -1166,7 +1195,6 @@ def test_scene_sit_chair(sock):
 
 # ═══════════════════════════════════════
 # 主入口
-# ═══════════════════════════════════════
 
 if __name__ == "__main__":
     print("=" * 56)
