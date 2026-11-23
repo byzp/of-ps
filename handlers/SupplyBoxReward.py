@@ -1,19 +1,30 @@
+from config import Config
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-import logging
+import random
 import time
 
 from proto.net_pb2 import (
     SupplyBoxRewardReq,
     SupplyBoxRewardRsp,
     StatusCode,
-    ItemDetail,
     PackNotice,
 )
+from utils.res_loader import res
+from utils import item_mgr
 import utils.db as db
-from utils.pb_create import make_item
+from utils import achieve_track
+from utils import supply_box
 
-logger = logging.getLogger(__name__)
+"""
+# 补给箱领奖 1893 1894
+刷新间隔(已对表验证): GlobalConfig key=SupplyBox_Random_Time values=('10','30'),
+单位分钟, 下次可领时间取 10-30 分钟随机, 持久化于 kv ns=player k=supply_box_next。
+注: 奖励内容无表可查 —— 已查 GlobalConfig 全部 316 个键、Treasure.json、
+TreasureBox.json、QuickObtaining.json、RandomEvent.json 及全资源目录 supply
+关键字均无补给箱奖励配置(应在服务端私有配置, 未随客户端资源下发),
+维持金币101 x1000 占位。
+"""
 
 
 @packet_handler(MsgId.SupplyBoxRewardReq)
@@ -25,29 +36,29 @@ class Handler(PacketHandler):
         rsp = SupplyBoxRewardRsp()
         rsp.status = StatusCode.StatusCode_OK
 
-        rsp1 = PackNotice()
-        rsp1.status = StatusCode.StatusCode_OK
-        item = db.get_item_detail(
-            session.player_id, 101
-        )  # TODO 暂时不知道具体奖励内容,先给1000个金币
-        tmp1 = ItemDetail()
-        if not item:
-            make_item(101, 0, session.player_id, tmp1)
+        # 冷却校验: 未到 next_reward_time 不重复发放
+        now = int(time.time())
+        next_ts = supply_box.next_reward_time(session.player_id)
+        if now < next_ts:
+            rsp.status = StatusCode.StatusCode_FAIL
+            rsp.next_reward_time = next_ts
+            session.send(MsgId.SupplyBoxRewardRsp, rsp, packet_id)  # 1893,1894
+            return
 
-        else:
-            tmp1.ParseFromString(item)
-        num_t = tmp1.main_item.base_item.num
-        tmp1.main_item.base_item.num = 1000
-        rsp.items.add().CopyFrom(tmp1)
-        tmp1.main_item.base_item.num = num_t + 1000
-        rsp1.items.add().CopyFrom(tmp1)
-        db.set_item_detail(
-            session.player_id,
-            tmp1.SerializeToString(),
-            101,
-            None,
-        )
-        rsp.next_reward_time = int(time.time()) + 600
-
-        session.send(MsgId.SupplyBoxRewardRsp, rsp, packet_id)  # 1893 1894
-        session.send(MsgId.PackNotice, rsp1, 0)
+        pack = PackNotice(status=StatusCode.StatusCode_OK)
+        with achieve_track.batch(session):
+            item_mgr.grant_items(
+                session.player_id,
+                [(Config.SUPPLY_BOX_COIN_ITEM_ID, Config.SUPPLY_BOX_COIN_COUNT)],
+                rsp_items=rsp.items,
+                pack_notice=pack,
+                session=session,
+            )
+            rsp.next_reward_time = now + supply_box.interval_seconds()
+            db.set_kv(
+                session.player_id, "player", "supply_box_next", rsp.next_reward_time
+            )
+            achieve_track.report(session, "supply_box")
+            session.send(MsgId.SupplyBoxRewardRsp, rsp, packet_id)
+            if pack.items:
+                session.send(MsgId.PackNotice, pack, 0)

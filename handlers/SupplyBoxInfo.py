@@ -3,7 +3,7 @@ from network.msg_id import MsgId
 
 from proto.net_pb2 import SupplyBoxInfoRsp, StatusCode
 
-from server.notice_sync import _rel_time as rel_time
+from utils import supply_box
 
 
 @packet_handler(MsgId.SupplyBoxInfoReq)
@@ -11,6 +11,6 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         rsp = SupplyBoxInfoRsp()
         rsp.status = StatusCode.StatusCode_OK
-        rsp.next_reward_time = int(rel_time) + 600
+        rsp.next_reward_time = supply_box.next_reward_time(session.player_id)
 
-        session.send(MsgId.SupplyBoxInfoRsp, rsp, packet_id)  # 1891,1892
+        session.send(MsgId.SupplyBoxInfoRsp, rsp, packet_id)
