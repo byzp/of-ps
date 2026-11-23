@@ -13,7 +13,9 @@ from proto.net_pb2 import (
 )
 
 import utils.db as db
+from utils import item_mgr
 from utils.res_loader import res
+from utils import achieve_track
 
 
 @packet_handler(MsgId.CharacterStarUpReq)
@@ -51,14 +53,43 @@ class Handler(PacketHandler):
 
         next_star = current_star + 1
         star_config = None
+        star_item_id = 0
         for star_info in char_star_data["star_info"]:
+            star_item_id = star_info.get("item_i_d", 0)
             if star_info["star"] == next_star:
                 star_config = star_info
                 break
 
         if not star_config:
-            rsp.status = StatusCode.StatusCode_FAIL
-            session.send(MsgId.CharacterStarUpRsp, rsp, packet_id)
+            shards = 0
+            if star_item_id:
+                raw = db.get_item_detail(session.player_id, star_item_id)
+                if raw:
+                    shard = ItemDetail()
+                    shard.ParseFromString(raw)
+                    shards = int(shard.main_item.base_item.num)
+            if shards <= 0:
+                rsp.status = StatusCode.StatusCode_FAIL
+                session.send(MsgId.CharacterStarUpRsp, rsp, packet_id)
+                return
+            consumed = ItemDetail()
+            consumed.ParseFromString(
+                db.get_item_detail(session.player_id, star_item_id)
+            )
+            consumed.main_item.base_item.num = 0
+            db.set_item_detail(
+                session.player_id, consumed.SerializeToString(), star_item_id, None
+            )
+            rsp.status = StatusCode.StatusCode_OK
+            rsp.char_id = req.char_id
+            rsp.star = current_star
+            item_mgr.grant_items(
+                session.player_id,
+                [(101, shards * 500)],
+                rsp_items=rsp.items,
+                session=session,
+            )
+            session.send(MsgId.CharacterStarUpRsp, rsp, packet_id)  # 角色升星 1037 1038
             return
 
         item_id = star_config.get("item_i_d", 0)
@@ -93,12 +124,12 @@ class Handler(PacketHandler):
         item.main_item.base_item.num -= item_num
         db.set_item_detail(session.player_id, item.SerializeToString(), item_id, None)
 
-        # TODO 满星剩余碎片转换物品响应
-
         rsp.status = StatusCode.StatusCode_OK
         rsp.char_id = req.char_id
         rsp.star = character.star
 
+        # 成就: 角色升星；类型120的 param 是本次升到的新星级。
+        achieve_track.report(session, "star_up", match=character.star)
         session.send(MsgId.CharacterStarUpRsp, rsp, packet_id)  # 角色升星 1037 1038
 
         # 更新碎片数量通知

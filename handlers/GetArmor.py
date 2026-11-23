@@ -16,20 +16,17 @@ class Handler(PacketHandler):
         rsp = GetArmorRsp()
         rsp.status = StatusCode.StatusCode_OK
 
-        max_num = req.end_index - req.start_index
-        total_num = 0
-
+        all_armors = []
         for item in db.get_item_detail(session.player_id, table="items_s"):
             tmp = ItemDetail()
             tmp.ParseFromString(item)
             if tmp.main_item.item_tag == EBagItemTag.EBagItemTag_Armor:
-                # if tmp.main_item.armor.armor_id >2331000:
-                if max_num == total_num:
-                    break
-                total_num += 1
-                rsp.armors.add().CopyFrom(tmp.main_item.armor)
-
-        rsp.total_num = total_num
-        rsp.end_index = req.start_index + total_num
+                all_armors.append(tmp.main_item.armor)
+        rsp.total_num = len(all_armors)
+        start = req.start_index if req.start_index else 0
+        end = req.end_index if req.end_index else len(all_armors)
+        for a in all_armors[start:end]:
+            rsp.armors.add().CopyFrom(a)
+        rsp.end_index = min(end, len(all_armors))
 
         session.send(MsgId.GetArmorRsp, rsp, packet_id)  # 获取防具列表 1403 1404

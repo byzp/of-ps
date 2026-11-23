@@ -9,7 +9,16 @@ from proto.net_pb2 import (
     Character,
 )
 import utils.db as db
+from utils import item_mgr
 from utils.res_loader import res
+from utils import achieve_track
+
+"""
+# 角色突破 1041 1042
+rule_need_item 校验+扣除改走 item_mgr.consume_items 原子入口
+(原逐件循环在第 2 件不足时已吞掉第 1 件且不回 1400, 属静默损失);
+包序对齐官方成功样本: Rsp → 1400 → 1720/1764/1718(帧尾)。
+"""
 
 
 @packet_handler(MsgId.CharacterLevelBreakReq)
@@ -24,7 +33,7 @@ class Handler(PacketHandler):
 
         character_data = db.get_characters(session.player_id, req.char_id)
         if not character_data:
-            rsp.status = StatusCode.StatusCode_CHARACTER_NOT_FOUND
+            rsp.status = StatusCode.StatusCode_CharNotExist
             rsp.char_id = req.char_id
             session.send(MsgId.CharacterLevelBreakRsp, rsp, packet_id)
             return
@@ -46,7 +55,7 @@ class Handler(PacketHandler):
                 break
 
         if not char_level_data:
-            rsp.status = StatusCode.StatusCode_CHAR_NOT_EXIST
+            rsp.status = StatusCode.StatusCode_CharNotExist
             rsp.char_id = req.char_id
             session.send(MsgId.CharacterLevelBreakRsp, rsp, packet_id)
             return
@@ -60,50 +69,41 @@ class Handler(PacketHandler):
                 break
 
         if not level_config:
-            rsp.status = StatusCode.StatusCode_CHARACTER_SKILL_LV_IS_MAX
+            rsp.status = StatusCode.StatusCode_CharacterSkillLvIsMax
             rsp.char_id = req.char_id
             session.send(MsgId.CharacterLevelBreakRsp, rsp, packet_id)
             return
 
-        # 检查并扣除所需物品
-        for need_item in level_config["rule_need_item"]:
-            item_id = need_item["need_item_i_d"]
-            item_count = need_item["need_item_count"]
-
-            # 检查玩家是否有足够物品
-            item_data = db.get_item_detail(session.player_id, item_id)
-            if not item_data:
+        # 整体校验后统一扣除(要么全扣要么零变更)
+        cost_list = [
+            (n["need_item_i_d"], n["need_item_count"])
+            for n in level_config["rule_need_item"]
+        ]
+        with achieve_track.batch(session):
+            if cost_list and not item_mgr.consume_items(
+                session.player_id,
+                cost_list,
+                pack_notice=notice,
+                session=session,
+            ):
                 rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
                 rsp.char_id = req.char_id
                 session.send(MsgId.CharacterLevelBreakRsp, rsp, packet_id)
                 return
 
-            # 解析物品数据
-            item = notice.items.add()
-            item.ParseFromString(item_data)
-            current_item_num = item.main_item.base_item.num
-
-            # 检查物品数量是否足够
-            if current_item_num < item_count:
-                rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
-                rsp.char_id = req.char_id
-                session.send(MsgId.CharacterLevelBreakRsp, rsp, packet_id)
-                return
-
-            # 扣除物品
-            item.main_item.base_item.num -= item_count
-            db.set_item_detail(
-                session.player_id, item.SerializeToString(), item_id, None
+            character.max_level = next_max_level
+            db.set_character(
+                session.player_id, req.char_id, character.SerializeToString()
             )
-        session.send(MsgId.PackNotice, notice, packet_id)
 
-        character.max_level = next_max_level
-        db.set_character(session.player_id, req.char_id, character.SerializeToString())
+            rsp.status = StatusCode.StatusCode_OK
+            rsp.char_id = req.char_id
+            rsp.level = character.level
+            rsp.exp = character.exp
+            rsp.max_level = character.max_level
 
-        rsp.status = StatusCode.StatusCode_OK
-        rsp.char_id = req.char_id
-        rsp.level = character.level
-        rsp.exp = character.exp
-        rsp.max_level = character.max_level
-
-        session.send(MsgId.CharacterLevelBreakRsp, rsp, packet_id)  # 角色突破 1041 1042
+            # 成就: 角色突破(分角色 + 总计, 事件层归族)
+            achieve_track.report(session, "character_break", match=req.char_id)
+            session.send(MsgId.CharacterLevelBreakRsp, rsp, packet_id)  # 1041,1042
+            if len(notice.items):
+                session.send(MsgId.PackNotice, notice, 0)  # 1400

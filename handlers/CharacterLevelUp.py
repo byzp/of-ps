@@ -1,3 +1,4 @@
+from config import Config
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 
@@ -11,7 +12,34 @@ from proto.net_pb2 import (
 )
 
 import utils.db as db
+from utils import item_mgr
 from utils.res_loader import res
+from utils import achieve_track
+
+"""
+# 角色升级 1039 1040(官方抓包 pack0 实锤: 批量喝能量饮料连升多级)
+经验源 Item.json tag19 道具的 relate_i_d(190=1000/191=5000/192=20000,
+与官方 req nums 4/2/5 升 18 级的曲线和值吻合); 升级曲线为
+Character.json level.datas[i_d=1].level_info(全部角色 growth_level_i_d=1),
+条目按 **character_id 字段=等级序号** 给出升到下一级所需 exp(99 段)。
+本仓数据无 exp_to_coin 列 —— 原金币折算为参考库漂移字段, 已移除。
+包序: Rsp → 1400(饮料消耗回显, 官方每次升级必有) → 帧尾成就/任务。
+先校验角色存在, 再原子扣道具(原实现角色不存在时饮料已扣)。
+"""
+
+
+def _exp_per_item(item_id):
+    for e in res["Item"]["item"]["datas"]:
+        if e.get("i_d") == item_id:
+            return int(e.get("relate_i_d", 0) or 0)
+    return 0
+
+
+def _level_curve():
+    return {
+        e["character_id"]: e["exp"]
+        for e in res["Character"]["level"]["datas"][0]["level_info"]
+    }
 
 
 @packet_handler(MsgId.CharacterLevelUpReq)
@@ -22,90 +50,74 @@ class Handler(PacketHandler):
 
         rsp = CharacterLevelUpRsp()
         rsp.status = StatusCode.StatusCode_OK
-        notice = PackNotice()
-        notice.status = StatusCode.StatusCode_OK
 
-        energy_items = [
-            (190, req.nums[0]),  # 小瓶能量饮料
-            (191, req.nums[1]),  # 中瓶能量饮料
-            (192, req.nums[2]),  # 大瓶能量饮料
-        ]
-
-        for item_id, quantity in energy_items:
-            if quantity > 0:
-                item_data = db.get_item_detail(session.player_id, item_id)
-                if item_data:
-                    item = notice.items.add()
-                    item.ParseFromString(item_data)
-                    item.main_item.base_item.num = max(
-                        0, item.main_item.base_item.num - quantity
-                    )
-                    db.set_item_detail(
-                        session.player_id, item.SerializeToString(), item_id, None
-                    )
-
+        # 角色必须先存在(不满足则零消耗零变更)
         character_data_list = db.get_characters(session.player_id, req.char_id)
         if not character_data_list:
             rsp.status = StatusCode.StatusCode_CharNotExist
-            session.send(MsgId.CharacterLevelUpRsp, rsp, packet_id)
+            session.send(MsgId.CharacterLevelUpRsp, rsp, packet_id)  # 1039,1040
             return
 
-        character = Character()
-        character.ParseFromString(character_data_list[0])
+        nums = list(req.nums) + [0] * (3 - len(req.nums))
+        costs = []
+        total_exp = 0
+        for idx, item_id in enumerate(Config.CHARACTER_LEVEL_UP_ENERGY_ITEMS):
+            q = int(nums[idx] or 0)
+            if q > 0:
+                costs.append((item_id, q))
+                total_exp += q * _exp_per_item(item_id)
 
-        current_level = character.level
-        current_exp = character.exp
-        max_level = character.max_level
-
-        total_exp = req.nums[0] * 1000 + req.nums[1] * 5000 + req.nums[2] * 20000
-
-        new_exp = current_exp + total_exp
-        new_level = current_level
-
-        for level_config in res["Character"]["level"]["datas"][0]["level_info"]:
-            if (
-                level_config["level"] == new_level
-                and new_exp >= level_config["need_exp"]
-                and new_level < max_level
+        notice = PackNotice()
+        notice.status = StatusCode.StatusCode_OK
+        with achieve_track.batch(session):
+            if costs and not item_mgr.consume_items(
+                session.player_id,
+                costs,
+                pack_notice=notice,
+                session=session,
             ):
-                new_level += 1
-                new_exp -= level_config["need_exp"]
-            elif level_config["level"] > new_level:
-                break
+                # 任一饮料不足: 整单不扣不发
+                rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
+                session.send(MsgId.CharacterLevelUpRsp, rsp, packet_id)
+                return
+            achieve_track.report(
+                session, "energy_drink", amount=sum(int(n or 0) for n in nums)
+            )
 
-        if new_level >= max_level:
-            new_exp = 0
-            new_level = max_level
-
-        character.level = new_level
-        character.exp = new_exp
-
-        coin_cost = 0
-        if current_level > 0 and current_level <= len(
-            res["Character"]["level"]["datas"][0]["level_info"]
-        ):
-            for level_config in res["Character"]["level"]["datas"][0]["level_info"]:
-                if level_config["level"] == current_level:
-                    coin_cost = int(total_exp * level_config["exp_to_coin"])
+            character = Character()
+            character.ParseFromString(character_data_list[0])
+            curve = _level_curve()
+            new_level = character.level
+            new_exp = character.exp + total_exp
+            while new_level < character.max_level:
+                need = curve.get(new_level)
+                if need is None or new_exp < need:
                     break
-        if coin_cost > 0:
-            coin_item_id = 101  # 金币ID
-            coin_data = db.get_item_detail(session.player_id, coin_item_id)
-            if coin_data:
-                coin_item = notice.items.add()
-                coin_item.ParseFromString(coin_data)
-                coin_item.main_item.base_item.num = max(
-                    0, coin_item.main_item.base_item.num - coin_cost
-                )
-                db.set_item_detail(
-                    session.player_id, coin_item.SerializeToString(), coin_item_id, None
-                )
+                new_exp -= need
+                new_level += 1
+            if new_level >= character.max_level:
+                new_exp = 0
 
-                session.send(MsgId.PackNotice, notice, packet_id)
-        db.set_character(session.player_id, req.char_id, character.SerializeToString())
+            character.level = new_level
+            character.exp = new_exp
+            db.set_character(
+                session.player_id, req.char_id, character.SerializeToString()
+            )
+            # 成就: 分角色等级35 / N个角色达到X级79 /
+            # 队长等级36(队长角色升级时判定)。类型35按角色 id 参数匹配。
+            achieve_track.report(
+                session,
+                "character_level",
+                match=req.char_id,
+                level=new_level,
+            )
+            achieve_track.character_level_count(session)
+            if achieve_track.captain_id(session.player_id) == req.char_id:
+                achieve_track.captain_level(session, new_level)
 
-        rsp.char_id = req.char_id
-        rsp.level = new_level
-        rsp.exp = new_exp
-
-        session.send(MsgId.CharacterLevelUpRsp, rsp, packet_id)  # 角色升级 1039 1040
+            rsp.char_id = req.char_id
+            rsp.level = new_level
+            rsp.exp = new_exp
+            session.send(MsgId.CharacterLevelUpRsp, rsp, packet_id)  # 1039,1040
+            if len(notice.items):
+                session.send(MsgId.PackNotice, notice, 0)  # 1400

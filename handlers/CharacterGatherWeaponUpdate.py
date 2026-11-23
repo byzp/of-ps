@@ -26,7 +26,7 @@ class Handler(PacketHandler):
         character_data = db.get_characters(session.player_id, character_id)
         if not character_data:
             rsp = CharacterGatherWeaponUpdateRsp()
-            rsp.status = StatusCode.StatusCode_INTERNAL_ERROR
+            rsp.status = StatusCode.StatusCode_FAIL
             session.send(MsgId.CharacterGatherWeaponUpdateRsp, rsp, packet_id)
             return
 
