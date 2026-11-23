@@ -1,12 +1,19 @@
+import pickle as _pk
+
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 
 
 from proto.net_pb2 import ExploreInitReq, ExploreInitRsp, StatusCode
-
+import utils.garden_state as garden_state
+import utils.db as db
+from utils.res_loader import res
 
 """
 # 探索初始化 1819 1820
+探索进度统一走 utils/garden_state 内存态,
+与 Explore/ExploreCollectReward 等 handler 的读写口径保持一致;
+探索点清单/采集物取 Explore.json explore_area
 """
 
 
@@ -17,76 +24,29 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = ExploreInitRsp()
+        rsp.status = StatusCode.StatusCode_OK
 
-        # Set data from test data
-        rsp.status = TEST_DATA["status"]
+        for explore_id in garden_state.explore_area_ids():
+            e = garden_state.get_explore(session.player_id, explore_id)
+            garden_state.fill_explore_info(rsp.explore.add(), explore_id, e)
 
-        # Set explore data
-        for explore_data in TEST_DATA["explore"]:
-            explore = rsp.explore.add()
-            explore.explore_id = explore_data["explore_id"]
-            explore.times = explore_data["times"]
-            explore.start_time = explore_data["start_time"]
-            explore.is_quick_finish = explore_data["is_quick_finish"]
+        # activity_explore: Explore.explore_activity(单活动 901)状态回填
+        _act = next(iter(res["Explore"]["explore_activity"]["datas"]), None)
+        if _act:
+            _raw = db.get_kv(
+                session.player_id,
+                "activity_explore",
+                str(_act["i_d"]),
+                b"",
+            )
 
-            # Set collect_item_id
-            for item_id in explore_data["collect_item_id"]:
-                explore.collect_item_id.append(item_id)
+            st = _pk.loads(_raw) if _raw else {}
+            info = rsp.activity_explore.add()
+            info.explore_id = _act["i_d"]
+            info.times = int(st.get("times", 0))
+            info.is_quick_finish = bool(st.get("is_quick_finish"))
+            if st.get("start_time"):
+                info.start_time = int(st["start_time"])
+                info.collect_reward = bool(st.get("collectable"))
 
-            explore.collect_reward = explore_data["collect_reward"]
-
-        # Set activity_explore (empty list in this case)
-        # for activity_data in TEST_DATA["activity_explore"]:
-        #     activity = rsp.activity_explore.add()
-        #     # Add activity fields here if needed
-
-        session.send(MsgId.ExploreInitRsp, rsp, packet_id)
-
-
-# Hardcoded test data
-TEST_DATA = {
-    "status": 1,
-    "explore": [
-        {
-            "explore_id": 10102,
-            "times": 0,
-            "start_time": 0,
-            "is_quick_finish": False,
-            "collect_item_id": [2070, 101, 2020, 10],
-            "collect_reward": True,
-        },
-        {
-            "explore_id": 10301,
-            "times": 0,
-            "start_time": 0,
-            "is_quick_finish": False,
-            "collect_item_id": [481, 101, 10, 102, 491],
-            "collect_reward": True,
-        },
-        {
-            "explore_id": 10201,
-            "times": 0,
-            "start_time": 0,
-            "is_quick_finish": False,
-            "collect_item_id": [2020, 101, 401, 481, 102],
-            "collect_reward": True,
-        },
-        {
-            "explore_id": 10101,
-            "times": 0,
-            "start_time": 0,
-            "is_quick_finish": False,
-            "collect_item_id": [101, 109],
-            "collect_reward": True,
-        },
-        {
-            "explore_id": 10202,
-            "times": 0,
-            "start_time": 0,
-            "is_quick_finish": False,
-            "collect_item_id": [191, 10, 491, 11, 2070],
-            "collect_reward": True,
-        },
-    ],
-    "activity_explore": [],
-}
+        session.send(MsgId.ExploreInitRsp, rsp, packet_id)  # 1819,1820
