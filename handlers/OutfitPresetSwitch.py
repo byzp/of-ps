@@ -27,8 +27,11 @@ class Handler(PacketHandler):
         rsp.use_preset_index = req.use_preset_index
         session.send(MsgId.OutfitPresetSwitchRsp, rsp, packet_id)
 
+        chars = db.get_characters(session.player_id, req.char_id)
+        if not chars:
+            return
         chr = Character()
-        chr.ParseFromString(db.get_characters(session.player_id, req.char_id)[0])
+        chr.ParseFromString(chars[0])
         chr.in_use_outfit_preset_index = req.use_preset_index
         db.set_character(session.player_id, req.char_id, chr.SerializeToString())
 

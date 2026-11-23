@@ -21,7 +21,15 @@ class Handler(PacketHandler):
         rsp.status = StatusCode.StatusCode_OK
         rsp.pet_instance_id = req.pet_instance_id
         rsp.name = req.name
-        pet_b = db.get_item_detail(session.player_id, None, req.pet_instance_id)
+        pet_b = (
+            db.get_item_detail(session.player_id, None, req.pet_instance_id)
+            if req.pet_instance_id
+            else None
+        )
+        if not pet_b or isinstance(pet_b, (list, dict)):
+            rsp.status = StatusCode.StatusCode_PET_NOT_FOUND
+            session.send(MsgId.PetRenameRsp, rsp, packet_id)
+            return
         rsp1 = PackNotice()
         rsp1.status = StatusCode.StatusCode_OK
         tmp = rsp1.items.add()

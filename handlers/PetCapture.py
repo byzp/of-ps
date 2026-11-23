@@ -14,6 +14,7 @@ from proto.net_pb2 import (
 import utils.db as db
 from utils.res_loader import res
 from utils.pb_create import make_item
+from utils import achieve_track, item_mgr
 
 
 @packet_handler(MsgId.PetCaptureReq)
@@ -56,9 +57,12 @@ class Handler(PacketHandler):
 
                 if random.uniform(0, 1) <= catch_rate:
                     rsp.success = True
+                    # 成就: 捕捉[物种]70
+                    achieve_track.report(session, "pet_capture", match=req.monster_id)
                     pet_item = ItemDetail()
                     make_item(pet["i_d"], 0, session.player_id, pet_item)
                     pet_item.main_item.pet.catch_scene_id = session.scene_id
+                    item_mgr.mark_new_item(session.player_id, pet_item)
                     rsp.items.add().CopyFrom(pet_item)
                     rsp1.items.add().CopyFrom(pet_item)
                     db.set_item_detail(

@@ -10,6 +10,7 @@ from proto.net_pb2 import (
 )
 
 import utils.db as db
+from utils import item_mgr
 from utils.res_loader import res
 from utils.pb_create import make_item
 
@@ -59,6 +60,7 @@ class Handler(PacketHandler):
             else:
                 item_detail.ParseFromString(existing)
                 item_detail.main_item.base_item.num += total_num
+            item_mgr.mark_new_item(session.player_id, item_detail)
             rsp1.items.add().CopyFrom(item_detail)
             db.set_item_detail(
                 session.player_id, item_detail.SerializeToString(), item_id, None

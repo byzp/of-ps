@@ -22,19 +22,16 @@ class Handler(PacketHandler):
         rsp = GetPosterRsp()
         rsp.status = StatusCode.StatusCode_OK
 
-        max_num = req.end_index - req.start_index
-        total_num = 0
-
+        posters = []
         for item in db.get_item_detail(session.player_id, table="items_s"):
             tmp = ItemDetail()
             tmp.ParseFromString(item)
             if tmp.main_item.item_tag == EBagItemTag.EBagItemTag_Poster:
-                if max_num == total_num:
-                    break
-                total_num += 1
-                rsp.posters.add().CopyFrom(tmp.main_item.poster)
-
-        rsp.total_num = total_num
-        rsp.end_index = req.start_index + total_num
+                posters.append(tmp.main_item.poster)
+        start = max(0, req.start_index)
+        end = req.end_index or len(posters)
+        rsp.posters.extend(posters[start:end])
+        rsp.total_num = len(posters)
+        rsp.end_index = min(end, len(posters))
 
         session.send(MsgId.GetPosterRsp, rsp, packet_id)  # 获取映像列表 1405 1406

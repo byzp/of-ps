@@ -13,6 +13,7 @@ from proto.net_pb2 import (
 import utils.db as db
 import utils.pb_create as pb_create
 from server.scene_data import up_scene_action
+from utils import achieve_track
 
 
 @packet_handler(MsgId.OutfitPresetUpdateReq)
@@ -25,10 +26,19 @@ class Handler(PacketHandler):
         rsp.status = StatusCode.StatusCode_OK
         rsp.char_id = req.char_id
         rsp.preset.CopyFrom(req.preset)
+        # 成就: 更换时装127(方案含任意外观槽位即计);
+        # 雨伞144 无独立上报通道不计数
+
+        preset = req.preset
+        if preset.clothes or preset.hat or preset.hair or preset.ornament:
+            achieve_track.report(session, "wear_outfit")
         session.send(MsgId.OutfitPresetUpdateRsp, rsp, packet_id)
         # 更新角色数据
+        chars = db.get_characters(session.player_id, req.char_id)
+        if not chars:
+            return
         chr = Character()
-        chr.ParseFromString(db.get_characters(session.player_id, req.char_id)[0])
+        chr.ParseFromString(chars[0])
         chr.outfit_presets[req.preset.preset_index].CopyFrom(req.preset)
         db.set_character(session.player_id, req.char_id, chr.SerializeToString())
 
