@@ -1,12 +1,14 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 
-
 from proto.net_pb2 import BattleEncounterInfoReq, BattleEncounterInfoRsp, StatusCode
 
+import utils.db as db
 
 """
 # 战斗遭遇信息 1329 1330
+遭遇战状态持久化于 db player_kv ns=encounter k=states,
+与 BattleEncounterStateUpdate 共用同一处读写, 服务器重启不丢失。
 """
 
 
@@ -17,26 +19,16 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = BattleEncounterInfoRsp()
+        rsp.status = StatusCode.StatusCode_OK
 
-        rsp.status = TEST_DATA["status"]
+        player_states = db.get_encounter_states(session.player_id)
 
-        # 根据请求中的encounter_ids数量返回对应数量的encounters
-        for i, encounter_id in enumerate(req.encounter_ids):
+        # 按请求的 encounter_ids 返回已记录的状态, 无记录时返回默认值(Start/无宝箱)
+        for encounter_id in req.encounter_ids:
             encounter = rsp.encounters.add()
-            encounter.battle_id = encounter_id  # 使用请求中的ID
-            encounter.state = TEST_DATA["state"]  # 设置为Close状态
-            # 第一个encounter的box_id为300000，其余为0
-            encounter.box_id = (
-                TEST_DATA["box_id_first"] if i == 0 else TEST_DATA["box_id_other"]
-            )
+            encounter.battle_id = encounter_id
+            state, box_id = player_states.get(encounter_id, (0, 0))
+            encounter.state = state
+            encounter.box_id = box_id
 
-        session.send(MsgId.BattleEncounterInfoRsp, rsp, packet_id)
-
-
-# 硬编码测试数据
-TEST_DATA = {
-    "status": 1,  # StatusCode.OK
-    "state": 4,  # BattleState.Close
-    "box_id_first": 300000,
-    "box_id_other": 0,
-}
+        session.send(MsgId.BattleEncounterInfoRsp, rsp, packet_id)  # 1329,1330

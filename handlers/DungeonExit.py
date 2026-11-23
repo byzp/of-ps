@@ -1,3 +1,5 @@
+from proto.net_pb2 import ChangeSceneChannelRsp
+
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 
@@ -23,18 +25,30 @@ class Handler(PacketHandler):
         req = DungeonExitReq()
         req.ParseFromString(data)
 
+        if not session.dungeon[0]:
+            rsp = DungeonExitRsp()
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+            session.send(MsgId.DungeonExitRsp, rsp, packet_id)
+            return
+
         rsp = DungeonExitRsp()
         rsp.status = StatusCode.StatusCode_OK
         rsp.scene_id = session.scene_id
 
         dg_b = db.get_dungeon(session.player_id, session.dungeon[0])
-        if dg_b:
+        if dg_b and not isinstance(dg_b, dict):
             dg = DungeonData()
             dg.ParseFromString(dg_b)
             dg.exit_times += 1
             db.set_dungeon(session.player_id, dg.dungeon_id, dg.SerializeToString())
         session.dungeon = [0, 0, 0, -1]
         session.send(MsgId.DungeonExitRsp, rsp, packet_id)
+
+        cs = ChangeSceneChannelRsp()
+        cs.status = StatusCode.StatusCode_OK
+        cs.scene_id = session.scene_id
+        cs.channel_id = session.channel_id
+        session.send(MsgId.ChangeSceneChannelRsp, cs, 0)
 
         # 更新场景
         rsp = SceneDataNotice()
