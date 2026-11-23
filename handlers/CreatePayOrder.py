@@ -12,6 +12,7 @@ from proto.net_pb2 import (
     StatusCode,
 )
 import utils.db as db
+from utils import item_mgr
 from utils.res_loader import res
 from utils.pb_create import make_item
 from server.scene_data import get_session
@@ -25,7 +26,7 @@ class Handler(PacketHandler):
 
         rsp = CreatePayOrderRsp()
         if Config.REJECT_PAYMENT:
-            rsp.status = StatusCode.StatusCode_NOT_PAYMENT
+            rsp.status = StatusCode.StatusCode_Not_Payment
             session.send(MsgId.CreatePayOrderRsp, rsp, packet_id)
             return
         rsp.status = StatusCode.StatusCode_OK
@@ -47,42 +48,22 @@ class Handler(PacketHandler):
                     target_player_id = target_session.player_id
                     break
         for data in res["Shop"]["grid"]["datas"]:
-            if data["i_d"] == req.shop_id:  # TODO 如果含有武器, 可能引起严重错误
+            if data["i_d"] == req.shop_id:
                 rsp1 = PackNotice()
                 rsp1.status = StatusCode.StatusCode_OK
-                for items in data["items"]:
-                    if items["grid_i_d"] == req.grid_id:
+                for grid in data["items"]:
+                    if grid["grid_i_d"] == req.grid_id:
                         for pool in res["Shop"]["pool"]["datas"]:
-                            if pool["i_d"] == items["shop_pool_i_d"]:
+                            if pool["i_d"] == grid["shop_pool_i_d"]:
                                 rsp.grids.pool_id = pool["i_d"]
                                 for item_pool in pool["items"]:
-                                    item = db.get_item_detail(
-                                        target_player_id, item_pool["item_i_d"]
-                                    )
-                                    tmp1 = ItemDetail()
-                                    if not item:
-                                        make_item(
-                                            item_pool["item_i_d"],
-                                            0,
-                                            target_player_id,
-                                            tmp1,
-                                        )
-                                    else:
-                                        tmp1.ParseFromString(item)
-                                    num_t = tmp1.main_item.base_item.num
-                                    tmp1.main_item.base_item.num = item_pool["item_num"]
-                                    rsp.items.add().CopyFrom(tmp1)
-                                    tmp1.main_item.base_item.num = (
-                                        num_t + item_pool["item_num"]
-                                    )
-                                    rsp1.items.add().CopyFrom(
-                                        tmp1
-                                    )  # TODO 目前是直接给礼包，不会自动开启
-                                    db.set_item_detail(
+                                    # 实例安全发放(武器/映像单独落库)
+                                    item_mgr.grant_single_item(
                                         target_player_id,
-                                        tmp1.SerializeToString(),
                                         item_pool["item_i_d"],
-                                        None,
+                                        num=item_pool.get("item_num", 1),
+                                        pack_notice=rsp1,
+                                        rsp_items=rsp.items,
                                     )
                                 if req.to_player_id:
                                     if target_session:
