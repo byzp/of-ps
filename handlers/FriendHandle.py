@@ -12,6 +12,7 @@ from proto.net_pb2 import (
 
 import utils.db as db
 from server.scene_data import get_session
+from utils import achieve_track
 
 
 @packet_handler(MsgId.FriendHandleReq)
@@ -28,7 +29,7 @@ class Handler(PacketHandler):
         if stat != None:
             match stat:
                 case 0:  # 非好友
-                    rsp.type = StatusCode.StatusCode_FRIEND_NOT_APPLY
+                    rsp.status = StatusCode.StatusCode_FRIEND_NOT_APPLY
                 case 1:  # 已发过申请
                     rsp1 = FriendHandleNotice()
                     rsp1.status = StatusCode.StatusCode_OK
@@ -41,6 +42,8 @@ class Handler(PacketHandler):
                             session.player_id, req.player_id, "friend_status", 2
                         )
 
+                        # 成就: 交1名新朋友
+                        achieve_track.report(session, "new_friend")
                         rsp1.type = FriendHandleType.FriendHandleType_ADD
                         rsp1.target_player_id = req.player_id
                         session.send(MsgId.FriendHandleNotice, rsp1, 0)

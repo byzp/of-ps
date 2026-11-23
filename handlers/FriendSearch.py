@@ -17,16 +17,16 @@ class Handler(PacketHandler):
         rsp = FriendSearchRsp()
         rsp.status = StatusCode.StatusCode_OK
 
-        try:
+        if req.search_args.isdigit():
             player_index = int(req.search_args)
-        except Exception as e:
+        else:
             player_index = ""
 
         res = False
         if isinstance(player_index, int):
             player_info = db.get_players_info(player_index, "player_id")
             if player_info:
-                player_id = player_index[0]
+                player_id = player_index
                 res = True
         else:
             player_info = db.get_players_info(req.search_args, "player_id")
