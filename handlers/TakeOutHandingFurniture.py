@@ -6,6 +6,7 @@ from proto.net_pb2 import (
     TakeOutHandingFurnitureRsp,
     StatusCode,
 )
+import utils.db as db
 
 
 @packet_handler(MsgId.TakeOutHandingFurnitureReq)

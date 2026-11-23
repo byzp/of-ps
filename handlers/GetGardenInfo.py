@@ -1,3 +1,5 @@
+from handlers.GardenPlaceCharacter import replay_placements
+
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 
@@ -19,4 +21,13 @@ class Handler(PacketHandler):
             rsp.garden_info.is_open,
         ) = db.get_garden_info(session.player_id)
 
+        # 花园密码与过期时间
+        password, expire_time = db.get_garden_password(session.player_id)
+        rsp.garden_info.password = password
+        rsp.garden_info.password_expire_time = expire_time
+
         session.send(MsgId.GetGardenInfoRsp, rsp, packet_id)  # 1685,1686
+
+        # 重放花园已放置角色
+
+        replay_placements(session)
