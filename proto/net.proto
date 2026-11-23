@@ -251,6 +251,7 @@ enum EMissionType {
     EMissionType_TopDungeon = 11;
     EMissionType_GatherDungeon = 12;
     EMissionType_BossRush = 13;
+    EMissionType_SFWDungeon = 14;
 }
 
 enum WeatherType {
@@ -272,6 +273,7 @@ enum EMultiplayerPlayMode {
     EMultiplayerPlayMode_MagicPlatform = 2;
     EMultiplayerPlayMode_SinkObject = 3;
     EMultiplayerPlayMode_Landlord = 4;
+    EMultiplayerPlayMode_Collapse = 5;
 }
 
 enum RollNoticeType {
@@ -332,6 +334,7 @@ enum EActivityType {
     EActivityType_ActivityHomecoming = 11;
     EActivityType_ActivityPile = 12;
     EActivityType_ActivityJinli = 13;
+    EActivityType_HomecomingDaySign = 14;
 }
 
 enum AuditStatus {
@@ -558,6 +561,7 @@ enum StatusCode {
     StatusCode_INVITE_CODE_NOT_EXIST = 1512;
     StatusCode_ACTIVITY_INVITE_TASK_CLAIMED = 1513;
     StatusCode_ACTIVITY_INVITE_TASK_NOT_COMPLETED = 1514;
+    StatusCode_INVITE_CODE_IS_SELF = 1515;
     StatusCode_CANT_REPEATED_PLACED_IN_OTHER_CHANNEL = 1520;
     StatusCode_CANT_HANDING_MORE = 1521;
     StatusCode_GAME_CARD_CANT_GACHA = 1601;
@@ -871,6 +875,21 @@ message PacketHead {
     uint32 body_len = 4;
     uint32 total_pack_count = 5;
     uint32 seq_id = 6;
+}
+
+enum EGomokuOverReason {
+    EGomokuOverReason_None = 0;
+    EGomokuOverReason_Win = 1;
+    EGomokuOverReason_Leave = 2;
+    EGomokuOverReason_Furniture = 3;
+    EGomokuOverReason_Timeout = 4;
+}
+
+enum EGomokuChessBoardStatus {
+    EGomokuChessBoardStatus_None = 0;
+    EGomokuChessBoardStatus_Start = 1;
+    EGomokuChessBoardStatus_Playing = 2;
+    EGomokuChessBoardStatus_Over = 3;
 }
 
 message Vector3 {
@@ -5364,6 +5383,11 @@ message MPPlayRoomRankMagicPlatform {
     int64 time = 2;
 }
 
+message MPPlayRoomRankCollapseObject {
+    uint32 player_id = 1;
+    uint32 count = 2;
+}
+
 message MPRoomRankSinkObjectPlayer {
     uint32 player_id = 1;
     uint32 score = 2;
@@ -5383,6 +5407,7 @@ message MPPlayRoomRankInfo {
     int32 star = 1;
     repeated MPPlayRoomRankDestroyObject destroy_object = 2;
     repeated MPPlayRoomRankMagicPlatform magic_platform = 3;
+    repeated MPPlayRoomRankCollapseObject collapse_object = 5;
     MPRoomRankSinkObject sink_object = 4;
 }
 
@@ -6392,6 +6417,147 @@ message ChooseGachaRsp {
     StatusCode status = 1;
     uint32 choose_gacha_pool = 2;
     uint32 gacha_id = 3;
+}
+
+message GomokuSinglePlayerRewardReq {
+    repeated int32 board = 1;
+    bool is_use_game_coin = 2;
+    int32 self = 3;
+    int32 last_row = 4;
+    int32 last_col = 5;
+}
+
+message GomokuSinglePlayerRewardRsp {
+    StatusCode status = 1;
+    repeated ItemDetail items = 2;
+    repeated ItemDetail extra_rewards = 3;
+    bool is_self_win = 4;
+}
+
+message CollapseFailReq {
+}
+
+message CollapseFailRsp {
+    StatusCode status = 1;
+}
+
+message GomokuOnlinePlayerReadyReq {
+    int64 id = 1;
+    uint32 coin_num = 2;
+}
+
+message GomokuOnlinePlayerReadyRsp {
+    StatusCode status = 1;
+}
+
+message CollapseFailNotice {
+    StatusCode status = 1;
+    int64 player_id = 2;
+}
+
+message GomokuOnlinePlayerWatchReq {
+    int64 id = 1;
+}
+
+message GomokuOnlinePlayerWatchRsp {
+    StatusCode status = 1;
+}
+
+message GomokuOnlinePlayerNotice {
+    StatusCode status = 1;
+    int64 first_player_id = 2;
+    int64 player1_id = 3;
+    int64 player2_id = 4;
+}
+
+message GomokuOnlinePlayerWatchNotice {
+    StatusCode status = 1;
+    int64 id = 2;
+    uint32 player_id = 3;
+}
+
+message GomokuOnlinePlayerRemoveNotice {
+    StatusCode status = 1;
+    int64 id = 2;
+    int64 winner_id = 3;
+    EGomokuOverReason over_reason = 4;
+}
+
+message GetGomokuOnlineChessboardReq {
+    int64 id = 1;
+}
+
+message GetGomokuOnlineChessboardRsp {
+    StatusCode status = 1;
+    EGomokuChessBoardStatus board_state = 2;
+    repeated PlayerBriefInfo chest_players = 3;
+    repeated PlayerBriefInfo watch_players = 4;
+    uint32 next_player_id = 5;
+    int64 turn_deadline = 6;
+    repeated int32 board = 7;
+}
+
+message GomokuOnlinePlayerPlaceStoneReq {
+    int64 id = 1;
+    int32 row = 2;
+    int32 col = 3;
+}
+
+message GomokuOnlinePlayerPlaceStoneRsp {
+    StatusCode status = 1;
+    bool is_win = 2;
+    uint32 next_player_id = 3;
+    int64 turn_deadline = 4;
+}
+
+message GomokuOnlinePlayerPlaceStoneNotice {
+    StatusCode status = 1;
+    int64 id = 2;
+    int32 row = 3;
+    int32 col = 4;
+    int32 chess = 5;
+    uint32 next_player_id = 6;
+    int64 turn_deadline = 7;
+    bool is_win = 8;
+}
+
+message GomokuOnlinePlayerLeaveReq {
+    int64 id = 1;
+}
+
+message GomokuOnlinePlayerLeaveRsp {
+    StatusCode status = 1;
+}
+
+message GomokuOnlinePlayerLeaveNotice {
+    StatusCode status = 1;
+    int64 id = 2;
+    uint32 player_id = 3;
+    bool is_player = 4;
+}
+
+message GomokuOnlinePlayerStartPlayReq {
+    int64 id = 1;
+}
+
+message GomokuOnlinePlayerStartPlayRsp {
+    StatusCode status = 1;
+    int64 turn_deadline = 2;
+}
+
+message GomokuOnlinePlayerStartPlayNotice {
+    StatusCode status = 1;
+    int64 id = 2;
+    uint32 first_player_id = 3;
+    int64 turn_deadline = 4;
+}
+
+message GomokuOnlineSettlementNotice {
+    StatusCode status = 1;
+    int64 id = 2;
+    bool is_win = 3;
+    EGomokuOverReason over_reason = 4;
+    repeated ItemDetail items = 5;
 }
 
 ///////////互联模块定义的msg，不属于游戏本身
