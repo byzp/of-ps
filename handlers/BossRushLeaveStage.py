@@ -11,6 +11,7 @@ from proto.net_pb2 import (
 from utils import db
 from utils.res_loader import res
 import time
+from datetime import datetime
 
 
 @packet_handler(MsgId.BossRushLeaveStageReq)
@@ -81,10 +82,9 @@ class Handler(PacketHandler):
         info.best_total_score = 0
         for si in info.stage_infos:
             info.best_total_score += si.best_score
-        info.total_rank_ratio = 9985
+        info.total_rank_ratio = 0
 
         # 重置赛季时间
-        from datetime import datetime
 
         season_data = None
         for s in res["BossRush"]["boss_rush_season"]["datas"]:

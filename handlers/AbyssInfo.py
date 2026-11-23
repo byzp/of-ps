@@ -27,6 +27,7 @@ class Handler(PacketHandler):
                 seasons.append((i["i_d"], i["season_stage"]))  # 周期性深渊
                 break
         for i in seasons:
+            rsp.abyss_info.season_info[i[0]].season_id = i[0]
             for ii in res["Abyss"]["abyss_stage"]["datas"]:
                 if ii["i_d"] == i[1]:
                     for iii in ii["abyss_stage_group_info"]:
