@@ -1,3 +1,5 @@
+from server.scene_data import get_session as _gs
+
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 
@@ -20,3 +22,11 @@ class Handler(PacketHandler):
         rsp.is_sit = req.is_sit
 
         session.send(MsgId.SceneSitChairRsp, rsp, packet_id)
+
+        for other in _gs():
+            if (
+                other.player_id != session.player_id
+                and other.scene_id == session.scene_id
+                and other.channel_id == session.channel_id
+            ):
+                other.send(MsgId.SceneSitChairRsp, rsp, 0)

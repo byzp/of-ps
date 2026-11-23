@@ -1,3 +1,5 @@
+from proto.net_pb2 import Character as _PbChar
+
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 
@@ -14,6 +16,7 @@ from server.scene_data import up_scene_action
 import utils.pb_create as pb_create
 
 import utils.db as db
+from utils import achieve_track
 
 
 @packet_handler(MsgId.UpdateTeamReq)
@@ -25,10 +28,23 @@ class Handler(PacketHandler):
         rsp = UpdateTeamRsp()
         rsp.status = StatusCode.StatusCode_OK
 
+        # 队伍角色必须已拥有(0 表示空位)
+        for cid in (req.char1, req.char2, req.char3):
+            if cid and not db.get_characters(session.player_id, cid):
+                rsp.status = StatusCode.StatusCode_CharNotExist
+                session.send(MsgId.UpdateTeamRsp, rsp, packet_id)
+                return
+
         db.set_players_info(
             session.player_id, "team", (req.char1, req.char2, req.char3)
         )
         session.send(MsgId.UpdateTeamRsp, rsp, packet_id)
+        # 成就135是当前队伍状态(上阵3名角色)，不是切队操作次数。
+        achieve_track.report(
+            session,
+            "team_size",
+            team_size=sum(1 for cid in (req.char1, req.char2, req.char3) if cid),
+        )
 
         # 修改玩家 队长徽章ID
         characters = db.get_characters(session.player_id, req.char1)
@@ -41,7 +57,18 @@ class Handler(PacketHandler):
                 character.character_appearance.badge,
             )
         # 修改玩家 队长角色ID
+        # 成就: 切换队长(队长变化才计)
+        prev = db.get_players_info(session.player_id, "character_id")
+        if prev and prev[0] != req.char1:
+            achieve_track.report(session, "team_switch")
         db.set_players_info(session.player_id, "character_id", req.char1)
+        # 成就: 队长等级36(换队长后按新队长当前等级重判)
+        _cap_chars = db.get_characters(session.player_id, req.char1)
+        if _cap_chars:
+
+            _cap = _PbChar()
+            _cap.ParseFromString(_cap_chars[0])
+            achieve_track.captain_level(session, int(_cap.level))
 
         # 发送场景同步通知
         pb_create.make_ScenePlayer(session)

@@ -21,6 +21,16 @@ class Handler(PacketHandler):
 
         other_info = rsp.other_info
 
+        infos = db.get_players_info(
+            player_id,
+            "player_id,player_name,level,head,last_login_time,sex,phone_background,sign,guild_name,team_leader_badge,character_id,create_time,player_id,garden_like_num,account_type,birthday,hide_value,avatar_frame",
+        )
+        if not infos:
+            # 玩家不存在
+            rsp.status = StatusCode.StatusCode_FAIL
+            session.send(MsgId.OtherPlayerInfoRsp, rsp, packet_id)
+            return
+
         other_info.is_online = player_id in online_player_ids
         (
             other_info.player_id,
@@ -41,10 +51,7 @@ class Handler(PacketHandler):
             other_info.birthday,
             other_info.hide_value,
             other_info.avatar_frame,
-        ) = db.get_players_info(
-            player_id,
-            "player_id,player_name,level,head,last_login_time,sex,phone_background,sign,guild_name,team_leader_badge,character_id,create_time,player_id,garden_like_num,account_type,birthday,hide_value,avatar_frame",
-        )
+        ) = infos
 
         friend_info = db.get_friend_info(
             player_id,

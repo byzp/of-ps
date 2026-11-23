@@ -1,7 +1,7 @@
+import logging
+
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-
-
 from proto.net_pb2 import (
     GenericGameAReq,
     GenericGameARsp,
@@ -12,6 +12,9 @@ from proto.net_pb2 import (
 
 import utils.db as db
 from utils.pb_create import make_item
+from utils.dungeon_reward import sync_multiplier
+
+logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.GenericGameAReq)
@@ -22,8 +25,15 @@ class Handler(PacketHandler):
 
         rsp = GenericGameARsp()
         rsp.status = StatusCode.StatusCode_OK
+        rsp.generic_msg_id = req.generic_msg_id
+        rsp.params.extend(req.params)
+        for _k, _v in req.param_map.items():
+            rsp.param_map[_k] = _v
 
         match req.generic_msg_id:
+            case 2:  # DUNGEON_MULTI，params=[副本ID, 倍率]
+                if not sync_multiplier(session.player_id, req, rsp):
+                    rsp.status = StatusCode.StatusCode_BAD_REQ
             case 5:  # 解锁染色方案
                 rsp1 = PackNotice()
                 rsp1.status = StatusCode.StatusCode_OK
@@ -85,9 +95,14 @@ class Handler(PacketHandler):
                 session.send(MsgId.PackNotice, rsp1, 0)
             case 7:  # 退出染色
                 session.color_data[0] = None
-            case 9:  # TODO 登录时是否进入热门频道，0为进入，1为不进入
-                if req.params[0].int_value:
-                    pass
+            case 9:  # 登录时是否进入热门频道(0=进入,1=不进入), 存入玩家偏好
+                if req.params:
+                    db.set_kv(
+                        session.player_id,
+                        "preferences",
+                        "hot_channel_skip",
+                        int(req.params[0].int_value),
+                    )
             case _:
-                print(req)
+                logger.info("GenericGameA 未处理分支: %s", req.generic_msg_id)
         session.send(MsgId.GenericGameARsp, rsp, packet_id)

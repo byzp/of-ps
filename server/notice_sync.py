@@ -14,6 +14,7 @@ from proto.net_pb2 import (
     ChatChannelType,
     PlayerSceneSyncDataNotice,
     PackNotice,
+    SceneWeatherChangeNotice,
 )
 from network.msg_id import MsgId
 from network.remote_link import rsend
@@ -33,20 +34,44 @@ from server.scene_data import (
     up_scene_action,
 )
 import utils.db as db
+from utils import weather, item_mgr as items_util, mail_rewards
+from utils.res_loader import res
 
 logger = logging.getLogger(__name__)
 
 max_tps = Config.SERVER_MAX_TPS
-tod_time = 21600.0
+game_time_seconds = float(Config.INITIAL_GAME_TIME_SECONDS)
+tod_time = game_time_seconds
 _rel_time = 0.0
 _last_send_time = 0.0
 _last_stamina_sync_time = 0
 
-SPEED_MULTIPLIER = 50.0
-SEND_INTERVAL_REAL = 60.0
-STAMINA_INTERVAL = 300
+SPEED_MULTIPLIER = 86400.0 / weather.config_int(
+    "Tod_Diurnal_Cycle", Config.GAME_DAY_REAL_SECONDS
+)
+SEND_INTERVAL_REAL = Config.SCENE_STATE_SYNC_INTERVAL
+STAMINA_INTERVAL = Config.STAMINA_SYNC_INTERVAL
 
 sync_stop = False
+
+
+def set_time_of_day(seconds):
+    """设置当前游戏日时间，与同步循环共用时钟和锁；86400表示次日零点。"""
+    global game_time_seconds, tod_time, _rel_time, _last_send_time
+    with lock_session:
+        previous_weather = weather.weather_at(int(game_time_seconds // 3600))
+        game_time_seconds = (game_time_seconds // 86400) * 86400 + seconds
+        tod_time = game_time_seconds % 86400.0
+        _rel_time = time.time()
+        _last_send_time = 0.0
+        current_weather = weather.weather_at(int(game_time_seconds // 3600))
+        if previous_weather != current_weather:
+            notice = SceneWeatherChangeNotice(
+                status=StatusCode.StatusCode_OK, weather_type=current_weather
+            )
+            for session in session_list:
+                if session.logged_in:
+                    session.send(MsgId.SceneWeatherChangeNotice, notice, 0)
 
 
 def init():
@@ -70,7 +95,7 @@ def start_loop():
 
 
 def notice_sync_loop():
-    global tod_time, _rel_time, _last_send_time, _last_stamina_sync_time
+    global tod_time, game_time_seconds, _rel_time, _last_send_time, _last_stamina_sync_time
     while True:
         start_t = time.time()
         with lock_session:
@@ -88,12 +113,16 @@ def notice_sync_loop():
                 for session in session_list:
                     if session.logged_in == True:
                         db.set_players_info(
-                            session.player_id, "last_login_time", int(start_t)
+                            session.player_id, "last_login_time", int(start_t * 1000)
                         )
                 return
             # 检查并清除掉线玩家
             for session in session_list:
                 if session.running == False and session.logged_in == True:
+                    mail_rewards.recover_drops(session)
+                    db.set_players_info(
+                        session.player_id, "last_login_time", int(start_t * 1000)
+                    )
                     logger.info(
                         f"Player logout: {session.player_name}({session.player_id})"
                     )
@@ -111,8 +140,18 @@ def notice_sync_loop():
             ]  # 清除已断开的连接
             elapsed_real = start_t - _rel_time
             if elapsed_real > 0:
-                tod_time = (tod_time + elapsed_real * SPEED_MULTIPLIER) % 86400.0
+                previous_weather = weather.weather_at(int(game_time_seconds // 3600))
+                game_time_seconds += elapsed_real * SPEED_MULTIPLIER
+                tod_time = game_time_seconds % 86400.0
                 _rel_time = start_t
+                current_weather = weather.weather_at(int(game_time_seconds // 3600))
+                if previous_weather != current_weather:
+                    notice = SceneWeatherChangeNotice(
+                        status=StatusCode.StatusCode_OK, weather_type=current_weather
+                    )
+                    for session in session_list:
+                        if session.logged_in:
+                            session.send(MsgId.SceneWeatherChangeNotice, notice, 0)
             with lock_action:
                 # 1970 玩家动作广播
                 for ac in action:
@@ -120,7 +159,7 @@ def notice_sync_loop():
                         rsend(MsgId.SendActionNotice, ac[2], [ac[0], ac[1]])
                     for session in session_list:
                         # if session.player_id == ac[2].from_player_id:
-                        #     continue
+                        # continue
                         if session.scene_id == ac[0] and session.channel_id == ac[1]:
                             session.send(MsgId.SendActionNotice, ac[2], 0)
                 action.clear()
@@ -217,23 +256,48 @@ def notice_sync_loop():
             time.sleep(wait_time)
 
 
+# 体力恢复节奏 = GlobalConfig.Player_Recover_Vitality_Second(600秒/点);
+_vit_tick = False
+
+
+def _stamina_caps(level):
+    """按玩家等级查 Level.player_level 的体力/精力上限, 表缺失兜底 150/800"""
+    for e in res["Level"]["player_level"]["datas"]:
+        if e["i_d"] == level:
+            return (
+                e.get("player_vitality", Config.VITALITY_MAX_FALLBACK),
+                e.get("player_energy", Config.ENERGY_MAX_FALLBACK),
+            )
+    return Config.VITALITY_MAX_FALLBACK, Config.ENERGY_MAX_FALLBACK
+
+
 def _stamina_sync(session_list):
+    global _vit_tick
+    _vit_tick = not _vit_tick
+
     for session in session_list:
         if session.running and session.logged_in:
+            row = db.get_players_info(session.player_id, "level")
+            vit_cap, energy_cap = _stamina_caps(row[0] if row else 0)
             pack = PackNotice()
             pack.status = StatusCode.StatusCode_OK
-            item = pack.items.add()
-            item_b = db.get_item_detail(session.player_id, 10)  # 体力
-            item.ParseFromString(item_b)
-            item.main_item.base_item.num += 1
-            if item.main_item.base_item.num > 150:
-                item.main_item.base_item.num = 150
-            db.set_item_detail(session.player_id, item.SerializeToString(), 10)
-            item = pack.items.add()
-            item_b = db.get_item_detail(session.player_id, 11)  # 精力
-            item.ParseFromString(item_b)
-            item.main_item.base_item.num += 5
-            if item.main_item.base_item.num > 800:
-                item.main_item.base_item.num = 800
-            db.set_item_detail(session.player_id, item.SerializeToString(), 11)
-            session.send(MsgId.PackNotice, pack, 0)
+            # 与领奖/扣费共用该玩家的物品读改写锁(按玩家粒度, 不影响其他玩家)
+            with items_util.player_lock(session.player_id):
+                for item_id, add, cap in (
+                    (10, 1 if _vit_tick else 0, vit_cap),  # 体力
+                    (11, 5, energy_cap),  # 精力
+                ):
+                    item_b = db.get_item_detail(session.player_id, item_id)
+                    if not item_b:
+                        continue  # 从未持有则不自然恢复
+                    item = pack.items.add()
+                    item.ParseFromString(item_b)
+                    num = item.main_item.base_item.num
+                    new_num = min(num + add, cap) if num < cap else num
+                    if new_num != num:
+                        item.main_item.base_item.num = new_num
+                        db.set_item_detail(
+                            session.player_id, item.SerializeToString(), item_id
+                        )
+            if pack.items:
+                session.send(MsgId.PackNotice, pack, 0)
