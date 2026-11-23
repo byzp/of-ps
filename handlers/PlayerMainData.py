@@ -275,7 +275,7 @@ class Handler(PacketHandler):
         for i in db.get_chat_history(player_id):
             if not i["msg"]:
                 continue
-                rsp = ChatMsgRecordInitNotice()
+            rsp = ChatMsgRecordInitNotice()
             rsp.status = StatusCode.StatusCode_OK
             rsp.type = i["type"]
             for m in i["msg"]:

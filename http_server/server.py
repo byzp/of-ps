@@ -7,6 +7,7 @@ import logging
 import time
 import uvicorn
 import os
+from urllib.parse import urlencode
 
 from http_server.handlers.dispatch_handler import DispatchHandler
 from http_server.handlers.oauth_handler import OAuthHandler
@@ -147,15 +148,37 @@ async def open_oauth():
 async def api_login(login: LoginRequest):
     user = db.get_sdk_user_info(login.username, login.password)
     if not user:
-        return JSONResponse({"success": False, "msg": "密码错误"}, status_code=200)
+        return JSONResponse(
+            {"success": False, "msg": "Incorrect password."}, status_code=200
+        )
 
     uid = str(user["id"])
     username = user["username"]
     user_token = user["user_token"]
 
-    success_url = (
-        "https://sdkapi-of.inutan.com/loginSuccess.html?"
-        f"uid={uid}&username={username}&userToken={user_token}&authToken={user_token}&timeleft=-1"
+    # The Steam patch rejects unnamed characters; use the account name at creation.
+    player_id = db.get_player_id(user["id"])
+    if not db.get_players_info(player_id, "player_name")[0]:
+        if not username or len(username.encode("utf-8")) > 48:
+            return JSONResponse(
+                {"success": False, "msg": "Username must be between 1 and 48 bytes."}
+            )
+        if db.get_player_name_exists(username):
+            return JSONResponse(
+                {"success": False, "msg": "Username is already used as a player name."}
+            )
+        db.set_players_info(player_id, "player_name", username)
+        if not Config.SKIP_QUESTS:
+            db.set_kv(player_id, "profile", "tutorial_pending", 1)
+
+    success_url = "/loginSuccess.html?" + urlencode(
+        {
+            "uid": uid,
+            "username": username,
+            "userToken": user_token,
+            "authToken": user_token,
+            "timeleft": -1,
+        }
     )
 
     return JSONResponse({"success": True, "successUrl": success_url})

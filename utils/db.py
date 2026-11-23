@@ -561,25 +561,12 @@ def init_player(player_id):
     mail.content_type = MailContentType.MailContentType_TEXT
     mail.send_time = int(time.time())
     mail.title = "of-ps"
-    mail.content = '此项目以AGPL开源, 仓库地址<color=#66ccff><b><link="https://github.com/byzp/of-ps">https://github.com/byzp/of-ps</link></b></color>, 觉得有用点个star吧\n\n'
+    mail.content = 'This project is open source under the AGPL. Repository: <color=#66ccff><b><link="https://github.com/byzp/of-ps">https://github.com/byzp/of-ps</link></b></color>. If you find it useful, please give it a star.\n\n'
     mail.overdue_day = 3650
     tmp = mail.items.add()
     tmp.item_id = 108
     tmp.num = 1488891
     set_mail(player_id, 1, mail.SerializeToString())
-    if not Config.SKIP_QUESTS:
-        for mail_id, (title, rewards) in enumerate(Config.NEW_PLAYER_MAIL_REWARDS, 1):
-            mail = MailBriefData(
-                mail_id=mail_id,
-                sender="《开放空间》运营团队",
-                title=title,
-                content_type=MailContentType.MailContentType_TEXT,
-                send_time=cur_time,
-                overdue_day=Config.LOST_DROP_MAIL_DAYS,
-            )
-            for item_id, count in rewards:
-                mail.items.add(item_id=item_id, num=count)
-            set_mail(player_id, mail_id, mail.SerializeToString())
 
 
 def verify_sdk_user_info(user_id, login_token):

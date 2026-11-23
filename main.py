@@ -27,12 +27,7 @@ _stop_once = threading.Event()
 
 
 def _graceful_exit(signum, frame):
-    """SIGTERM/SIGINT: 落盘一次后退出。
-
-    落盘在信号处理器内同步执行, 不设超时、不强制杀死 —— db 操作必须
-    完整跑完。lock_db 为 RLock: 即使信号打断已持锁的主线程也可重入,
-    不会死锁。(默认终止不经过 atexit, 必须在此显式落盘)
-    """
+    # SIGTERM/SIGINT: 落盘一次后退出。
     if _stop_once.is_set():
         return
     _stop_once.set()

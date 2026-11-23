@@ -44,7 +44,10 @@ class Handler(PacketHandler):
         )
         rsp.analysis_account_id = db.get_analysis_account_id(player_id)
         # rsp.server_time_zone # int(datetime.now(timezone.utc).astimezone().utcoffset().total_seconds())。。
-        if rsp.player_name == "" and not Config.SKIP_QUESTS:
+        if not Config.SKIP_QUESTS and (
+            not rsp.player_name
+            or db.get_kv(player_id, "profile", "tutorial_pending", 0)
+        ):
             session.scene_id = 100  # 新玩家
         else:
             session.scene_id = scene_data.get_scene_id(player_id)
