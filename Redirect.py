@@ -1,39 +1,48 @@
-from mitmproxy import http
+import logging
+import re
+
+from mitmproxy import ctx, http, tls
 
 ip = "127.0.0.1"
 port = 21000
 rd_res = False
 
+logger = logging.getLogger(__name__)
+
 
 class Redirector:
+    @staticmethod
+    def _host_pattern() -> str:
+        resource_exclusion = (
+            "" if rd_res else r"(?!cdn-of\.inutan\.com\.?(?::\d+)?$)"
+        )
+        return rf"^{resource_exclusion}(?:[^.:]+\.)+inutan\.com\.?(?::\d+)?$"
+
+    def load(self, loader) -> None:
+        # 在协议识别时放行其他连接，避免先替换 HTTPS 证书再到 request 中放行。
+        ctx.options.update(allow_hosts=[self._host_pattern()])
+
+    def tls_clienthello(self, data: tls.ClientHelloData) -> None:
+        # 请求将转发到 HTTP 私服，不需要先与官方服务器完成 TLS 握手。
+        if data.client_hello.sni and re.fullmatch(
+            self._host_pattern(), data.client_hello.sni, re.IGNORECASE
+        ):
+            data.establish_server_tls_first = False
+
     def request(self, flow: http.HTTPFlow) -> None:
         full_host = flow.request.pretty_host
-        print(f"正在处理请求: {full_host}")
-
-        suffix_matches = (".inutan.com",)
-
-        if not rd_res and full_host == "cdn-of.inutan.com":
-            print(f"排除域名: {full_host}")
+        if not re.fullmatch(self._host_pattern(), full_host, re.IGNORECASE):
             return
 
-        if any(full_host.endswith(suffix) for suffix in suffix_matches):
-            print(f"重定向 {full_host} → {ip}:{port}")
-            self._redirect(flow, orig_host=full_host)
-            return
+        self._redirect(flow, orig_host=full_host)
+        logger.info("重定向 %s → %s:%s", full_host, ip, port)
 
-    def _redirect(self, flow: http.HTTPFlow, orig_host: str):
-        original_host = orig_host
+    def _redirect(self, flow: http.HTTPFlow, orig_host: str) -> None:
+        original_host_header = flow.request.host_header or orig_host
         flow.request.scheme = "http"
-
         flow.request.host = ip
         flow.request.port = port
-
-        flow.request.headers["Host"] = original_host
-        try:
-            flow.server_conn.address = (ip, port)
-        except Exception:
-            pass
-        flow.server_conn.tls = False
+        flow.request.host_header = original_host_header
 
 
 addons = [Redirector()]
