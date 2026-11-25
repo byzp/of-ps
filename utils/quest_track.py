@@ -58,7 +58,7 @@ def _build():
         for r in res["Achieve"]["achieve"]["datas"]
         if isinstance(r, dict) and "i_d" in r
     }
-    _COND_QUESTS = {}
+    cond = {}
     groups = {
         g["i_d"]: g
         for g in res["Quest"]["condition_set_group"]["datas"]
@@ -75,8 +75,9 @@ def _build():
                 if not c:
                     continue
                 need = int(c.get("count_param") or 1)
-                _COND_QUESTS.setdefault(cid, []).append((qid, need))
-    return _COND_QUESTS
+                cond.setdefault(cid, []).append((qid, need))
+    _COND_QUESTS = cond
+    return cond
 
 
 def _cond_quests():
