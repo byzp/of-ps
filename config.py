@@ -18,6 +18,8 @@ class Config:
 
     SESSION_POOL_MAX_WORKERS = 4
     PACKET_POOL_MAX_WORKERS = 12
+    # 动作广播按场景/频道分片。相同频道固定落在同一独立线程，保留广播顺序。
+    ACTION_SYNC_WORKERS = 4
     SERVER_MAX_TPS = 120
     COMPRESS_THRESHOLD = 1200
     DEBUG_PACKET_PASS = [1007, 1008, 1203, 1206, 2201, 2202]
