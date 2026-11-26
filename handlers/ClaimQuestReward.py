@@ -1,3 +1,4 @@
+from config import Config
 from utils import quest_track as _qt
 
 from network.packet_handler import PacketHandler, packet_handler
@@ -22,6 +23,17 @@ from utils.reward_resolver import resolve_reward
 def _player_level(player_id):
     row = db.get_players_info(player_id, "level")
     return row[0] if row else 0
+
+
+def _required_rewards(reward_id, level):
+    """0/哨兵表示权威配置明确无奖励; 非零配置必须能解析出合法奖励。"""
+    if not reward_id or reward_id == Config.NONE_REWARD:
+        return []
+    rewards = resolve_reward(reward_id, level)
+    if not rewards:
+        raise item_mgr.EconomyConfigError("missing quest reward config")
+    item_mgr.validate_rewards(rewards)
+    return rewards
 
 
 def _chain_tail_echo(player_id, head_id):
@@ -104,6 +116,16 @@ def _extra_gate_cfg(quest_id):
 @packet_handler(MsgId.ClaimQuestRewardReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
+        try:
+            self._handle(session, data, packet_id)
+        except item_mgr.EconomyConfigError:
+            session.send(
+                MsgId.ClaimQuestRewardRsp,
+                ClaimQuestRewardRsp(status=StatusCode.StatusCode_CFG_NOT_FOUND),
+                packet_id,
+            )
+
+    def _handle(self, session, data: bytes, packet_id: int):
         req = ClaimQuestRewardReq()
         req.ParseFromString(data)
 
@@ -130,61 +152,55 @@ class Handler(PacketHandler):
                 (s for s in res["Story"]["story"]["datas"] if s["i_d"] == req.quest_id),
                 None,
             )
-            quest_i_d = (story_cfg or {}).get("quest_i_d")
-
-            tmp = Chapter()
-            for blob in db.get_chapter(session.player_id):
-                c = Chapter()
-                c.ParseFromString(blob)
-                if c.chapter_id == chapter_cfg["i_d"]:
-                    tmp.CopyFrom(c)
-                    break
-            tmp.chapter_id = chapter_cfg["i_d"]
-            if req.quest_id in tmp.rewarded_story_ids:
-                # 已领取一律回 REPEAT_GET_REWARD
-                rsp.status = StatusCode.StatusCode_REPEAT_GET_REWARD
+            if story_cfg is None:
+                rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
                 session.send(MsgId.ClaimQuestRewardRsp, rsp, packet_id)
                 return
-            story_cfg = next(
-                (s for s in res["Story"]["story"]["datas"] if s["i_d"] == req.quest_id),
-                None,
-            )
-            pre_story = story_cfg.get("pre_story_unlock") if story_cfg else None
-            if pre_story and not db.is_story_rewarded(session.player_id, pre_story):
-                rsp.status = StatusCode.StatusCode_BAD_REQ
-                session.send(MsgId.ClaimQuestRewardRsp, rsp, packet_id)
-                return
-            if not quest_i_d or not _qt.is_completed_live(session.player_id, quest_i_d):
-                rsp.status = StatusCode.StatusCode_BAD_REQ
-                session.send(MsgId.ClaimQuestRewardRsp, rsp, packet_id)
-                return
-            tmp.rewarded_story_ids.append(req.quest_id)
-            db.set_chapter(session.player_id, tmp.chapter_id, tmp.SerializeToString())
-
-            reward_list = []
-            for story in res["Story"]["story"]["datas"]:
-                if story["i_d"] == req.quest_id:
-                    # Story.story.reward -> Reward.reward_pool
-                    reward_list = resolve_reward(story.get("reward"), level)
-                    if story.get("quest_i_d"):
-                        rsp.quest.CopyFrom(
-                            _chain_tail_echo(session.player_id, story["quest_i_d"])
-                        )
-                    break
-
-            rsp.status = StatusCode.StatusCode_OK
-            notice = PackNotice()
-            notice.status = StatusCode.StatusCode_OK
+            quest_i_d = story_cfg.get("quest_i_d")
+            notice = PackNotice(status=StatusCode.StatusCode_OK)
+            try:
+                with item_mgr.player_lock(session.player_id), db.transaction():
+                    tmp = Chapter(chapter_id=chapter_cfg["i_d"])
+                    for blob in db.get_chapter(session.player_id):
+                        chapter = Chapter.FromString(blob)
+                        if chapter.chapter_id == chapter_cfg["i_d"]:
+                            tmp.CopyFrom(chapter)
+                            break
+                    if req.quest_id in tmp.rewarded_story_ids:
+                        rsp.status = StatusCode.StatusCode_REPEAT_GET_REWARD
+                    else:
+                        pre_story = story_cfg.get("pre_story_unlock")
+                        if pre_story and not db.is_story_rewarded(session.player_id, pre_story):
+                            rsp.status = StatusCode.StatusCode_BAD_REQ
+                        elif not quest_i_d or not _qt.is_completed_live(session.player_id, quest_i_d):
+                            rsp.status = StatusCode.StatusCode_BAD_REQ
+                        else:
+                            reward_list = _required_rewards(story_cfg.get("reward"), level)
+                            if quest_i_d:
+                                rsp.quest.CopyFrom(
+                                    _chain_tail_echo(session.player_id, quest_i_d)
+                                )
+                            item_mgr.grant_items(
+                                session.player_id,
+                                reward_list,
+                                rsp_items=rsp.items,
+                                pack_notice=notice,
+                                session=session,
+                            )
+                            tmp.rewarded_story_ids.append(req.quest_id)
+                            db.set_chapter(
+                                session.player_id,
+                                tmp.chapter_id,
+                                tmp.SerializeToString(),
+                            )
+                            rsp.status = StatusCode.StatusCode_OK
+            except item_mgr.EconomyConfigError:
+                rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+                del rsp.items[:]
+                del notice.items[:]
             with achieve_track.batch(session):
-                item_mgr.grant_items(
-                    session.player_id,
-                    reward_list,
-                    rsp_items=rsp.items,
-                    pack_notice=notice,
-                    session=session,
-                )
                 session.send(MsgId.ClaimQuestRewardRsp, rsp, packet_id)
-                if len(notice.items):
+                if rsp.status == StatusCode.StatusCode_OK and notice.items:
                     session.send(MsgId.PackNotice, notice, 0)
             return
 
@@ -202,12 +218,17 @@ class Handler(PacketHandler):
 
         quest = Quest()
         quest_b = db.get_quest(session.player_id, req.quest_id)
-        if quest_b:
-            quest.ParseFromString(quest_b)
-        quest.quest_id = req.quest_id
+        if not quest_b:
+            rsp.status = StatusCode.StatusCode_BAD_REQ
+            session.send(MsgId.ClaimQuestRewardRsp, rsp, packet_id)
+            return
+        quest.ParseFromString(quest_b)
+        if quest.status not in Config.QUEST_TRACK_DONE and not _qt.is_completed_live(session.player_id, req.quest_id):
+            rsp.status = StatusCode.StatusCode_BAD_REQ
+            rsp.quest.CopyFrom(quest)
+            session.send(MsgId.ClaimQuestRewardRsp, rsp, packet_id)
+            return
 
-        # ---- 支线开启门禁(extra_chapter): 需前置任务 quest_unlock 已完成,
-        # 且玩家等级 >= lv_unlock, 否则不允许领取/完成 ----
         gate = _extra_gate_cfg(req.quest_id)
         if gate:
             if level < int(gate.get("lv_unlock") or 1):
@@ -229,35 +250,46 @@ class Handler(PacketHandler):
             session.send(MsgId.ClaimQuestRewardRsp, rsp, packet_id)
             return
 
-        reward_list = resolve_reward(quest_cfg.get("reward"), level)
-        if quest.complete_count == 0:
-            # 首次完成额外奖励 Quest.quest.first_reward
-            reward_list = reward_list + resolve_reward(
-                quest_cfg.get("first_reward"), level
-            )
-        quest.complete_count += 1
-        db.set_quest(session.player_id, req.quest_id, quest.SerializeToString())
-
+        notice = PackNotice(status=StatusCode.StatusCode_OK)
+        limit_reached = False
+        invalid = False
+        with item_mgr.player_lock(session.player_id), db.transaction():
+            latest_blob = db.get_quest(session.player_id, req.quest_id)
+            latest = Quest()
+            latest.ParseFromString(latest_blob)
+            if limit and latest.complete_count >= limit:
+                limit_reached = True
+            else:
+                if latest.status not in Config.QUEST_TRACK_DONE and not _qt.is_completed_live(session.player_id, req.quest_id):
+                    invalid = True
+                else:
+                    reward_list = _required_rewards(quest_cfg.get("reward"), level)
+                    if latest.complete_count == 0:
+                        reward_list += _required_rewards(quest_cfg.get("first_reward"), level)
+                    latest.complete_count += 1
+                    latest.status = QuestStatus.QuestStatus_Finish
+                    latest.bonus_times = max(latest.bonus_times, 1)
+                    db.set_quest(session.player_id, req.quest_id, latest.SerializeToString())
+                    item_mgr.grant_items(
+                        session.player_id,
+                        reward_list,
+                        rsp_items=rsp.items,
+                        pack_notice=notice,
+                        session=session,
+                    )
+                    quest.CopyFrom(latest)
+        if invalid:
+            rsp.status = StatusCode.StatusCode_BAD_REQ
+            session.send(MsgId.ClaimQuestRewardRsp, rsp, packet_id)
+            return
+        if limit_reached:
+            rsp.status = StatusCode.StatusCode_REPEAT_GET_REWARD
+            rsp.quest.CopyFrom(quest)
+            session.send(MsgId.ClaimQuestRewardRsp, rsp, packet_id)
+            return
+        session.quests[req.quest_id] = quest
         rsp.status = StatusCode.StatusCode_OK
-        if not quest_b:
-            quest.status = QuestStatus.QuestStatus_Finish
-            quest.bonus_times = 1
-            for c in _quest_conditions(quest_cfg):
-                cond = quest.conditions.add()
-                cond.condition_id = c
-                cond.progress = achieve_track.target_of(c) or 1
-                cond.status = QuestStatus.QuestStatus_Finish
         rsp.quest.CopyFrom(quest)
-        notice = PackNotice()
-        notice.status = StatusCode.StatusCode_OK
-        with achieve_track.batch(session):
-            item_mgr.grant_items(
-                session.player_id,
-                reward_list,
-                rsp_items=rsp.items,
-                pack_notice=notice,
-                session=session,
-            )
-            session.send(MsgId.ClaimQuestRewardRsp, rsp, packet_id)  # 1725,1726
-            if len(notice.items):
-                session.send(MsgId.PackNotice, notice, 0)
+        session.send(MsgId.ClaimQuestRewardRsp, rsp, packet_id)
+        if notice.items:
+            session.send(MsgId.PackNotice, notice, 0)

@@ -1,20 +1,60 @@
-from network.packet_handler import PacketHandler, packet_handler
-from network.msg_id import MsgId
 import random
 
-from proto.net_pb2 import (
-    GachaReq,
-    GachaRsp,
-    StatusCode,
-    PackNotice,
-    ItemDetail,
-)
 from config import Config
-from utils.res_loader import res
+from network.msg_id import MsgId
+from network.packet_handler import PacketHandler, packet_handler
+from proto.net_pb2 import GachaReq, GachaRsp, ItemDetail, PackNotice, StatusCode
 import utils.db as db
-from utils import item_mgr
+from utils import achieve_track, item_mgr
 from utils.pb_create import make_item
-from utils import achieve_track
+from utils.res_loader import res
+
+
+def _rows(sheet, table):
+    section = res.get(sheet, {}).get(table, {})
+    rows = section.get("datas", ()) if isinstance(section, dict) else ()
+    return rows if isinstance(rows, (list, tuple)) else ()
+
+
+def _configuration(gacha_id):
+    info = next((row for row in _rows("Gacha", "info") if row.get("i_d") == gacha_id), None)
+    pool = next((row for row in _rows("Gacha", "pool") if row.get("i_d") == gacha_id), None)
+    if not info or not pool:
+        return None
+    pool_ids = {item["free_gacha_pool_i_d"] for item in pool.get("items", ())}
+    guarantee_id = int(info.get("big_guarantee_pool_i_d", 0) or 0)
+    normal = []
+    guarantee = []
+    reward_rows = _rows("Gacha", "reward_pool")
+    for reward_pool_id in pool_ids:
+        row = next((row for row in reward_rows if row.get("i_d") == reward_pool_id), None)
+        items = [item["item_i_d"] for item in (row or {}).get("items", ()) if item.get("item_i_d")]
+        if not items:
+            return None
+        normal.extend(items)
+    if guarantee_id:
+        row = next((row for row in reward_rows if row.get("i_d") == guarantee_id), None)
+        guarantee = [item["item_i_d"] for item in (row or {}).get("items", ()) if item.get("item_i_d")]
+        if not guarantee:
+            return None
+    if not normal:
+        return None
+    try:
+        for item_id in normal + guarantee:
+            item_mgr.validate_item_id(item_id)
+    except item_mgr.EconomyConfigError:
+        return None
+    return info, normal, guarantee
+
+
+def _cost(info, single):
+    if single:
+        count = item_mgr.checked_mul(
+            int(info.get("method1_count", 0) or 0),
+            int(info.get("consume_item1_num", 1) or 1),
+        )
+        return int(info.get("consume_item1_i_d", 0) or 0), count
+    return int(info.get("consume_item2_i_d", 0) or 0), int(info.get("consume_item2_num", 0) or 0)
 
 
 @packet_handler(MsgId.GachaReq)
@@ -22,135 +62,94 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = GachaReq()
         req.ParseFromString(data)
-
-        with achieve_track.batch(session):
-            self._draw(session, req, packet_id)
-
-    def _draw(self, session, req, packet_id):
-
-        rsp = GachaRsp()
-        rsp.status = StatusCode.StatusCode_OK
-        rsp.info.gacha_id = req.gacha_id
-        rsp.info.gacha_times = 1 if req.is_single else 10
-        rsp1 = PackNotice()
-        rsp1.status = StatusCode.StatusCode_OK
-        gt = db.get_gacha_guarantee(session.player_id, req.gacha_id)
-        _gt_cap = next(
-            (
-                int(e.get("max_times") or 70)
-                for e in res["Gacha"]["info"]["datas"]
-                if isinstance(e, dict) and e.get("i_d") == req.gacha_id
-            ),
-            70,
-        )
-        _pool_found = False
-        for i in res["Gacha"]["pool"]["datas"]:
-            if i["i_d"] == req.gacha_id:
-                _pool_found = True
-                pools = []
-                for i2 in i["items"]:
-                    pools.append(i2["free_gacha_pool_i_d"])
-                rewards = []
-                rewards_gt = []
-                gt_pool = 0
-                for i2 in res["Gacha"]["info"]["datas"]:
-                    if i2["i_d"] == req.gacha_id:
-                        # 单抽走 consume_item1(招募券), 十连走 consume_item2(星石)
-                        if req.is_single:
-                            cost_id = i2.get("consume_item1_i_d", 0)
-                            cost_num = int(i2.get("method1_count", 0) or 0) * int(
-                                i2.get("consume_item1_num", 1) or 1
-                            )
-                        else:
-                            cost_id = i2.get("consume_item2_i_d", 0)
-                            cost_num = int(i2.get("consume_item2_num", 0) or 0)
-                        if not cost_id or cost_num <= 0:
-                            break
-                        consume_b = db.get_item_detail(session.player_id, cost_id)
-                        if not consume_b:
-                            rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
-                            session.send(MsgId.GachaRsp, rsp, packet_id)
-                            return
-                        item = rsp1.items.add()
-                        item.ParseFromString(consume_b)
-                        item.main_item.base_item.num -= cost_num
-                        if item.main_item.base_item.num < 0:
-                            rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
-                            session.send(MsgId.GachaRsp, rsp, packet_id)
-                            return
-                        db.set_item_detail(
-                            session.player_id,
-                            item.SerializeToString(),
-                            item.main_item.item_id,
-                        )
-                        gt_pool = i2.get("big_guarantee_pool_i_d", 0)
-                        break
-                for i2 in res["Gacha"]["reward_pool"]["datas"]:
-                    if i2["i_d"] in pools:
-                        for i3 in i2["items"]:
-                            rewards.append(i3["item_i_d"])
-                    if i2["i_d"] == gt_pool:
-                        for i3 in i2["items"]:
-                            rewards_gt.append(i3["item_i_d"])
-        if not _pool_found or not rewards:
-            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
-            session.send(MsgId.GachaRsp, rsp, packet_id)
+        configuration = _configuration(req.gacha_id)
+        if configuration is None:
+            session.send(MsgId.GachaRsp, GachaRsp(status=StatusCode.StatusCode_CFG_NOT_FOUND), packet_id)
             return
-        for _ in range(10):
-            if rewards_gt and gt + 1 >= _gt_cap:
-                r = random.choice(rewards_gt)
-                gt = 0
-            else:
-                r = random.choice(rewards)
-                gt += 1
-            if (
-                not Config.SKIP_QUESTS
-                and req.gacha_id == 2000
-                and req.is_single
-                and db.get_total_gacha_num(session.player_id, 2000) == 0
-            ):
-                r = 102001
-            c = False
-            for i in res["Character"]["character"]["datas"]:
-                if i["i_d"] == r:
-                    item = rsp.items.add()
-                    # 重复角色自动转换为碎片(repeat_item_i_d)
-                    dup = item_mgr.grant_character(
-                        session.player_id, r, item, pack_notice=rsp1
-                    )
-                    if not dup:
-                        extra = ItemDetail()
-                        make_item(107, 500, session.player_id, extra)
-                        item.extras.add().CopyFrom(extra.main_item)
-                        item_mgr.grant_items(
-                            session.player_id,
-                            [(107, 500)],
-                            pack_notice=rsp1,
-                            session=session,
-                        )
-                        for i2 in res["Item"]["item"]["datas"]:
-                            if i2["i_d"] == item.main_item.item_id:
-                                item.extra_quality = i2.get("quality", 0)
-                                break
-                    c = True
-                    break
-            if not c:
-                item_mgr.grant_single_item(
-                    session.player_id,
-                    r,
-                    num=1,
-                    rsp_items=rsp.items,
-                    pack_notice=rsp1,
-                )
-            else:
-                rsp1.items.add().CopyFrom(item)
-            db.add_gacha_record(session.player_id, req.gacha_id, r)
-            if req.is_single:
-                break
-        db.set_gacha_guarantee(session.player_id, req.gacha_id, gt)
+        info, normal, guarantee = configuration
+        try:
+            cost_id, cost_count = _cost(info, req.is_single)
+            if not cost_id or cost_count <= 0:
+                raise item_mgr.EconomyConfigError("invalid gacha cost")
+            item_mgr.validate_stackable_item_id(cost_id)
+            draws = 1 if req.is_single else 10
+            cap = item_mgr.validate_counter(
+                int(info.get("max_times", 70) or 70), allow_zero=False, label="gacha cap"
+            )
+        except (item_mgr.EconomyConfigError, TypeError, ValueError):
+            session.send(MsgId.GachaRsp, GachaRsp(status=StatusCode.StatusCode_CFG_NOT_FOUND), packet_id)
+            return
 
-        if gt_pool:
-            rsp.info.guarantee = max(0, _gt_cap - gt)
+        rsp = GachaRsp(status=StatusCode.StatusCode_OK)
+        rsp.info.gacha_id = req.gacha_id
+        rsp.info.gacha_times = draws
+        pack = PackNotice(status=StatusCode.StatusCode_OK)
+        try:
+            with item_mgr.player_lock(session.player_id), db.transaction():
+                counter = item_mgr.validate_counter(
+                    db.get_gacha_guarantee(session.player_id, req.gacha_id),
+                    label="gacha guarantee",
+                )
+                rewards = []
+                for index in range(draws):
+                    if guarantee and counter + 1 >= cap:
+                        reward = random.choice(guarantee)
+                        counter = 0
+                    else:
+                        reward = random.choice(normal)
+                        counter = item_mgr.checked_add(
+                            counter, 1, limit=Config.ECONOMY_UINT32_MAX
+                        )
+                    if (
+                        not Config.SKIP_QUESTS
+                        and req.gacha_id == 2000
+                        and req.is_single
+                        and db.get_total_gacha_num(session.player_id, 2000) == 0
+                    ):
+                        reward = 102001
+                    rewards.append(reward)
+                item_mgr.validate_rewards([(reward, 1) for reward in rewards])
+                if not item_mgr.consume_items(
+                    session.player_id,
+                    [(cost_id, cost_count)],
+                    pack_notice=pack,
+                    session=session,
+                ):
+                    rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
+                else:
+                    for reward in rewards:
+                        self._grant(session, reward, rsp, pack)
+                        db.add_gacha_record(session.player_id, req.gacha_id, reward)
+                    db.set_gacha_guarantee(session.player_id, req.gacha_id, counter)
+                    if guarantee:
+                        rsp.info.guarantee = max(0, cap - counter)
+        except item_mgr.EconomyConfigError:
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+            del rsp.items[:]
+            del pack.items[:]
+
         session.send(MsgId.GachaRsp, rsp, packet_id)
-        session.send(MsgId.PackNotice, rsp1, 0)
-        achieve_track.report(session, "gacha", amount=1 if req.is_single else 10)
+        if rsp.status != StatusCode.StatusCode_OK:
+            return
+        if pack.items:
+            session.send(MsgId.PackNotice, pack, 0)
+        achieve_track.report(session, "gacha", amount=draws)
+
+    @staticmethod
+    def _grant(session, reward, rsp, pack):
+        character_cfg = next(
+            (row for row in _rows("Character", "character") if row.get("i_d") == reward),
+            None,
+        )
+        if character_cfg:
+            item = rsp.items.add()
+            duplicate = item_mgr.grant_character(session.player_id, reward, item, pack_notice=pack)
+            if not duplicate:
+                extra = ItemDetail()
+                make_item(107, 500, session.player_id, extra)
+                item.extras.add().CopyFrom(extra.main_item)
+                item_mgr.grant_items(session.player_id, [(107, 500)], pack_notice=pack, session=session)
+            item.extra_quality = int(character_cfg.get("quality", 0) or 0)
+            pack.items.add().CopyFrom(item)
+        else:
+            item_mgr.grant_single_item(session.player_id, reward, num=1, rsp_items=rsp.items, pack_notice=pack)

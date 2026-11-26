@@ -35,13 +35,13 @@ def serve(
     Config.GAME_SERVER_IP = "127.0.0.1"
     Config.GAME_SERVER_PORT = port
     Config.LINK_OTHER_SERVER = False
+    Config.VERIFY_TOKEN = False
     logging.basicConfig(level=logging.INFO)
     random.seed(0)
     from utils import res_loader, db
 
     res_loader.init()
     db.init()
-    db.get_sdk_user_info("scene_smoke", "local")
     if badge_tree:
         from utils.pb_create import make_item
 

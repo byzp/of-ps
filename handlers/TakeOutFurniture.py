@@ -13,6 +13,7 @@ from proto.net_pb2 import (
 )
 import utils.db as db
 from server import scene_data
+from utils import garden_state
 
 """
 # 收回家具 1697 1698
@@ -28,6 +29,10 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = TakeOutFurnitureRsp()
+        if session.scene_id != 9999 or session.channel_id != session.player_id:
+            rsp.status = StatusCode.StatusCode_BAD_REQ
+            session.send(MsgId.TakeOutFurnitureRsp, rsp, packet_id)
+            return
         rsp.status = StatusCode.StatusCode_OK
         rsp.furniture_id = req.furniture_id
 
@@ -45,6 +50,7 @@ class Handler(PacketHandler):
         db.del_furniture(
             session.scene_id, session.channel_id, session.player_id, req.furniture_id
         )
+        garden_state.adjust_furniture_count(session.player_id, -1)
 
         # 归还家具道具(客户端勾选"放入背包")
         if req.is_put_in_package and details.furniture_item_id:

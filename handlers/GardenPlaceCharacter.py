@@ -10,9 +10,11 @@ from proto.net_pb2 import (
     GardenPlaceCharacterReq,
     GardenPlaceCharacterRsp,
     GardenPlaceCharacterNotice,
+    FurnitureDetailsInfo,
     ScenePlacedCharacter,
     StatusCode,
 )
+from utils.res_loader import res
 import utils.db as db
 from utils.pb_create import (
     make_SceneCharacterOutfitPreset,
@@ -90,6 +92,10 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = GardenPlaceCharacterRsp()
+        if session.scene_id != 9999 or session.channel_id != session.player_id:
+            rsp.status = StatusCode.StatusCode_BAD_REQ
+            session.send(MsgId.GardenPlaceCharacterRsp, rsp, packet_id)
+            return
         rsp.status = StatusCode.StatusCode_OK
         rsp.character_id = req.character_id
         rsp.furniture_id = req.furniture_id
@@ -118,6 +124,16 @@ class Handler(PacketHandler):
                 rsp.status = StatusCode.StatusCode_FURNITURE_NOT_EXIST
                 session.send(MsgId.GardenPlaceCharacterRsp, rsp, packet_id)
                 return
+            furniture = FurnitureDetailsInfo()
+            furniture.ParseFromString(furniture_row[-1])
+            seat_limit = next(
+                (int(row.get('home_item_point_num', 0)) for row in res['HomeItem']['home_item']['datas'] if row.get('item_i_d') == furniture.furniture_item_id),
+                0,
+            )
+            if seat_limit and not 0 <= req.seat_id < seat_limit:
+                rsp.status = StatusCode.StatusCode_BAD_REQ
+                session.send(MsgId.GardenPlaceCharacterRsp, rsp, packet_id)
+                return
             # 角色必须已拥有
             chars = db.get_characters(session.player_id, req.character_id)
             if not chars:
@@ -128,14 +144,14 @@ class Handler(PacketHandler):
                 return
             # 不能与当前队伍角色重复(角色正在队伍中)
             team_info = db.get_players_info(session.player_id, "team")
-            if team_info:
-                team_ids = {
-                    int(x)
-                    for x in str(team_info[0]).replace(" ", "").split(",")
-                    if x.strip().isdigit()
-                }
+            raw_team = team_info[0] if team_info else ()
+            if isinstance(raw_team, (tuple, list)):
+                team_ids = {int(value) for value in raw_team if value}
+            elif isinstance(raw_team, bytes):
+                import pickle
+                team_ids = {int(value) for value in pickle.loads(raw_team) if value}
             else:
-                team_ids = set()
+                team_ids = {int(value) for value in str(raw_team).replace('(', '').replace(')', '').replace(' ', '').split(',') if value.isdigit()}
             if req.character_id in team_ids:
                 rsp.status = StatusCode.StatusCode_CHARACTER_IN_TEAM
                 session.send(MsgId.GardenPlaceCharacterRsp, rsp, packet_id)

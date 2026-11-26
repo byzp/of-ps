@@ -4,12 +4,10 @@ from network.msg_id import MsgId
 from proto.net_pb2 import (
     FriendAddReq,
     FriendAddRsp,
-    FriendHandleNotice,
-    StatusCode,
     FriendHandleType,
 )
 
-import utils.db as db
+from server import social
 from server.scene_data import get_session
 
 
@@ -19,39 +17,13 @@ class Handler(PacketHandler):
         req = FriendAddReq()
         req.ParseFromString(data)
 
-        rsp = FriendAddRsp()
-        rsp.status = StatusCode.StatusCode_OK
-
-        stat = db.get_friend_info(req.player_id, session.player_id, "friend_status")[0]
-
-        if stat != None:
-            match stat:
-                case 0:  # 曾经是好友
-                    pass
-                case 1:  # 已发过申请
-                    rsp.status = StatusCode.StatusCode_FRIEND_APPLY_EXIST
-                    session.send(MsgId.FriendAddRsp, rsp, packet_id)
-                    return
-                case 2:  # 好友,正常也不可能
-                    rsp.status = StatusCode.StatusCode_FRIEND_EXIST
-                    session.send(MsgId.FriendAddRsp, rsp, packet_id)
-                    return
-                case 3:  # 黑名单
-                    rsp.status = StatusCode.StatusCode_FRIEND_BLACK
-                    session.send(MsgId.FriendAddRsp, rsp, packet_id)
-                    return
-
-        db.init_friend(req.player_id, session.player_id)  # 初始化好友关系
-        db.set_friend_info(
-            req.player_id, session.player_id, "friend_status", 1
-        )  # 设置目标玩家为 被申请状态
+        status, new_application = social.request_friend(session.player_id, req.player_id)
+        rsp = FriendAddRsp(status=status)
         session.send(MsgId.FriendAddRsp, rsp, packet_id)
-
-        for s in get_session():
-            if s.player_id == req.player_id:
-                rsp = FriendHandleNotice()
-                rsp.status = StatusCode.StatusCode_OK
-                rsp.type = FriendHandleType.FriendHandleType_APPLY
-                rsp.target_player_id = session.player_id
-                s.send(MsgId.FriendHandleNotice, rsp, 0)
-                return
+        if new_application:
+            social.send_friend_notice(
+                session.player_id,
+                req.player_id,
+                FriendHandleType.FriendHandleType_APPLY,
+                get_session(),
+            )

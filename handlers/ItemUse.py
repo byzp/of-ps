@@ -8,186 +8,170 @@ from proto.net_pb2 import (
     EBagItemTag,
     ItemUseReq,
     ItemUseRsp,
-    ItemDetail,
     PackNotice,
     PlayerBuffNotice as _PBN,
     StatusCode,
 )
 import utils.db as db
-from utils import achieve_track
-from utils import item_mgr
+from utils import achieve_track, item_mgr
 from utils.res_loader import res
+
+
+def _rows(sheet, table):
+    section = res.get(sheet, {}).get(table, {})
+    rows = section.get("datas", ()) if isinstance(section, dict) else ()
+    return rows if isinstance(rows, (list, tuple)) else ()
+
+
+def _rewards(item_id):
+    pool = next((row for row in _rows("Reward", "reward_pool") if row.get("i_d") == item_id), None)
+    if pool is None:
+        return []
+    group_ids = [group.get("reward_pool_group_i_d") for group in pool.get("reward_pool_group", ())]
+    if not group_ids:
+        raise item_mgr.EconomyConfigError("empty item-use reward pool")
+    item_pools = {row.get("i_d"): row for row in _rows("Reward", "reward_item_pool")}
+    rewards = []
+    for group_id in group_ids:
+        item_pool = item_pools.get(group_id)
+        if item_pool is None:
+            raise item_mgr.EconomyConfigError("missing item-use reward group")
+        for entry in item_pool.get("reward_item_pool_group", ()):
+            minimum = int(entry.get("item_min_count", 1))
+            maximum = int(entry.get("item_max_count", minimum))
+            item_mgr.validate_count(minimum, label="reward minimum")
+            item_mgr.validate_count(maximum, label="reward maximum")
+            if minimum > maximum:
+                raise item_mgr.EconomyConfigError("invalid reward count range")
+            item_mgr.validate_item_id(entry.get("item_i_d"))
+            rewards.append((entry["item_i_d"], random.randint(minimum, maximum)))
+    item_mgr.validate_rewards(rewards)
+    return rewards
 
 
 @packet_handler(MsgId.ItemUseReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        # 一次使用动作只构造一份成就帧(eat/stamina/gain 多路计数合并)
         with achieve_track.batch(session):
             self._handle(session, data, packet_id)
 
-    def _handle(self, session, data: bytes, packet_id: int):
+    def _handle(self, session, data, packet_id):
         req = ItemUseReq()
         req.ParseFromString(data)
-
         rsp = ItemUseRsp()
         rsp.dungeon_id = session.dungeon[0] if session.dungeon else 0
-        rsp.status = StatusCode.StatusCode_OK
-
-        item = db.get_item_detail(session.player_id, req.item_id)
-        if not item:
-            rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
+        if req.num <= 0:
+            rsp.status = StatusCode.StatusCode_BAD_REQ
             session.send(MsgId.ItemUseRsp, rsp, packet_id)
             return
-        else:
-            item_use = ItemDetail()
-            item_use.ParseFromString(item)
-            if item_use.main_item.base_item.num >= req.num:
-                item_use.main_item.base_item.num -= req.num
-                rsp1 = PackNotice()
-                rsp1.status = StatusCode.StatusCode_OK
-                rsp1.items.add().CopyFrom(item_use)
-                db.set_item_detail(
-                    session.player_id, item_use.SerializeToString(), req.item_id, None
+        try:
+            item_mgr.validate_count(req.num)
+            item_row = item_mgr.validate_stackable_item_id(req.item_id)
+            tag = item_row.get("new_bag_item_tag")
+            buff = None
+            if tag == EBagItemTag.EBagItemTag_Food:
+                affect = next(
+                    (row for row in _rows("Cooking", "cook_affect") if row.get("i_d") == req.item_id),
+                    None,
                 )
-            else:
-                rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
-                session.send(MsgId.ItemUseRsp, rsp, packet_id)
-                return
-
-        # 成就: 吃任意食物75(Item.new_bag_item_tag==EBagItemTag_Food);
-        # 使用体力/精力药剂计入消耗(80/81)
-        _tag = next(
-            (
-                e.get("new_bag_item_tag")
-                for e in res["Item"]["item"]["datas"]
-                if isinstance(e, dict) and e.get("i_d") == req.item_id
-            ),
-            None,
-        )
-        if _tag == EBagItemTag.EBagItemTag_Food:
-            achieve_track.report(session, "eat_food", amount=req.num)
-            # 料理效果(Cooking.cook_affect): 推送 LIFE 类 Buff 并持久化到期时间
-
-            _affect = next(
+                if affect and affect.get("buff_i_d"):
+                    duration = int(affect.get("food_effect_type_param", 0) or 0)
+                    item_mgr.validate_counter(affect["buff_i_d"], allow_zero=False, label="food buff id")
+                    item_mgr.validate_count(duration, label="food buff duration")
+                    buff = (int(affect["buff_i_d"]), int(time.time()) + duration)
+            restore = None
+            if tag in (32, 35):
+                restore_item = 10 if tag == 32 else 11
+                relate = int(item_row.get("relate_i_d", 0) or 0)
+                item_mgr.validate_stackable_item_id(restore_item)
+                item_mgr.validate_count(relate, label="restore amount")
+                restore = (restore_item, item_mgr.checked_mul(relate, req.num))
+            catcher = next(
                 (
-                    a
-                    for a in res["Cooking"]["cook_affect"]["datas"]
-                    if isinstance(a, dict) and a.get("i_d") == req.item_id
+                    row for row in _rows("Expression", "catcher")
+                    if row.get("need_item_i_d") == req.item_id
                 ),
                 None,
             )
-            if _affect and _affect.get("buff_i_d"):
-                _buff_id = int(_affect["buff_i_d"])
-                _dur = int(_affect.get("food_effect_type_param", 0) or 0)
-                _end = int(time.time()) + _dur
-                _raw = db.get_kv(session.player_id, "buffs", "life", b"")
-                _store = pickle.loads(_raw) if _raw else {}
-                _store[_buff_id] = max(_end, int(_store.get(_buff_id, 0)))
-                db.set_kv(session.player_id, "buffs", "life", pickle.dumps(_store))
+            if catcher:
+                item_mgr.validate_counter(catcher.get("action_i_d", 0), allow_zero=False, label="action id")
+            rewards = _rewards(req.item_id)
+            if restore:
+                rewards.append(restore)
+            item_mgr.validate_rewards(rewards)
+        except (item_mgr.EconomyConfigError, TypeError, ValueError):
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+            session.send(MsgId.ItemUseRsp, rsp, packet_id)
+            return
 
-                _n = _PBN()
-                _n.status = StatusCode.StatusCode_OK
-                _pb = _n.player_buffs.add()
-                _pb.system_type = 2  # BuffSystemType_LIFE
-                _b = _pb.buff_lst.add()
-                _b.buff_id = _buff_id
-                _b.end_time = _end
-                session.send(MsgId.PlayerBuffNotice, _n, 0)
+        pack = PackNotice(status=StatusCode.StatusCode_OK)
+        with item_mgr.player_lock(session.player_id), db.transaction():
+            if not item_mgr.consume_items(
+                session.player_id,
+                [(req.item_id, req.num)],
+                pack_notice=pack,
+                session=session,
+            ):
+                rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
+            else:
+                if buff:
+                    buff_id, end = buff
+                    raw = db.get_kv(session.player_id, "buffs", "life", b"")
+                    store = pickle.loads(raw) if raw else {}
+                    store[buff_id] = max(end, int(store.get(buff_id, 0)))
+                    db.set_kv(session.player_id, "buffs", "life", pickle.dumps(store))
+                if catcher:
+                    expire_ms = int((time.time() + 24 * 3600) * 1000)
+                    raw = db.get_kv(session.player_id, "actions", "ids", b"")
+                    actions = {}
+                    for pair in raw.decode().split(","):
+                        if ":" in pair:
+                            action_id, expiry = pair.split(":", 1)
+                            actions[int(action_id)] = int(expiry)
+                    action_id = int(catcher["action_i_d"])
+                    actions[action_id] = max(actions.get(action_id, 0), expire_ms)
+                    db.set_kv(
+                        session.player_id,
+                        "actions",
+                        "ids",
+                        ",".join(f"{key}:{value}" for key, value in actions.items()).encode(),
+                    )
+                if rewards:
+                    item_mgr.grant_items(
+                        session.player_id,
+                        rewards,
+                        pack_notice=pack,
+                        rsp_items=rsp.items,
+                        session=session,
+                    )
+                rsp.status = StatusCode.StatusCode_OK
+
+        if rsp.status != StatusCode.StatusCode_OK:
+            session.send(MsgId.ItemUseRsp, rsp, packet_id)
+            return
+        if tag == EBagItemTag.EBagItemTag_Food:
+            achieve_track.report(session, "eat_food", amount=req.num)
+            if buff:
+                buff_id, end = buff
+                notice = _PBN(status=StatusCode.StatusCode_OK)
+                buff_entry = notice.player_buffs.add()
+                buff_entry.system_type = 2
+                entry = buff_entry.buff_lst.add()
+                entry.buff_id = buff_id
+                entry.end_time = end
+                session.send(MsgId.PlayerBuffNotice, notice, 0)
         elif req.item_id == 10:
             achieve_track.report(session, "stamina_drink", amount=req.num)
         elif req.item_id == 11:
             achieve_track.report(session, "energy_drink", amount=req.num)
-
-        if _tag == 32:
-            _relate = next(
-                (
-                    e.get("relate_i_d", 0)
-                    for e in res["Item"]["item"]["datas"]
-                    if isinstance(e, dict) and e.get("i_d") == req.item_id
-                ),
-                0,
+        if restore:
+            achieve_track.report(
+                session,
+                "vitality_restore" if tag == 32 else "energy_restore",
+                amount=req.num,
             )
-            if _relate and req.num > 0:
-                item_mgr.grant_items(
-                    session.player_id,
-                    [(10, int(_relate) * req.num)],
-                    pack_notice=rsp1,
-                    rsp_items=rsp.items,
-                    session=session,
-                )
-                achieve_track.report(session, "vitality_restore", amount=req.num)
-        elif _tag == 35:
-            _relate = next(
-                (
-                    e.get("relate_i_d", 0)
-                    for e in res["Item"]["item"]["datas"]
-                    if isinstance(e, dict) and e.get("i_d") == req.item_id
-                ),
-                0,
-            )
-            if _relate and req.num > 0:
-                item_mgr.grant_items(
-                    session.player_id,
-                    [(11, int(_relate) * req.num)],
-                    pack_notice=rsp1,
-                    rsp_items=rsp.items,
-                    session=session,
-                )
-                achieve_track.report(session, "energy_restore", amount=req.num)
-
-        # 互动道具(Expression.catcher: need_item_i_d -> action_i_d,
-        # new_bag_item_tag=55): 使用后解锁动作(24h, 与 ActionStudy 同存储)
-        catcher = next(
-            (
-                e
-                for e in res["Expression"]["catcher"]["datas"]
-                if isinstance(e, dict) and e.get("need_item_i_d") == req.item_id
-            ),
-            None,
-        )
         if catcher:
-
-            expire_ms = int((time.time() + 24 * 3600) * 1000)
-            raw = db.get_kv(session.player_id, "actions", "ids", b"")
-            actions = {}
-            for pair in raw.decode().split(","):
-                if ":" in pair:
-                    aid, exp = pair.split(":")
-                    actions[int(aid)] = int(exp)
-            actions[catcher["action_i_d"]] = max(
-                actions.get(catcher["action_i_d"], 0), expire_ms
-            )
-            db.set_kv(
-                session.player_id,
-                "actions",
-                "ids",
-                ",".join(f"{k}:{v}" for k, v in actions.items()).encode(),
-            )
             achieve_track.report(session, "use_interact_item")
-
-        for data in res.get("Reward", {}).get("reward_pool", {}).get("datas", []):
-            if data["i_d"] == req.item_id:
-                # 奖励发放走实例安全入口(武器/映像等实例类单独落库)
-                rp = []
-                for reward_pool in data["reward_pool_group"]:
-                    rp.append(reward_pool["reward_pool_group_i_d"])
-                for item_pool in (
-                    res.get("Reward", {}).get("reward_item_pool", {}).get("datas", [])
-                ):
-                    if item_pool["i_d"] in rp:
-                        for item in item_pool["reward_item_pool_group"]:
-                            r_num = random.randint(
-                                item["item_min_count"], item["item_max_count"]
-                            )
-                            item_mgr.grant_single_item(
-                                session.player_id,
-                                item["item_i_d"],
-                                num=r_num,
-                                pack_notice=rsp1,
-                                rsp_items=rsp.items,
-                            )
-        session.send(
-            MsgId.ItemUseRsp, rsp, packet_id
-        )  # 一些测试物品可能没有奖励池,不能放到循环内
-        session.send(MsgId.PackNotice, rsp1, 0)
+        session.send(MsgId.ItemUseRsp, rsp, packet_id)
+        if pack.items:
+            session.send(MsgId.PackNotice, pack, 0)

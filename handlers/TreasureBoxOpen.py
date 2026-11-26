@@ -92,6 +92,9 @@ class Handler(PacketHandler):
             if tb.state != TreasureBoxState_Open:
                 tb.state = TreasureBoxState_Open
                 changed = True
+            if one_time and not tutorial and tb.next_refresh_time == 0:
+                tb.next_refresh_time = Config.PERMANENT_BOX_REFRESH_TIME
+                changed = True
             if refreshable and tb.next_refresh_time <= 0:
                 if not tb.rewards:
                     refresh = True
@@ -117,6 +120,8 @@ class Handler(PacketHandler):
             tb.state = TreasureBoxState_Open
             if refreshable:
                 tb.next_refresh_time = time_t + refresh_interval
+            elif one_time and not tutorial:
+                tb.next_refresh_time = Config.PERMANENT_BOX_REFRESH_TIME
             if material_cfg:
                 multiple = reward_multiplier(session.player_id, material_cfg["i_d"])
                 box_items = make_dungeon_rewards(

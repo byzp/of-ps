@@ -1,28 +1,15 @@
-from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-
-from proto.net_pb2 import (
-    MPPlayRoomRewardInfoReq,
-    MPPlayRoomRewardInfoRsp,
-    StatusCode,
-)
+from network.packet_handler import PacketHandler, packet_handler
+from proto.net_pb2 import MPPlayRoomRewardInfoReq, MPPlayRoomRewardInfoRsp, StatusCode
+from server import mp_room_rewards
 
 
 @packet_handler(MsgId.MPPlayRoomRewardInfoReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        req = MPPlayRoomRewardInfoReq()
-        req.ParseFromString(data)
-
-        rsp = MPPlayRoomRewardInfoRsp()
-        rsp.status = StatusCode.StatusCode_OK
-        rsp.score_day_remain = 10
-        rsp.score_week_remain = 70
-        rsp.extra_bonus_day_remain = 10
-        rsp.extra_bonus_week_remain = 70
-        rsp.extra_mag_day_remain = 10
-        rsp.extra_mag_week_remain = 70
-
-        session.send(
-            MsgId.MPPlayRoomRewardInfoRsp, rsp, packet_id
-        )  # 2515,2516 房间奖励次数查询
+        MPPlayRoomRewardInfoReq().ParseFromString(data)
+        rsp = MPPlayRoomRewardInfoRsp(status=StatusCode.StatusCode_OK)
+        for kind in ('score', 'extra_bonus', 'extra_mag'):
+            setattr(rsp, f'{kind}_day_remain', mp_room_rewards.remaining(session.player_id, kind, 'day'))
+            setattr(rsp, f'{kind}_week_remain', mp_room_rewards.remaining(session.player_id, kind, 'week'))
+        session.send(MsgId.MPPlayRoomRewardInfoRsp, rsp, packet_id)

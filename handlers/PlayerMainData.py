@@ -8,6 +8,7 @@ from proto.net_pb2 import PlayerBuff as _PB
 
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
+from server import social
 import time
 import logging
 
@@ -209,6 +210,13 @@ class Handler(PacketHandler):
 
         rsp = PrivateChatOfflineNotice()
         rsp.status = StatusCode.StatusCode_OK
+        for entry in social.private_chat_offline(session.player_id):
+            offline = rsp.offline_msg.add()
+            offline.player_id = entry["player_id"]
+            offline.name = entry["name"]
+            offline.head = entry["head"]
+            offline.is_new_msg = entry["is_new_msg"]
+            offline.avatar_frame = entry["avatar_frame"]
         session.send(MsgId.PrivateChatOfflineNotice, rsp, 0)
 
         activity_state.send_login_notices(session)
@@ -275,14 +283,14 @@ class Handler(PacketHandler):
         for i in db.get_chat_history(player_id):
             if not i["msg"]:
                 continue
-                rsp = ChatMsgRecordInitNotice()
-            rsp.status = StatusCode.StatusCode_OK
-            rsp.type = i["type"]
+            history = ChatMsgRecordInitNotice()
+            history.status = StatusCode.StatusCode_OK
+            history.type = i["type"]
             for m in i["msg"]:
-                tmp = rsp.msg.add()
+                tmp = history.msg.add()
                 for k, v in m.items():
                     setattr(tmp, k, v)
-            session.send(MsgId.ChatMsgRecordInitNotice, rsp, packet_id)
+            session.send(MsgId.ChatMsgRecordInitNotice, history, packet_id)
 
         # 视为完成登录，同步场景玩家并广播加入事件
         if session.logged_in == False:

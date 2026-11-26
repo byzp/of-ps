@@ -80,7 +80,13 @@ def make_ScenePlayer(session):
     else:
         player.is_birthday = False  # 判断生日
 
+    saved_position = session.pos.get(session.scene_id)
+    saved_rotation = player.team.char1.rot.SerializeToString()
     player.team.CopyFrom(make_SceneTeam(session.player_id, char_ids))
+    if saved_position is not None:
+        player.team.char1.pos.CopyFrom(saved_position)
+    if saved_rotation:
+        player.team.char1.rot.ParseFromString(saved_rotation)
 
 
 def _fill_scene_equip(player_id, char_msg, chr):

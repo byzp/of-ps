@@ -5,10 +5,12 @@
 后台线程周期性脏检测保存, 重启不丢。
 """
 
+import copy
 import logging
 import pickle
 import threading
 import time
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ _last_snapshot = [None]
 
 # ---------------- 照片分享墙 ----------------
 photos = {}
-lock_photo = threading.Lock()
+lock_photo = threading.RLock()
 
 _next_code = [int(time.time()) * 100]  # 分享码, 用时间戳做基数避免重启后重复
 
@@ -115,15 +117,16 @@ lock_sp = threading.Lock()
 
 
 def _snapshot():
-    return {
-        "photos": photos,
-        "extra_upload_grid": extra_upload_grid,
-        "express_address": express_address,
-        "wish_lists": wish_lists,
-        "week_send_count": week_send_count,
-        "sp_state": sp_state,
-        "next_code": _next_code[0],
-    }
+    with lock_photo, lock_express, lock_wish, lock_sp:
+        return copy.deepcopy({
+            "photos": photos,
+            "extra_upload_grid": extra_upload_grid,
+            "express_address": express_address,
+            "wish_lists": wish_lists,
+            "week_send_count": week_send_count,
+            "sp_state": sp_state,
+            "next_code": _next_code[0],
+        })
 
 
 def _restore(snap: dict):
@@ -151,6 +154,15 @@ def load():
             )
     except Exception:
         logger.exception("photo_share load failed")
+    photo_directory = Path("data/photos")
+    if photo_directory.is_dir():
+        for path in photo_directory.glob("*.bin"):
+            try:
+                code = int(path.stem)
+            except ValueError:
+                continue
+            if code not in photos:
+                path.unlink(missing_ok=True)
     _start_autosave()
 
 

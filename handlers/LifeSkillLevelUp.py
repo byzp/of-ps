@@ -146,7 +146,7 @@ class Handler(PacketHandler):
 
         _n = LifeSkillLevelUpNotice()
         _n.status = StatusCode.StatusCode_OK
-        _ls = _n.life_skills
+        _ls = _n.life_skills.add()
         _ls.life_type = req.life_type
         _sk = _ls.life_skill_info.add()
         _sk.skill_id = req.skill_id

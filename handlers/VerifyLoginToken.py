@@ -19,11 +19,17 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = VerifyLoginTokenRsp()
-        rsp.status = StatusCode.StatusCode_OK
-        if not req.sdk_uid:
-            req.sdk_uid = "9000000"
+        if not req.sdk_uid or not req.sdk_uid.isdigit() or len(req.sdk_uid) > 10:
+            rsp.status = StatusCode.StatusCode_FAIL
+            session.send(MsgId.VerifyLoginTokenRsp, rsp, packet_id)
+            return
         _uid = db.get_user_id(req.sdk_uid)
         user_id = int(_uid)
+        if not 1 <= user_id <= 0xffffffff:
+            rsp.status = StatusCode.StatusCode_FAIL
+            session.send(MsgId.VerifyLoginTokenRsp, rsp, packet_id)
+            return
+        rsp.status = StatusCode.StatusCode_OK
         if Config.VERIFY_TOKEN and not db.verify_sdk_user_info(
             user_id, req.login_token
         ):
@@ -34,15 +40,16 @@ class Handler(PacketHandler):
         player_id = db.get_player_id(user_id)
         with lock_session:
             for i in session_list:
-                if i.player_id == player_id:
+                if i is not session and i.player_id == player_id:
                     rsp1 = PlayerOfflineRsp()
                     rsp1.status = StatusCode.StatusCode_OK
                     rsp1.reason = PlayerOfflineReason.PlayerOfflineReason_ANOTHER_LOGIN
                     if i.running == True and i.logged_in == True:
                         i.send(MsgId.PlayerOfflineRsp, rsp1, 0)
-                        i.running = False
-                        session_list.remove(i)
-                        break
+                    i.close()
+                    i.running = False
+                    session_list.remove(i)
+                    break
 
         session.verified = True
         session.player_id = player_id

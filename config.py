@@ -3,8 +3,9 @@ from proto.net_pb2 import EArchaeologyType, EBagItemTag, LifeType, QuestStatus
 
 class Config:
     # HTTP Server
-    HTTP_HOST = "0.0.0.0"
+    HTTP_HOST = "127.0.0.1"
     HTTP_PORT = 21000
+    HTTP_ALLOWED_ORIGINS = ()
     # RES_VERSION = "2026-10-21-14-05-50_2026-11-07-22-39-35" # cn
     RES_VERSION = "2026-10-24-12-00-58_2026-11-23-15-53-19"  # global
     RES_URL = "http://cdn-of.inutan.com/Resources;https://cdn-of.inutan.com/Resources;http://127.0.0.1:21000/Resources"
@@ -13,7 +14,7 @@ class Config:
     GAME_SERVER_GADGET_PORT = 11033
 
     # Game Server
-    GAME_SERVER_IP = "0.0.0.0"  # listen
+    GAME_SERVER_IP = "127.0.0.1"  # listen
     GAME_SERVER_PORT = 11033
 
     SESSION_POOL_MAX_WORKERS = 4
@@ -22,8 +23,9 @@ class Config:
     COMPRESS_THRESHOLD = 1200
     DEBUG_PACKET_PASS = [1007, 1008, 1203, 1206, 2201, 2202]
 
-    VERIFY_TOKEN = False
-    REJECT_PAYMENT = False  # CreatePayOrderReq
+    VERIFY_TOKEN = True
+    REJECT_PAYMENT = True  # CreatePayOrderReq
+    ALLOW_AUTO_REGISTER = False
     SKIP_QUESTS = False
 
     # 活动秘境仅在窗口内显示。
@@ -43,19 +45,17 @@ class Config:
     DUNGEON_DROP_COUNTS_BY_TIER = (1, 2, 3, 4, 5, 6)
 
     # Link Server
-    LINK_OTHER_SERVER = True
+    LINK_OTHER_SERVER = False
     SERVER_NAME = "aac"
     SELF_ADDR_IS_PUBLIC = False  # NAT 后设为 False
-    LINK_LISTEN = ("0.0.0.0", 11000)
-    SELF_ADDR = ("0.0.0.0", 11000)
-    LINK_POOL = [
-        ("139.196.113.128", 11000),
-    ]
+    LINK_LISTEN = ("127.0.0.1", 11000)
+    SELF_ADDR = ("127.0.0.1", 11000)
+    LINK_POOL = []
     LINK_POOL_CACHE = "./link_pool.json"
 
     # database
     DB_PATH = "./player.db"
-    IN_MEMORY = True  # False=落盘；True=内存库+退出快照
+    IN_MEMORY = False  # False=直接落盘；True=内存库+退出快照
 
     # Package scanning
     HANDLERS_PACKAGE = "handlers"
@@ -70,6 +70,12 @@ class Config:
     SANDBAG_MAX_HIT_PER_REQUEST = 100
     TURNTABLE_MAX_DRAW_TIMES = 10
     TURNTABLE_RECORD_PAGE_SIZE = 10
+
+    # 经济数量边界: 协议计数/物品 id 使用 uint32, BaseItem.num 使用 int64。
+    # 所有乘法、累加和配置数量在写库前检查, 禁止回绕或负余额。
+    ECONOMY_UINT32_MAX = (1 << 32) - 1
+    ECONOMY_ITEM_NUM_MAX = (1 << 63) - 1
+    ECONOMY_MAX_INSTANCE_GRANT = 100
 
     # 游戏币物品 ID。
     GAME_COIN_ITEM_ID = 117
@@ -102,6 +108,8 @@ class Config:
 
     FISHING_COST_ITEM_FALLBACK = 11
     FISHING_COST_COUNT_FALLBACK = 1
+    GATHER_POINT_REFRESH_SECONDS = 60
+    GATHER_LUCKY_CHANCE = 0.1
 
     # 生活类型到成就表的映射。
     GET_LIFE_ACHIEVE_LIFE_ITEM_FAMILIES = {
@@ -184,6 +192,7 @@ class Config:
     )
 
     MAX_DYE_SCHEME_NUM = 16
+    EQUIPMENT_PRESET_LIMIT = 3
 
     CAMPFIRE_NAMESPACE = "camp_fires"
     CAMPFIRE_TTL_MS = 3600 * 1000
@@ -200,8 +209,38 @@ class Config:
     CHAT_HISTORY_MAX = 50
     PUBLIC_CHANNELS = (0, 1)
 
+    PHOTO_MAX_BYTES = 8 * 1024 * 1024
+    PHOTO_DAILY_UPLOAD_LIMIT = 10
+
+    # 五子棋金币对局：每位玩家锁定自己申报的 coin_num，胜者拿走双方奖池，
+    # 和棋各退自己本金；不抽水、不额外生成金币。
+    GOMOKU_COIN_ITEM_ID = 101
+    GOMOKU_MAX_WAGER = 10000
+    GOMOKU_TURN_SECONDS = 15
+    # 协议没有独立的断线/和棋原因：断线按离开判负，和棋/重启退款使用 None(0)。
+    GOMOKU_DISCONNECT_GRACE_SECONDS = 15
+    GOMOKU_DRAW_OVER_REASON = 0
+    GOMOKU_RESTART_OVER_REASON = 0
+    # 关闭判负开关时保守改为和棋退款；服务重启丢失 runtime 时始终退回未结算本金。
+    GOMOKU_LEAVE_FORFEITS = True
+    GOMOKU_TIMEOUT_FORFEITS = True
+    GOMOKU_DISCONNECT_FORFEITS = True
+    GOMOKU_SINGLE_PLAYER_REWARDS = ()
+    GOMOKU_SINGLE_PLAYER_EXTRA_REWARDS = ()
+    GOMOKU_ONLINE_REWARDS = ()
+
+    MP_ROOM_REWARD_LIMITS = {
+        'score': (10, 70),
+        'extra_bonus': (10, 70),
+        'extra_mag': (10, 70),
+    }
+
+    ACTIVITY_RECALL_REWARDS = {}
+    DUNGEON_STAR_REWARDS = {}
+
     SUPPLY_BOX_COIN_ITEM_ID = 101
     SUPPLY_BOX_COIN_COUNT = 1000
+    SUPPLY_BOX_REWARDS = ((SUPPLY_BOX_COIN_ITEM_ID, SUPPLY_BOX_COIN_COUNT),)
 
     # 教程场景宝箱只掉金币。
     TUTORIAL_SCENE_ID = 100
@@ -491,6 +530,8 @@ class Config:
     GENERIC_GAME_REGION_ID = 1003
     # 本区服可见招募池。
     GACHA_VISIBLE_IDS = (1000, 4000, 103005, 2000)
+    FULL_PICK_MIN_DRAWS = 70
+    MAX_SHOP_BUY_TIMES = 100
     # 本区服景点语音。
     SCENIC_VOICE_IDS = {1002: 101}
     # 教程完成后新增的功能。
@@ -549,6 +590,8 @@ class Config:
     ITEM_MGR_INSTANCE_TAGS = (2, 3, 5, 56, 34)
     # 角色卡物品标签。
     ITEM_MGR_CARD_TAG = 7
+    # 按 item_id 唯一持有且非实例化的物品标签：收藏卡/铭文/时装/藏宝图。
+    ITEM_MGR_UNIQUE_TAGS = (7, 17, 21, 53)
 
     # 生活类型到成就表。
     LIFE_ACHIEVE_LIFE_TABLES = {
@@ -593,6 +636,8 @@ class Config:
 
     # 场景宝箱缺少刷新配置时的间隔，单位：秒；显式配置为 0 的一次性宝箱不使用此值。
     DEFAULT_SCENE_REFRESH_INTERVAL = 14400
+    # 一次性收集箱以远期时间表示永久关闭；教学箱保持官方快照的 0。
+    PERMANENT_BOX_REFRESH_TIME = 253402300799
 
     # 收藏类别对应 Level 表及等级条目；等级1起，按场景累计经验逐级扣除。
     COLLECTION_LEVEL_SHEETS = {
@@ -915,3 +960,62 @@ class Config:
             31: ((110530501, 1),),
         },
     }
+
+def _load_recall_rewards():
+    """从本地 InteractionActivity.json 生成召回活动奖励表。
+
+    资源缺失或格式不符时返回空表，保持原有“缺配置直接拒绝”的行为。
+    """
+    import json
+    import os
+
+    path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "resources", "data", "InteractionActivity.json",
+    )
+    try:
+        with open(path, encoding="utf-8-sig") as handle:
+            payload = json.load(handle)
+        rewards = {}
+        rows = payload.get("recall_activity", {}).get("datas", [])
+        for row in rows:
+            activity_id = int(row.get("i_d", 0) or 0)
+            if activity_id <= 0:
+                continue
+            for item in row.get("recall_activity_item", []):
+                condition_id = int(item.get("achieve_condition_i_d", 0) or 0)
+                if condition_id <= 0:
+                    continue
+                entries = tuple(
+                    (int(entry.get("item_i_d", 0)), int(entry.get("item_num", 0)))
+                    for entry in item.get("recall_activity_reward_item", [])
+                    if entry.get("item_i_d") and entry.get("item_num")
+                )
+                if entries:
+                    rewards[(activity_id, condition_id)] = entries
+        return rewards
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return {}
+
+
+Config.ACTIVITY_RECALL_REWARDS = _load_recall_rewards()
+
+def _load_initial_unlock_functions():
+    """私服默认解锁全部功能，避免新号因缺少解锁项无法使用商店/副本等入口。"""
+    import json
+    import os
+
+    path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "resources", "data", "PlayerUnlock.json",
+    )
+    try:
+        with open(path, encoding="utf-8-sig") as handle:
+            payload = json.load(handle)
+        rows = payload.get("player_unlock", {}).get("datas", [])
+        return tuple(int(row["i_d"]) for row in rows if row.get("i_d"))
+    except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError):
+        return ()
+
+
+Config.INITIAL_UNLOCK_FUNCTIONS = _load_initial_unlock_functions()

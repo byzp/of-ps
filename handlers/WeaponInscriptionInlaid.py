@@ -1,6 +1,5 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-
 from proto.net_pb2 import (
     WeaponInscriptionInlaidReq,
     WeaponInscriptionInlaidRsp,
@@ -9,9 +8,56 @@ from proto.net_pb2 import (
     PackNotice,
 )
 
+from server import character_growth as growth
+from utils import achieve_track
 import utils.db as db
-from utils.res_loader import res
-from utils import item_mgr
+
+
+def _load_inscription(player_id, inscription_id):
+    cfg = growth.item_config(inscription_id)
+    if cfg is None or cfg.get("new_bag_item_tag") != 17:
+        raise growth.GrowthError(StatusCode.StatusCode_CFG_NOT_FOUND)
+    blob = db.get_item_detail(player_id, inscription_id)
+    if not isinstance(blob, (bytes, bytearray)):
+        raise growth.GrowthError(StatusCode.StatusCode_ITEM_NOT_ENOUGH)
+    detail = ItemDetail()
+    try:
+        detail.ParseFromString(blob)
+    except Exception as error:
+        raise growth.GrowthError(StatusCode.StatusCode_BAD_REQ) from error
+    inscription = detail.main_item.inscription
+    if (
+        detail.main_item.WhichOneof("item") != "inscription"
+        or detail.main_item.item_id != inscription_id
+        or inscription.inscription_id != inscription_id
+        or inscription.level <= 0
+    ):
+        raise growth.GrowthError(StatusCode.StatusCode_BAD_REQ)
+    return detail
+
+
+def _inscription_cost(inscription_id, level):
+    cfg = next(
+        (
+            row
+            for row in growth.rows("Inscription", "inscription")
+            if row.get("item_i_d") == inscription_id or row.get("i_d") == inscription_id
+        ),
+        None,
+    )
+    groups = cfg.get("inscription_group_info", ()) if cfg else ()
+    group = next(
+        (row for row in groups if isinstance(row, dict) and row.get("level") == level),
+        None,
+    )
+    if group is None:
+        raise growth.GrowthError(StatusCode.StatusCode_CFG_NOT_FOUND)
+    costs = [(101, int(group.get("need_gold_count", 0) or 0))]
+    costs.extend(
+        (int(entry.get("need_item_i_d", 0) or 0), int(entry.get("item_count", 0) or 0))
+        for entry in group.get("inscription_need_item", ()) or ()
+    )
+    return growth.normalize_costs(cost for cost in costs if cost[0] and cost[1])
 
 
 @packet_handler(MsgId.WeaponInscriptionInlaidReq)
@@ -19,124 +65,90 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = WeaponInscriptionInlaidReq()
         req.ParseFromString(data)
-
-        rsp = WeaponInscriptionInlaidRsp()
-        rsp.status = StatusCode.StatusCode_OK
-
-        if not req.weapon_instance_id:
-            rsp.status = StatusCode.StatusCode_BAD_REQ
-            session.send(MsgId.WeaponInscriptionInlaidRsp, rsp, packet_id)
-            return
-        weapon_b = db.get_item_detail(session.player_id, None, req.weapon_instance_id)
-        if not weapon_b:
-            rsp.status = StatusCode.StatusCode_BAD_REQ
-            session.send(MsgId.WeaponInscriptionInlaidRsp, rsp, packet_id)
-            return
-        weapon_item = ItemDetail()
-        weapon_item.ParseFromString(weapon_b)
-
-        # 归属校验: 玩家必须拥有该铭刻(铭刻按 item_id 存于 items 表, 见 pb_create.make_item)
-        ins_b = db.get_item_detail(session.player_id, req.inscription_id)
-        if not ins_b:
-            rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
-            session.send(MsgId.WeaponInscriptionInlaidRsp, rsp, packet_id)
-            return
-        ins_item = ItemDetail()
-        ins_item.ParseFromString(ins_b)
-
-        rsp1 = PackNotice()
-        rsp1.status = StatusCode.StatusCode_OK
-
-        # 目标武器上的旧铭刻解除绑定
-        old_id = weapon_item.main_item.weapon.inscription1
-        if old_id and old_id != req.inscription_id:
-            old_b = db.get_item_detail(session.player_id, old_id)
-            if old_b:
-                old_item = ItemDetail()
-                old_item.ParseFromString(old_b)
-                old_item.main_item.inscription.weapon_instance_id = 0
-                db.set_item_detail(
-                    session.player_id, old_item.SerializeToString(), old_id
+        rsp = WeaponInscriptionInlaidRsp(status=StatusCode.StatusCode_OK)
+        notice = PackNotice(status=StatusCode.StatusCode_OK)
+        cost_notice = PackNotice(status=StatusCode.StatusCode_OK)
+        has_cost = False
+        try:
+            with growth.transaction(session.player_id):
+                weapon = growth.load_owned_instance(
+                    session.player_id, req.weapon_instance_id, "weapon"
                 )
-                rsp.inscriptions.add().CopyFrom(old_item.main_item.inscription)
-                rsp.items.add().CopyFrom(old_item)
-                rsp1.items.add().CopyFrom(old_item)
+                inscription = _load_inscription(session.player_id, req.inscription_id)
+                weapon_state = weapon.main_item.weapon
+                inscription_state = inscription.main_item.inscription
+                old_id = int(weapon_state.inscription1 or 0)
+                previous_host = int(inscription_state.weapon_instance_id or 0)
+                if (old_id == req.inscription_id) != (previous_host == req.weapon_instance_id):
+                    raise growth.GrowthError(StatusCode.StatusCode_BAD_REQ)
 
-        # 该铭刻若已镶在别的武器上, 先清空旧宿主武器的铭刻槽(一铭刻一武器)
-        prev_weapon_id = ins_item.main_item.inscription.weapon_instance_id
-        if prev_weapon_id and prev_weapon_id != req.weapon_instance_id:
-            prev_b = db.get_item_detail(session.player_id, None, prev_weapon_id)
-            if prev_b:
-                prev_item = ItemDetail()
-                prev_item.ParseFromString(prev_b)
-                prev_item.main_item.weapon.inscription1 = 0
+                changed_inscriptions = []
+                previous_weapon = None
+                if old_id and old_id != req.inscription_id:
+                    old = _load_inscription(session.player_id, old_id)
+                    if old.main_item.inscription.weapon_instance_id != req.weapon_instance_id:
+                        raise growth.GrowthError(StatusCode.StatusCode_BAD_REQ)
+                    old.main_item.inscription.weapon_instance_id = 0
+                    changed_inscriptions.append(old)
+                if previous_host and previous_host != req.weapon_instance_id:
+                    previous_weapon = growth.load_owned_instance(
+                        session.player_id, previous_host, "weapon"
+                    )
+                    if previous_weapon.main_item.weapon.inscription1 != req.inscription_id:
+                        raise growth.GrowthError(StatusCode.StatusCode_BAD_REQ)
+                    previous_weapon.main_item.weapon.inscription1 = 0
+
+                if old_id != req.inscription_id:
+                    costs = _inscription_cost(req.inscription_id, inscription_state.level)
+                    has_cost = bool(costs)
+                    growth.consume(session.player_id, costs, cost_notice)
+                    weapon_state.inscription1 = req.inscription_id
+                    inscription_state.weapon_instance_id = req.weapon_instance_id
+
+                if previous_weapon is not None:
+                    db.set_item_detail(
+                        session.player_id,
+                        previous_weapon.SerializeToString(),
+                        None,
+                        previous_host,
+                    )
+                    rsp.weapon_instances.add().CopyFrom(previous_weapon.main_item.weapon)
+                    rsp.items.add().CopyFrom(previous_weapon)
+                    notice.items.add().CopyFrom(previous_weapon)
+                for changed in changed_inscriptions:
+                    changed_id = changed.main_item.item_id
+                    db.set_item_detail(
+                        session.player_id, changed.SerializeToString(), changed_id
+                    )
+                    rsp.inscriptions.add().CopyFrom(changed.main_item.inscription)
+                    rsp.items.add().CopyFrom(changed)
+                    notice.items.add().CopyFrom(changed)
                 db.set_item_detail(
                     session.player_id,
-                    prev_item.SerializeToString(),
+                    weapon.SerializeToString(),
                     None,
-                    prev_weapon_id,
+                    req.weapon_instance_id,
                 )
-                rsp.weapon_instances.add().CopyFrom(prev_item.main_item.weapon)
-                rsp.items.add().CopyFrom(prev_item)
-                rsp1.items.add().CopyFrom(prev_item)
-
-        # 镶嵌消耗(Inscription.inscription level=1: 金币 + 材料), 未配置则免耗
-        _cfg = next(
-            (
-                c
-                for c in res.get("Inscription", {})
-                .get("inscription", {})
-                .get("datas", [])
-                if c.get("item_i_d") == req.inscription_id
-            ),
-            None,
-        )
-        _lv1 = next(
-            (
-                g
-                for g in (_cfg or {}).get("inscription_group_info", ()) or ()
-                if int(g.get("level", 0)) == 1
-            ),
-            None,
-        )
-        rsp2 = PackNotice()
-        rsp2.status = StatusCode.StatusCode_OK
-        if _lv1:
-            _needs = [(101, int(_lv1.get("need_gold_count", 0)))]
-            for ni in _lv1.get("inscription_need_item", ()) or ():
-                _needs.append(
-                    (int(ni.get("need_item_i_d", 0)), int(ni.get("item_count", 0)))
+                db.set_item_detail(
+                    session.player_id, inscription.SerializeToString(), req.inscription_id
                 )
-            item_mgr.consume_items(
-                session.player_id,
-                [x for x in _needs if x[0]],
-                pack_notice=rsp2,
-                session=session,
-            )
+                rsp.weapon_instances.add().CopyFrom(weapon_state)
+                rsp.inscriptions.add().CopyFrom(inscription_state)
+                rsp.items.add().CopyFrom(weapon)
+                rsp.items.add().CopyFrom(inscription)
+                notice.items.add().CopyFrom(weapon)
+                notice.items.add().CopyFrom(inscription)
+        except growth.GrowthError as error:
+            rsp.status = error.status
+            session.send(MsgId.WeaponInscriptionInlaidRsp, rsp, packet_id)
+            return
 
-        # 武器记录铭刻
-        weapon_item.main_item.weapon.inscription1 = req.inscription_id
-        db.set_item_detail(
-            session.player_id,
-            weapon_item.SerializeToString(),
-            None,
-            req.weapon_instance_id,
-        )
-        rsp.weapon_instances.add().CopyFrom(weapon_item.main_item.weapon)
-        rsp.items.add().CopyFrom(weapon_item)
-        rsp1.items.add().CopyFrom(weapon_item)
-
-        # 铭刻物品记录所镶嵌武器
-        ins_item.main_item.inscription.inscription_id = req.inscription_id
-        ins_item.main_item.inscription.weapon_instance_id = req.weapon_instance_id
-        db.set_item_detail(
-            session.player_id, ins_item.SerializeToString(), req.inscription_id
-        )
-        rsp.inscriptions.add().CopyFrom(ins_item.main_item.inscription)
-        rsp.items.add().CopyFrom(ins_item)
-        rsp1.items.add().CopyFrom(ins_item)
-
-        session.send(MsgId.WeaponInscriptionInlaidRsp, rsp, packet_id)  # 1701,1702
-        session.send(MsgId.PackNotice, rsp1, 0)
-        if _lv1:
-            session.send(MsgId.PackNotice, rsp2, 0)
+        session.send(MsgId.WeaponInscriptionInlaidRsp, rsp, packet_id)
+        if notice.items:
+            session.send(MsgId.PackNotice, notice, 0)
+        if has_cost and cost_notice.items:
+            session.send(MsgId.PackNotice, cost_notice, 0)
+            costs = _inscription_cost(req.inscription_id, rsp.inscriptions[-1].level)
+            coin = sum(count for item_id, count in costs if item_id == 101)
+            if coin:
+                achieve_track.report(session, "spend_coin", amount=coin)

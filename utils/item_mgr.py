@@ -4,6 +4,7 @@ from config import Config
 
 import logging
 import threading
+from contextlib import contextmanager
 
 from proto.net_pb2 import (
     Character,
@@ -24,71 +25,214 @@ from utils.res_loader import res
 
 logger = logging.getLogger(__name__)
 
-_locks = {}  # player_id -> threading.Lock
+_locks = {}  # player_id -> threading.RLock
+
+
+class EconomyConfigError(ValueError):
+    """经济配置缺失或非法; 调用方必须拒绝本次请求。"""
 
 
 def player_lock(player_id):
     """该玩家的物品读改写锁; 特殊收支(如封顶发放)自行 with 后直读 db"""
-    return _locks.setdefault(player_id, threading.Lock())
+    return _locks.setdefault(player_id, threading.RLock())
+
+
+def _resource_rows(sheet, table):
+    section = res.get(sheet, {}).get(table, {})
+    rows = section.get("datas", ()) if isinstance(section, dict) else ()
+    return rows if isinstance(rows, (list, tuple)) else ()
+
+
+def item_config(item_id):
+    """返回权威 Item 配置; 不存在时拒绝, 不构造虚构物品。"""
+    if isinstance(item_id, bool) or not isinstance(item_id, int):
+        raise EconomyConfigError("item id must be an integer")
+    if not 0 < item_id <= Config.ECONOMY_UINT32_MAX:
+        raise EconomyConfigError("item id is outside uint32")
+    row = next(
+        (row for row in _resource_rows("Item", "item") if row.get("i_d") == item_id),
+        None,
+    )
+    if row is None:
+        raise EconomyConfigError(f"missing Item config: {item_id}")
+    return row
+
+
+def character_config(item_id):
+    try:
+        item_config(item_id)
+    except EconomyConfigError:
+        pass
+    row = next(
+        (
+            row
+            for row in _resource_rows("Character", "character")
+            if row.get("i_d") == item_id
+        ),
+        None,
+    )
+    if row is None:
+        raise EconomyConfigError(f"missing Character config: {item_id}")
+    return row
+
+
+def validate_item_id(item_id):
+    """物品或角色均可发放, 但必须在权威表中存在。"""
+    try:
+        return item_config(item_id)
+    except EconomyConfigError:
+        return character_config(item_id)
+
+
+def validate_stackable_item_id(item_id):
+    row = item_config(item_id)
+    if row.get("new_bag_item_tag") in Config.ITEM_MGR_INSTANCE_TAGS:
+        raise EconomyConfigError(f"item is not stackable: {item_id}")
+    if _is_character_item(item_id):
+        raise EconomyConfigError(f"character is not stackable: {item_id}")
+    return row
+
+
+def validate_count(num, *, allow_zero=False, label="item count"):
+    if isinstance(num, bool) or not isinstance(num, int):
+        raise EconomyConfigError(f"{label} must be an integer")
+    if num < 0 or (num == 0 and not allow_zero):
+        raise EconomyConfigError(f"{label} must be positive")
+    if num > Config.ECONOMY_ITEM_NUM_MAX:
+        raise EconomyConfigError(f"{label} is outside int64")
+    return num
+
+
+def validate_counter(value, *, allow_zero=True, label="counter"):
+    validate_count(value, allow_zero=allow_zero, label=label)
+    if value > Config.ECONOMY_UINT32_MAX:
+        raise EconomyConfigError(f"{label} is outside uint32")
+    return value
+
+
+def checked_add(left, right, *, limit=None):
+    validate_count(left, allow_zero=True, label="stored amount")
+    validate_count(right, label="delta")
+    result = left + right
+    if result > (Config.ECONOMY_ITEM_NUM_MAX if limit is None else limit):
+        raise EconomyConfigError("economy amount overflow")
+    return result
+
+
+def checked_mul(left, right, *, limit=None):
+    validate_count(left, label="multiplier")
+    validate_count(right, label="multiplicand")
+    result = left * right
+    if result > (Config.ECONOMY_ITEM_NUM_MAX if limit is None else limit):
+        raise EconomyConfigError("economy multiplication overflow")
+    return result
+
+
+def validate_rewards(reward_list):
+    """在任何写库前验证整批奖励; 0 数量无副作用, 负数/未知物品拒绝。"""
+    validated = []
+    for entry in reward_list:
+        if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+            raise EconomyConfigError("reward must be (item_id, count)")
+        item_id, num = entry
+        validate_item_id(item_id)
+        validate_count(num, allow_zero=True)
+        if num == 0:
+            continue
+        row = item_config(item_id) if not _is_character_item(item_id) else None
+        if row and row.get("new_bag_item_tag") in Config.ITEM_MGR_INSTANCE_TAGS:
+            if num > Config.ECONOMY_MAX_INSTANCE_GRANT:
+                raise EconomyConfigError("too many instance rewards")
+        if _is_character_item(item_id):
+            cfg = character_config(item_id)
+            repeat_id = int(cfg.get("repeat_item_i_d", 0) or 0)
+            validate_stackable_item_id(repeat_id)
+            if num != 1:
+                raise EconomyConfigError("character reward count must be one")
+        validated.append((item_id, num))
+    return tuple(validated)
+
+
+@contextmanager
+def _player_transaction(player_id):
+    """玩家锁 → DB transaction; 已持有同一 RLock 时只嵌套事务。"""
+    lock = player_lock(player_id)
+    owned = False
+    try:
+        owned = isinstance(lock, type(threading.RLock())) and lock._is_owned()
+    except AttributeError:
+        pass
+    if owned:
+        with db.transaction():
+            yield
+    else:
+        with lock, db.transaction():
+            yield
 
 
 def _load(player_id, item_id):
-    """锁内使用: 读出或构造 ItemDetail(带资源缺失兜底)"""
+    """锁内使用: 读取或按权威配置构造 ItemDetail。"""
+    validate_stackable_item_id(item_id)
     detail = ItemDetail()
     raw = db.get_item_detail(player_id, item_id)
     if raw:
         detail.ParseFromString(raw)
     else:
-        make_item(item_id, 0, player_id, detail)
-        if detail.main_item.WhichOneof("item") is None:
-            detail.main_item.item_id = item_id
-            detail.main_item.base_item.item_id = item_id
+        made = make_item(item_id, 0, player_id, detail)
+        if not isinstance(made, ItemDetail) or detail.main_item.item_id != item_id:
+            raise EconomyConfigError(f"cannot construct Item config: {item_id}")
+        if detail.main_item.WhichOneof("item") != "base_item":
+            raise EconomyConfigError(f"item is not stackable: {item_id}")
+    if detail.main_item.WhichOneof("item") != "base_item":
+        raise EconomyConfigError(f"stored item is not stackable: {item_id}")
+    validate_count(detail.main_item.base_item.num, allow_zero=True)
     mark_new_item(player_id, detail)
     return detail
 
 
 def get_num(player_id, item_id):
-    """当前持有数量"""
-    raw = db.get_item_detail(player_id, item_id)
-    if not raw:
-        return 0
-    detail = ItemDetail()
-    detail.ParseFromString(raw)
-    return detail.main_item.base_item.num
+    """当前持有数量。"""
+    validate_stackable_item_id(item_id)
+    with player_lock(player_id):
+        raw = db.get_item_detail(player_id, item_id)
+        if not raw:
+            return 0
+        detail = ItemDetail()
+        detail.ParseFromString(raw)
+        if detail.main_item.WhichOneof("item") != "base_item":
+            raise EconomyConfigError(f"stored item is not stackable: {item_id}")
+        num = detail.main_item.base_item.num
+        validate_count(num, allow_zero=True, label="stored amount")
+        return num
 
 
 def grant_character(player_id, char_id, item, pack_notice=None) -> bool:
-    """获得角色: 未拥有则入库并填入 item(角色分支), 返回 False;
-    已拥有则按 Character.repeat_item_i_d 转换为碎片填入 item, 返回 True。"""
-    _mark_got(player_id, char_id)
-    owned = False
-    for blob in db.get_characters(player_id):
-        c = Character()
-        c.ParseFromString(blob)
-        if c.character_id == char_id:
-            owned = True
-            break
+    """获得角色; 重复角色严格按 repeat_item_i_d 转换, 无配置回退。"""
+    cfg = character_config(char_id)
+    repeat_id = int(cfg.get("repeat_item_i_d", 0) or 0)
+    validate_stackable_item_id(repeat_id)
+    with _player_transaction(player_id):
+        _mark_got(player_id, char_id)
+        owned = any(
+            Character.FromString(blob).character_id == char_id
+            for blob in db.get_characters(player_id)
+        )
+        if not owned:
+            known_items = set(db.get_claimed(player_id, "got_ids"))
+            item.main_item.item_id = char_id
+            item.main_item.item_tag = EBagItemTag.EBagItemTag_Card
+            db.add_character(player_id, char_id, item.main_item.character)
+            if item.main_item.character.character_id != char_id:
+                raise EconomyConfigError(f"cannot construct Character config: {char_id}")
+            item.main_item.is_new = True
+            if pack_notice is not None:
+                _append_character_default_items(
+                    player_id, item.main_item.character, pack_notice, known_items
+                )
+            return False
 
-    if not owned:
-        known_items = set(db.get_claimed(player_id, "got_ids"))
-        item.main_item.item_id = char_id
-        item.main_item.item_tag = EBagItemTag.EBagItemTag_Card
-        db.add_character(player_id, char_id, item.main_item.character)
-        item.main_item.is_new = True
-        if pack_notice is not None:
-            _append_character_default_items(
-                player_id, item.main_item.character, pack_notice, known_items
-            )
-        return False
-
-    # 重复角色 → 碎片(Character.repeat_item_i_d), 缺配置回退金币101
-    repeat = 0
-    for e in res["Character"]["character"]["datas"]:
-        if e.get("i_d") == char_id:
-            repeat = int(e.get("repeat_item_i_d", 0) or 0)
-            break
-    item.CopyFrom(grant_single_item(player_id, repeat or 101, 1))
-    return True
+        item.CopyFrom(grant_single_item(player_id, repeat_id, 1))
+        return True
 
 
 _item_tags = None
@@ -97,10 +241,12 @@ _item_tags = None
 def _tag_of(item_id):
     global _item_tags
     if _item_tags is None:
+        rows = res.get("Item", {}).get("item", {}).get("datas", ())
         _item_tags = {
             e.get("i_d"): e.get("new_bag_item_tag")
-            for e in res.get("Item", {}).get("item", {}).get("datas", ())
-        }
+            for e in rows
+            if isinstance(e, dict)
+        } if isinstance(rows, (list, tuple)) else {}
     return _item_tags.get(item_id)
 
 
@@ -113,7 +259,7 @@ def _unlock_item_ids():
     """PlayerUnlock 中作为背包道具发放的 id。"""
     global _player_unlock_item_ids
     if _player_unlock_item_ids is None:
-        rows = res["PlayerUnlock"]["player_unlock"]["datas"]
+        rows = _resource_rows("PlayerUnlock", "player_unlock")
         _player_unlock_item_ids = {
             row["item_i_d"]
             for row in rows
@@ -210,22 +356,33 @@ def _append_character_default_items(player_id, character, pack_notice, known_ite
 
 
 def grant_single_item(player_id, item_id, num=1, pack_notice=None, rsp_items=None):
-    """礼包/商店等奖励的安全发放入口:
-    可堆叠物品合并入背包; 实例类(武器/映像/防具等)新分配 instance_id 单独落库。"""
+    """安全发放入口: 堆叠物品累加, 实例物品逐件分配并落库。"""
+    validate_count(num)
+    row = validate_item_id(item_id)
+    if _is_character_item(item_id):
+        raise EconomyConfigError("character rewards must use grant_character")
+    if row.get("new_bag_item_tag") in Config.ITEM_MGR_INSTANCE_TAGS and num != 1:
+        raise EconomyConfigError("instance reward count must be one")
     detail = ItemDetail()
-    with player_lock(player_id):
+    with _player_transaction(player_id):
         raw = db.get_item_detail(player_id, item_id)
         if raw:
             detail.ParseFromString(raw)
+            if detail.main_item.WhichOneof("item") != "base_item":
+                # 唯一物品（时装/铭文/收藏卡等）已持有：幂等返回，不再生成第二件。
+                return detail
+            validate_count(detail.main_item.base_item.num, allow_zero=True)
         gained_new = _mark_got(player_id, item_id)
-        if raw and not _is_instance(detail):
-            # 可堆叠: 数量合并
-            if detail.main_item.WhichOneof("item") == "base_item":
-                detail.main_item.base_item.num += num
+        if raw:
+            detail.main_item.base_item.num = checked_add(
+                detail.main_item.base_item.num, num
+            )
             detail.main_item.is_new = gained_new
             db.set_item_detail(player_id, detail.SerializeToString(), item_id, None)
         else:
-            make_item(item_id, num, player_id, detail)
+            made = make_item(item_id, num, player_id, detail)
+            if not isinstance(made, ItemDetail) or detail.main_item.item_id != item_id:
+                raise EconomyConfigError(f"cannot construct Item config: {item_id}")
             detail.main_item.is_new = gained_new
             which = detail.main_item.WhichOneof("item")
             if which and _is_instance(detail):
@@ -235,8 +392,10 @@ def grant_single_item(player_id, item_id, num=1, pack_notice=None, rsp_items=Non
                     None,
                     getattr(detail.main_item, which).instance_id,
                 )
-            else:
+            elif which in ("base_item", "outfit", "inscription", "character"):
                 db.set_item_detail(player_id, detail.SerializeToString(), item_id, None)
+            else:
+                raise EconomyConfigError(f"unsupported Item config: {item_id}")
 
     if rsp_items is not None or pack_notice is not None:
         if rsp_items is not None:
@@ -265,19 +424,10 @@ def grant_items(
     session=None,
     unlock_function_ids=None,
 ):
-    """发放 [(item_id, num), ...]。
-
-    rsp_items:    Rsp 中的 repeated ItemDetail, 每条填 num=本次获得数量(展示用)
-    pack_notice:  PackNotice, items 填叠加后的背包总量(同步背包用);
-                  传 None 且给了 session 时自动构造并 session.send(PackNotice)
-    session:      仅用于自动推送 PackNotice
-    unlock_function_ids: None 表示按 reward_list 中的 PlayerUnlock 道具自动
-                         开启功能；传入序列时只开启该序列(用于初始教程
-                         奖励中同时存在“道具已发放但功能不新增”的条目)
-    返回 [叠加后的 ItemDetail, ...]
-    """
+    """原子发放 [(item_id, num), ...]; 整批配置和数量先验证再写库。"""
+    rewards = validate_rewards(tuple(reward_list or ()))
     totals = []
-    if not reward_list:
+    if not rewards:
         return totals
     unlock_order = None
     if unlock_function_ids is None:
@@ -291,32 +441,35 @@ def grant_items(
         auto_notice = PackNotice()
         auto_notice.status = StatusCode.StatusCode_OK
         pack_notice = auto_notice
-    # 不可叠加条目先在锁外路由(grant_single_item 自带同把玩家锁,
-    # 不可重入, 禁止在锁内调用): 角色走角色表, 实例分配 instance_id。
-    stackables = []
-    for item_id, num in reward_list:
-        if not item_id or num <= 0:
-            continue
-        if item_id in unlock_candidates and item_id not in unlock_ids:
-            unlock_ids.append(item_id)
-        if _is_character_item(item_id):
-            det = ItemDetail()
-            grant_character(
-                player_id,
-                item_id,
-                det,
-                pack_notice=pack_notice,
-            )
-            totals.append(det)
-            if rsp_items is not None:
-                gain = ItemDetail()
-                gain.CopyFrom(det)
-                rsp_items.add().CopyFrom(gain)
-            if pack_notice is not None:
-                pack_notice.items.add().CopyFrom(det)
-            continue
-        if _tag_of(item_id) in Config.ITEM_MGR_INSTANCE_TAGS:
-            for _ in range(num):
+    level_exp = None
+    new_abilities = []
+    new_unlocks = []
+    with _player_transaction(player_id):
+        stackables = []
+        for item_id, num in rewards:
+            if item_id in unlock_candidates and item_id not in unlock_ids:
+                unlock_ids.append(item_id)
+            if _is_character_item(item_id):
+                det = ItemDetail()
+                grant_character(player_id, item_id, det, pack_notice=pack_notice)
+                totals.append(det)
+                if rsp_items is not None:
+                    rsp_items.add().CopyFrom(det)
+                if pack_notice is not None:
+                    pack_notice.items.add().CopyFrom(det)
+            elif _tag_of(item_id) in Config.ITEM_MGR_INSTANCE_TAGS:
+                for _ in range(num):
+                    totals.append(
+                        grant_single_item(
+                            player_id,
+                            item_id,
+                            1,
+                            pack_notice=pack_notice,
+                            rsp_items=rsp_items,
+                        )
+                    )
+            elif _tag_of(item_id) in Config.ITEM_MGR_UNIQUE_TAGS:
+                # 唯一物品按 item_id 持有，重复奖励幂等，不按堆叠数量累加。
                 totals.append(
                     grant_single_item(
                         player_id,
@@ -326,16 +479,14 @@ def grant_items(
                         rsp_items=rsp_items,
                     )
                 )
-            continue
-        stackables.append((item_id, num))
-    level_exp = None
-    ability_ids = {
-        row["need_item_i_d"]: row["i_d"] for row in res["Ability"]["ability"]["datas"]
-    }
-    new_abilities = []
-    with player_lock(player_id):
+            else:
+                stackables.append((item_id, num))
+        ability_ids = {
+            row["need_item_i_d"]: row["i_d"]
+            for row in _resource_rows("Ability", "ability")
+            if row.get("need_item_i_d")
+        }
         for item_id, num in stackables:
-            # 玩家经验(1): 同步入玩家等级并推送 PlayerLevelExpNotice
             if item_id == 1 and session is not None:
                 level_exp = db.add_player_exp(player_id, num)
             detail = _load(player_id, item_id)
@@ -345,35 +496,36 @@ def grant_items(
                 if db.get_kv(player_id, "ability", ability_id) is None:
                     db.set_kv(player_id, "ability", ability_id, 0)
                     new_abilities.append(ability_id)
-            if detail.main_item.WhichOneof("item") == "base_item":
-                detail.main_item.base_item.num += num
+            detail.main_item.base_item.num = checked_add(
+                detail.main_item.base_item.num, num
+            )
             db.set_item_detail(player_id, detail.SerializeToString(), item_id, None)
             totals.append(detail)
             if rsp_items is not None:
                 gain = ItemDetail()
                 gain.CopyFrom(detail)
-                if gain.main_item.WhichOneof("item") == "base_item":
-                    gain.main_item.base_item.num = num
+                gain.main_item.base_item.num = num
                 gain.main_item.is_new = gained_new
                 rsp_items.add().CopyFrom(gain)
             if pack_notice is not None:
                 pack_notice.items.add().CopyFrom(detail)
+        if unlock_order is not None:
+            unlock_ids = [
+                function_id for function_id in unlock_order if function_id in unlock_ids
+            ]
+        if unlock_ids:
+            new_unlocks = db.add_unlock_functions(player_id, unlock_ids)
+
+    # 通知和成就只在数据库提交后执行, 不参与经济写入的回滚边界。
     if level_exp is not None:
         notice = PlayerLevelExpNotice()
         notice.status = StatusCode.StatusCode_OK
         notice.level, notice.exp = level_exp
         session.send(MsgId.PlayerLevelExpNotice, notice, 0)
-        # 成就: 玩家等级达到X级(事件层状态判定, 35/36 由 achieve_track 归族)
         achieve_track.report(session, "player_level", level=level_exp[0])
-    # 物品已落库且玩家物品锁已释放后再推进任务, 避免任务即时奖励重入该锁。
     if session is not None:
-        for item_id, num in reward_list:
+        for item_id, num in rewards:
             achieve_track.report(session, "gain_item", match=item_id, amount=num)
-    if unlock_order is not None:
-        unlock_ids = [
-            function_id for function_id in unlock_order if function_id in unlock_ids
-        ]
-    new_unlocks = db.add_unlock_functions(player_id, unlock_ids)
     if session is not None and new_unlocks:
         for function_id in new_unlocks:
             unlock_notice = PlayerUnlockFunctionNotice()
@@ -451,19 +603,23 @@ def pickup_rewards(session, items, rsp_items, pack_notice, to_inventory=False):
 
 
 def consume_items(player_id, cost_list, pack_notice=None, session=None):
-    """扣除 [(item_id, num), ...]: 先整体校验后统一落库(要么全扣要么不扣)。
+    """原子扣除 [(item_id, num), ...]; 同种合并, 任一不足则全部不扣。
 
-    同种物品多条会先合并。足够则扣除并返回 True(pack_notice 填扣除后总量);
-    任一不足返回 False 且不产生任何扣除。
+    0 数量保留为内部无消耗语义; 负数、未知物品和溢出数量直接拒绝。
     """
+    costs = tuple(cost_list or ())
     merged = {}
-    for item_id, num in cost_list:
-        if not item_id or num <= 0:
-            continue
-        merged[item_id] = merged.get(item_id, 0) + num
+    for entry in costs:
+        if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+            raise EconomyConfigError("cost must be (item_id, count)")
+        item_id, num = entry
+        validate_stackable_item_id(item_id)
+        validate_count(num, allow_zero=True)
+        if num:
+            merged[item_id] = checked_add(merged.get(item_id, 0), num)
     if not merged:
         return True
-    with player_lock(player_id):
+    with _player_transaction(player_id):
         details = {}
         for item_id, need in merged.items():
             raw = db.get_item_detail(player_id, item_id)
@@ -471,7 +627,11 @@ def consume_items(player_id, cost_list, pack_notice=None, session=None):
                 return False
             detail = ItemDetail()
             detail.ParseFromString(raw)
-            if detail.main_item.base_item.num < need:
+            if detail.main_item.WhichOneof("item") != "base_item":
+                raise EconomyConfigError(f"stored item is not stackable: {item_id}")
+            current = detail.main_item.base_item.num
+            validate_count(current, allow_zero=True, label="stored amount")
+            if current < need:
                 return False
             details[item_id] = detail
         for item_id, need in merged.items():
@@ -482,7 +642,7 @@ def consume_items(player_id, cost_list, pack_notice=None, session=None):
             if pack_notice is not None:
                 pack_notice.items.add().CopyFrom(detail)
     if session is not None:
-        for item_id, num in cost_list:
+        for item_id, num in costs:
             if item_id == 101 and num > 0:
                 achieve_track.report(session, "spend_coin", amount=num)
     return True

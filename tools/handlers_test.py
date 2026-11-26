@@ -321,7 +321,14 @@ def phase_profile(s1):
     run(P, s1, "ChangeIsHideBirthdayReq", {}, None, "隐藏生日×1")
     run(P, s1, "ChangeIsHideBirthdayReq", {}, None, "隐藏生日×2还原")
     run(P, s1, "UnlockHeadListReq", {}, ["OK"], "头像解锁列表")
-    run(P, s1, "AccountNameBindingCancelReq", {}, ["OK"], "取消账号绑定")
+    run(
+        P,
+        s1,
+        "AccountNameBindingCancelReq",
+        {},
+        ["OK", "ACCOUNT_NAME_NOT_BIND"],
+        "取消账号绑定",
+    )
 
 
 def phase_ability_life(s1):
@@ -463,7 +470,7 @@ def phase_world_collect(s1):
         P,
         s1,
         "CollectingReq",
-        {"item_id": 90001},
+        {"item_id": 10199001},
         ["OK", "ALREADY_COLLECTED"],
         "收集点",
     )
@@ -483,7 +490,7 @@ def phase_world_collect(s1):
         None,
         "拾取宝箱奖励",
     )
-    run(P, s1, "CollectionRewardReq", {"item_id": 90001}, None, "收集里程碑")
+    run(P, s1, "CollectionRewardReq", {"item_id": 10199001}, None, "收集里程碑")
     run(P, s1, "GetCollectItemIdsReq", {}, ["OK"], "收集品id列表")
     run(P, s1, "GetCollectMoonInfoReq", {"scene_id": 1}, ["OK"], "月亮收集信息")
     run(P, s1, "CollectMoonReq", {"moon_id": CTX["moon_id"]}, None, "收集月亮")
@@ -751,7 +758,7 @@ def phase_bag_equip(s1):
         s1,
         "ItemUseReq",
         {"item_id": 999999, "num": 1},
-        ["ITEM_NOT_ENOUGH"],
+        ["ITEM_NOT_ENOUGH", "CFG_NOT_FOUND"],
         "用不存在物品",
     )
     run(
@@ -1150,7 +1157,7 @@ def phase_dungeon_bossrush(s1):
         P,
         s1,
         "DungeonEnterReq",
-        {"char1": 1001, "dungeon_id": did},
+        {"char1": 101001, "dungeon_id": did},
         ["OK", "FAIL", "ITEM_NOT_ENOUGH", "CFG_NOT_FOUND", "PLAYER_LEVEL_LIMIT"],
         "进入副本",
     )
@@ -1722,6 +1729,7 @@ def phase_achieve_flow(s1):
         )
         # 一次性不可刷新收集宝箱: 特殊奖励 + 永久关闭 + 计入探索度
         pt = 0
+        pt_index = 0
         _ctb = {
             r["i_d"]: r
             for r in rl.res["TreasureBox"]["collection_treasure_box"]["datas"]
@@ -1729,15 +1737,16 @@ def phase_achieve_flow(s1):
         for _sc in rl.res["ScenesConfigAsset"]["Scenes"]:
             if _sc.get("ID") != 1002 or pt:
                 continue
-            for c in _sc.get("CollectionTreasureInfos") or ():
+            for _pos, c in enumerate(_sc.get("CollectionTreasureInfos") or ()):
                 b = _ctb.get(c.get("ID"))
                 if b and tuple(b.get("refresh_time") or ()) == (0,):
                     pt = c["ID"]
+                    pt_index = c.get("Index", _pos)
                     break
         if pt:
             rsp = cap(
                 "TreasureBoxOpenReq",
-                {"box_type": CTX["box_type"], "treasure_box_index": pt, "loc_type": 1},
+                {"box_type": CTX["box_type"], "treasure_box_index": pt_index, "loc_type": 0},
                 f"一次性收集箱({pt})",
             )
             if rsp is not None:
@@ -1770,12 +1779,18 @@ def phase_achieve_flow(s1):
         ["OK"],
         "切至深渊10201",
     )
-    if rsp is not None and status_name(rsp) == "StatusCode_OK":
+    abyss_scene = next(
+        (row for row in rl.res["ScenesConfigAsset"]["Scenes"] if row.get("ID") == 10201),
+        None,
+    )
+    abyss_boxes = (abyss_scene or {}).get("CollectionTreasureInfos") or ()
+    if rsp is not None and status_name(rsp) == "StatusCode_OK" and abyss_boxes:
+        box_index = abyss_boxes[0].get("Index", 0)
         rsp = run(
             P,
             s1,
             "TreasureBoxOpenReq",
-            {"box_type": CTX["box_type"], "treasure_box_index": 3001, "loc_type": 1},
+            {"box_type": CTX["box_type"], "treasure_box_index": box_index, "loc_type": 1},
             ["OK"],
             "深渊开箱(战利品区分场景)",
         )
@@ -1792,7 +1807,7 @@ def phase_achieve_flow(s1):
             "切回主场景",
         )
     else:
-        g_log("深渊场景切换失败, 跳过", True)
+        g_log("深渊场景无宝箱配置, 跳过", True)
 
     # 汇总: 全程至少应有一条成就计数通知(计数型目标未饱和时必然推送)
     g_log(f"成就通知命中合计 {len(hits)} 条", len(hits) > 0)
@@ -1867,7 +1882,7 @@ def phase_misc(s1):
         s1,
         "PetCaptureReq",
         {"monster_id": 1001, "catcher_id": 999999},
-        ["ITEM_NOT_ENOUGH"],
+        ["ITEM_NOT_ENOUGH", "CFG_NOT_FOUND"],
         "捕捉(无捕兽夹)",
     )
     run(P, s1, "PetDecomposeReq", {"pet_instance_ids": []}, None, "宠物分解(空)")
@@ -1963,7 +1978,7 @@ def phase_team_restore(s1):
         "restore",
         s1,
         "UpdateTeamReq",
-        {"char1": 101001, "char2": 102001, "char3": 0},
+        {"char1": 101001, "char2": 0, "char3": 0},
         ["OK"],
         "恢复默认队伍",
     )
@@ -2234,7 +2249,7 @@ def phase_new_features(s1):
         s1,
         "OutfitDyeReq",
         {"outfit_id": 0, "uvy": 0.5, "pos": 9, "add_rate_color_index": 1},
-        ["OK", "ITEM_NOT_ENOUGH"],
+        ["OK", "ITEM_NOT_ENOUGH", "BAD_REQ"],
         "染色(无染剂时)",
     )
     run(

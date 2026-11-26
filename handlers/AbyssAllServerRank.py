@@ -8,6 +8,7 @@ from proto.net_pb2 import (
     StatusCode,
 )
 
+from server import abyss
 import utils.db as db
 from utils.rank_service import abyss_season_summary
 from utils.pb_create import make_PlayerBriefInfo
@@ -26,6 +27,10 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = AbyssAllServerRankRsp()
+        if abyss.season(req.season_id) is None:
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+            session.send(MsgId.AbyssAllServerRankRsp, rsp, packet_id)
+            return
         rsp.status = StatusCode.StatusCode_OK
 
         board = []

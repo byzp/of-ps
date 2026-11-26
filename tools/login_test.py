@@ -6,6 +6,7 @@
 依赖: 需先启动服务端 (python main.py)
 """
 
+import itertools
 import socket
 import struct
 import time
@@ -39,12 +40,17 @@ def recvall(sock, n):
     return buf
 
 
+_packet_ids = itertools.count(1)
+
+
 def send_packet(sock, msg_id, req):
     body = req.SerializeToString()
     head = PacketHead()
     head.msg_id = msg_id
     head.flag = 0
     head.body_len = len(body)
+    # 真实客户端为每次请求分配非零 packet_id；补给箱/转盘等幂等接口依赖该字段。
+    head.packet_id = next(_packet_ids)
     head.seq_id = 0
     head_data = head.SerializeToString()
     head_len = struct.pack(">H", len(head_data))

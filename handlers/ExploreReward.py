@@ -1,22 +1,19 @@
-from config import Config
 import pickle as _pk
-
 import time as _t
 
+from config import Config
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-
 from proto.net_pb2 import ExploreRewardReq, ExploreRewardRsp, PackNotice, StatusCode
 import utils.garden_state as garden_state
 import utils.db as db
-from utils.res_loader import res
-from utils import item_mgr
-from utils import achieve_track
-
-"""
-# 领取探索派遣奖励 1825 1826
-产出物取 Explore.json explore_area.explore_area_item, 完成校验用 need_time(秒)
-"""
+from utils import achieve_track, item_mgr
+from handlers.Explore import (
+    activity_config,
+    activity_rewards,
+    area_rewards,
+    validate_duration,
+)
 
 
 @packet_handler(MsgId.ExploreRewardReq)
@@ -24,117 +21,104 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = ExploreRewardReq()
         req.ParseFromString(data)
+        rsp = ExploreRewardRsp(is_activity=req.is_activity, explore_id=req.explore_id)
+        pack = PackNotice(status=StatusCode.StatusCode_OK)
+        try:
+            if req.is_activity:
+                self._claim_activity(session, req, rsp, pack)
+            else:
+                self._claim_area(session, req, rsp, pack)
+        except (item_mgr.EconomyConfigError, TypeError, ValueError):
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+            del rsp.reward_item[:]
+            del pack.items[:]
+        session.send(MsgId.ExploreRewardRsp, rsp, packet_id)
+        if rsp.status != StatusCode.StatusCode_OK:
+            return
+        if not req.is_activity:
+            achieve_track.report(session, "explore_reward")
+        if pack.items:
+            session.send(MsgId.PackNotice, pack, 0)
 
-        rsp = ExploreRewardRsp()
-        rsp.is_activity = req.is_activity
-        rsp.explore_id = req.explore_id
-
-        # 活动探索领奖(Explore.explore_activity): need_time 到期后领取
-        if req.is_activity:
-
-            _act = next(
-                (
-                    row
-                    for row in res["Explore"]["explore_activity"]["datas"]
-                    if isinstance(row, dict) and row.get("i_d") == req.explore_id
-                ),
-                None,
-            )
-            if not _act:
-                rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
-                session.send(MsgId.ExploreRewardRsp, rsp, packet_id)
-                return
-            key = str(_act["i_d"])
+    @staticmethod
+    def _claim_activity(session, req, rsp, pack):
+        cfg = activity_config(req.explore_id)
+        if cfg is None:
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+            return
+        duration = validate_duration(cfg)
+        rewards = activity_rewards(cfg)
+        key = str(cfg["i_d"])
+        with item_mgr.player_lock(session.player_id), db.transaction():
             raw = db.get_kv(session.player_id, "activity_explore", key, b"")
-            st = _pk.loads(raw) if raw else {}
-            start = int(st.get("start_time", 0))
+            state = _pk.loads(raw) if raw else {}
+            start = int(state.get("start_time", 0) or 0)
             if not start:
                 rsp.status = StatusCode.StatusCode_EXPLORE_NOT_FINISH
-                session.send(MsgId.ExploreRewardRsp, rsp, packet_id)
                 return
-            if not st.get("is_quick_finish") and _t.time() < start + int(
-                _act.get("need_time", 0)
-            ):
+            if not state.get("is_quick_finish") and _t.time() < start + duration:
                 rsp.status = StatusCode.StatusCode_EXPLORE_NOT_FINISH
                 info = rsp.explore
-                info.explore_id = _act["i_d"]
-                info.times = int(st.get("times", 0))
+                info.explore_id = req.explore_id
+                info.times = int(state.get("times", 0))
                 info.start_time = start
-                session.send(MsgId.ExploreRewardRsp, rsp, packet_id)
                 return
-
-            pack = PackNotice()
-            pack.status = StatusCode.StatusCode_OK
-            grants = []
-            sid = int(_act.get("special_reward_item_i_d", 0))
-            if sid:
-                grants.append((sid, 1))
-            for it in _act.get("explore_activity_item", ()) or ():
-                iid = int(it.get("rewar_item_i_d", 0))
-                if iid:
-                    grants.append((iid, 1))
             item_mgr.grant_items(
                 session.player_id,
-                [g for g in grants if g[0]],
-                session=session,
-                pack_notice=pack,
+                rewards,
                 rsp_items=rsp.reward_item,
+                pack_notice=pack,
+                session=session,
             )
-            st.pop("start_time", None)
-            st["is_quick_finish"] = False
-            st["collectable"] = False
-            db.set_kv(session.player_id, "activity_explore", key, _pk.dumps(st))
+            state.pop("start_time", None)
+            state["is_quick_finish"] = False
+            state["collectable"] = False
+            db.set_kv(session.player_id, "activity_explore", key, _pk.dumps(state))
             rsp.status = StatusCode.StatusCode_OK
             info = rsp.explore
-            info.explore_id = _act["i_d"]
-            info.times = int(st.get("times", 0))
+            info.explore_id = req.explore_id
+            info.times = int(state.get("times", 0))
             info.collect_reward = True
-            session.send(MsgId.ExploreRewardRsp, rsp, packet_id)  # 1825,1826
-            if pack.items:
-                session.send(MsgId.PackNotice, pack, 0)
-            return
 
-        e = garden_state.get_explore(session.player_id, req.explore_id)
-        if not e["start_time"]:
-            # 未派遣, 无奖励可领
-            rsp.status = StatusCode.StatusCode_EXPLORE_NOT_FINISH
-            garden_state.fill_explore_info(rsp.explore, req.explore_id, e)
-            session.send(MsgId.ExploreRewardRsp, rsp, packet_id)  # 1825,1826
-            return
-
-        # 完成校验: 到达 need_time(explore_area.need_time, 秒)或已快速完成
+    @staticmethod
+    def _claim_area(session, req, rsp, pack):
         cfg = garden_state.explore_area_cfg(req.explore_id)
-        need_ms = (cfg.get("need_time", 0) if cfg else 0) * 1000
-        if (
-            not e["is_quick_finish"]
-            and need_ms
-            and garden_state.now_ms() < e["start_time"] + need_ms
-        ):
-            rsp.status = StatusCode.StatusCode_EXPLORE_NOT_FINISH
-            garden_state.fill_explore_info(rsp.explore, req.explore_id, e)
-            session.send(MsgId.ExploreRewardRsp, rsp, packet_id)  # 1825,1826
+        if cfg is None:
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
             return
-
-        rsp.status = StatusCode.StatusCode_OK
-        e["times"] += 1
-        e["start_time"] = 0
-        e["is_quick_finish"] = False
-        garden_state.fill_explore_info(rsp.explore, req.explore_id, e)
-        garden_state.set_explore(session.player_id, req.explore_id, e)
-
-        # 发放产出物(explore_area.explore_area_item.rewar_item_i_d)
-        pack = PackNotice()
-        pack.status = StatusCode.StatusCode_OK
-        for item_id in garden_state.explore_collect_items(req.explore_id):
-            gain, total = garden_state.grant_stack_item(
-                session.player_id, item_id, Config.EXPLORE_REWARD_COUNT_PER_ITEM
+        duration = validate_duration(cfg)
+        item_mgr.validate_count(
+            Config.EXPLORE_REWARD_COUNT_PER_ITEM, label="explore reward count"
+        )
+        rewards = [
+            (item_id, item_mgr.checked_mul(Config.EXPLORE_REWARD_COUNT_PER_ITEM, 1))
+            for item_id, _ in area_rewards(req.explore_id)
+        ]
+        with item_mgr.player_lock(session.player_id), db.transaction():
+            state = garden_state.get_explore(session.player_id, req.explore_id)
+            start = int(state.get("start_time", 0) or 0)
+            if not start:
+                rsp.status = StatusCode.StatusCode_EXPLORE_NOT_FINISH
+                garden_state.fill_explore_info(rsp.explore, req.explore_id, state)
+                return
+            if not state.get("is_quick_finish") and garden_state.now_ms() < start + duration * 1000:
+                rsp.status = StatusCode.StatusCode_EXPLORE_NOT_FINISH
+                garden_state.fill_explore_info(rsp.explore, req.explore_id, state)
+                return
+            item_mgr.grant_items(
+                session.player_id,
+                rewards,
+                rsp_items=rsp.reward_item,
+                pack_notice=pack,
+                session=session,
             )
-            rsp.reward_item.add().CopyFrom(gain)
-            pack.items.add().CopyFrom(total)
-
-        # 委托/探索奖励领取计数(仅普通探索，活动探索不是委托奖励)。
-        achieve_track.report(session, "explore_reward")
-
-        session.send(MsgId.ExploreRewardRsp, rsp, packet_id)  # 1825,1826
-        if pack.items:
-            session.send(MsgId.PackNotice, pack, 0)  # 背包变化通知
+            state["times"] = item_mgr.checked_add(
+                item_mgr.validate_counter(state.get("times", 0), label="explore times"),
+                1,
+                limit=Config.ECONOMY_UINT32_MAX,
+            )
+            state["start_time"] = 0
+            state["is_quick_finish"] = False
+            garden_state.set_explore(session.player_id, req.explore_id, state)
+            rsp.status = StatusCode.StatusCode_OK
+            garden_state.fill_explore_info(rsp.explore, req.explore_id, state)
