@@ -17,6 +17,7 @@ from utils.res_loader import res
 from utils.reward_resolver import resolve_drop, resolve_reward
 from utils import achieve_track, item_mgr
 from utils import monster_loot
+from utils import dungeon_state
 from config import Config
 
 
@@ -40,6 +41,10 @@ def _monster_tag(monster_id):
 @packet_handler(MsgId.MonsterDeadReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
+        with dungeon_state.player_lock(session.player_id):
+            self._handle(session, data, packet_id)
+
+    def _handle(self, session, data: bytes, packet_id: int):
         req = MonsterDeadReq()
         req.ParseFromString(data)
 
@@ -58,15 +63,19 @@ class Handler(PacketHandler):
             for item_id, count in reward_list
         ]
         world_drops = (
-            session.scene_id != Config.TUTORIAL_SCENE_ID
+            not session.dungeon[0]
+            and session.scene_id != Config.TUTORIAL_SCENE_ID
             and _scene_types().get(session.scene_id) != Config.INSTANCE_SCENE_TYPE
         )
         if not reward_id and world_drops:
             drops = monster_loot.roll(session.player_id, player_level, world_level)
 
         with achieve_track.batch(session):
+            dungeon_state.record_monster(
+                session, req.monster_index, req.monster_id, _monster_tag(req.monster_id)
+            )
             # 成就: 击杀事件一次上报, 模块内部扫表记录该怪的全部讨伐/排除成就
-            # (讨伐1/4/6/41/42 + 全局86 + 按世界106), 有掉落的首领怪同样计入
+            # (讨伐1/4/6 + 全局86 + 按世界106)，副本41/42由点位事件匹配。
             achieve_track.report(
                 session,
                 "kill",

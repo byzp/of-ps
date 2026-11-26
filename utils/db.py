@@ -41,6 +41,13 @@ db = None
 # RLock: SIGTERM 处理器与主线程同线程, 可能在已持锁处打断, 需可重入
 lock_db = threading.RLock()
 
+# 自动提交(autosave)状态：写语句计数 + 上次提交时间。
+# 见 docs/数据库与存档优化方案.md：execute() 本身不 commit，靠这里定时/按量提交，
+# 避免进程被强杀时丢掉自启动以来的全部改动。
+_dirty = 0
+_last_commit = time.time()
+_WRITE_PREFIXES = ("INSERT", "UPDATE", "DELETE", "REPLACE")
+
 
 class db_result:
     """已脱离 SQLite 游标的查询结果，保留调用方使用的取值接口。"""
@@ -73,12 +80,16 @@ class db_warp:
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
 
     def execute(self, *args, **kwargs):
+        global _dirty
         with self._rw_lock:
             # execute 后的取值和游标释放同样会访问共享连接，必须一并持锁。
             # 不向 handler 暴露原始游标，避免锁外 fetch 与其他线程的 SQL 并发。
             cur = self._conn.execute(*args, **kwargs)
             rows = cur.fetchall()
             cur.close()
+            sql = args[0] if args and isinstance(args[0], str) else ""
+            if sql.lstrip()[:6].upper().startswith(_WRITE_PREFIXES):
+                _dirty += 1
             return db_result(rows)
 
     def execute_async(self, *args, **kwargs):
@@ -112,6 +123,7 @@ def _write_memory_snapshot():
 
 
 def save():
+    global _dirty, _last_commit
     with lock_db:
         if conn is None:
             return
@@ -470,6 +482,16 @@ def _repair_achieve_schema():
         conn.execute('DROP TABLE achieve')
         conn.execute('ALTER TABLE achieve__new RENAME TO achieve')
 
+    # 补索引：只补真正缺的（其余表的复合主键已覆盖 player_id 前缀，再建是浪费空间）。
+    # 全部 IF NOT EXISTS，可在老库上反复执行。
+    conn.executescript("""
+        CREATE UNIQUE INDEX IF NOT EXISTS ux_players_id ON players (player_id);
+        CREATE INDEX IF NOT EXISTS idx_gacha_record_player ON gacha_record (player_id, gacha_id, id DESC);
+        CREATE INDEX IF NOT EXISTS idx_turntable_record_player ON turntable_record (player_id, activity_id, draw_time DESC);
+        CREATE INDEX IF NOT EXISTS idx_photo_shares_player ON photo_shares (player_id);
+    """)
+    conn.commit()
+
 
 def _quest_trackers(player_id):
     """任务追踪条目始终由资源配置及通用成就计数生成。"""
@@ -616,25 +638,12 @@ def _init_player(player_id):
     mail.content_type = MailContentType.MailContentType_TEXT
     mail.send_time = int(time.time())
     mail.title = "of-ps"
-    mail.content = '此项目以AGPL开源, 仓库地址<color=#66ccff><b><link="https://github.com/byzp/of-ps">https://github.com/byzp/of-ps</link></b></color>, 觉得有用点个star吧\n\n'
+    mail.content = 'This project is open source under the AGPL. Repository: <color=#66ccff><b><link="https://github.com/byzp/of-ps">https://github.com/byzp/of-ps</link></b></color>. If you find it useful, please give it a star.\n\n'
     mail.overdue_day = 3650
     tmp = mail.items.add()
     tmp.item_id = 108
     tmp.num = 1488891
     set_mail(player_id, 1, mail.SerializeToString())
-    if not Config.SKIP_QUESTS:
-        for mail_id, (title, rewards) in enumerate(Config.NEW_PLAYER_MAIL_REWARDS, 1):
-            mail = MailBriefData(
-                mail_id=mail_id,
-                sender="《开放空间》运营团队",
-                title=title,
-                content_type=MailContentType.MailContentType_TEXT,
-                send_time=cur_time,
-                overdue_day=Config.LOST_DROP_MAIL_DAYS,
-            )
-            for item_id, count in rewards:
-                mail.items.add(item_id=item_id, num=count)
-            set_mail(player_id, mail_id, mail.SerializeToString())
 
 
 def verify_sdk_user_info(user_id, login_token):

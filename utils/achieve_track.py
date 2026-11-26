@@ -844,8 +844,8 @@ def _report_ops(session, event, *, match=None, amount=1, **fields):
     """事件计数统一入口(handler 侧不出现条件类型数字)。
 
     事件名决定归属的条件族, 由模块自行扫表判定哪些成就行命中:
-    如 report(session, "kill", match=怪物id) 一次记录该怪在 1/4/6/41/42
-    族里的全部"讨伐[该怪]"成就(14010001 及同段全部), 并同步 86/106 全局计数。
+    如 report(session, "kill", match=怪物id) 一次记录该怪在 1/4/6
+    族里的全部"讨伐[该怪]"成就，并同步86/106；秘境41/42由dungeon_kill计数。
     match 为事件携带的对象 id(怪物/物品/节点/场景等), amount 为增量。
     """
     if event == "talk":
@@ -876,10 +876,18 @@ def _report_ops(session, event, *, match=None, amount=1, **fields):
     if event == "dungeon_box":
         dungeon_id = fields.get("dungeon_id")
         box_kind = fields.get("box_kind")
-        if box_kind == "yellow":
-            add(session, 34, amount, match=dungeon_id)
-        elif box_kind == "normal":
+        if box_kind == "normal":
             add(session, 167, amount, match=(dungeon_id, 1))
+        return
+    if event == "dungeon_coin":
+        add(session, 34, amount, match=fields.get("dungeon_id"))
+        return
+    if event == "dungeon_kill":
+        dungeon_id = fields.get("dungeon_id")
+        if fields.get("monster_tag") is not None:
+            add(session, 41, amount, match=(dungeon_id, fields["monster_tag"]))
+        if fields.get("monster_id") is not None:
+            add(session, 42, amount, match=(dungeon_id, fields["monster_id"]))
         return
     if event == "battle_finish":
         row = db.get_players_info(session.player_id, "team")

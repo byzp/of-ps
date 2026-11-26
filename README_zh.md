@@ -82,7 +82,7 @@
 5. 开启一个命令行窗口，启动代理转发（不要关闭此命令窗口）
 
    ```bash
-   mitmdump --mode local -s .\Redirect.py
+   mitmdump --mode local:launcher.exe,PCSDKUI.exe,QtWebEngineProcess.exe,ZFGameBrowser.exe --set connection_strategy=lazy -s .\Redirect.py
    ```
 
    - 然后浏览器访问mitm.it

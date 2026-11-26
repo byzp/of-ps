@@ -1,4 +1,4 @@
-from utils import achieve_track
+from utils import achieve_track, dungeon_state
 
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
@@ -12,6 +12,10 @@ from utils.res_loader import res
 @packet_handler(MsgId.DungeonViewReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
+        with dungeon_state.player_lock(session.player_id):
+            self._handle(session, data, packet_id)
+
+    def _handle(self, session, data: bytes, packet_id: int):
         req = DungeonViewReq()
         req.ParseFromString(data)
 
@@ -56,5 +60,7 @@ class Handler(PacketHandler):
                 task = rsp.task_data_lst.add()
                 task.achieve_id = cid
                 task.count = achieve_track.progress(session.player_id, int(cid))
+                if not task.count:
+                    del rsp.task_data_lst[-1]
 
         session.send(MsgId.DungeonViewRsp, rsp, packet_id)

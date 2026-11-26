@@ -35,6 +35,7 @@ import server.scene_data as scene_data
 import server.notice_sync as notice_sync
 from utils import flag_config, flag_state, collection_state, weather
 from utils import treasure_box as tb_idx
+from utils.equipment_pool import random_equipment_ids
 
 
 def make_ScenePlayer(session):
@@ -269,92 +270,72 @@ def _fill_scene_outfit_slot(
     _copy_dye_scheme(getattr(sc, dye_field_name), item, dye_index)
 
 
+def _load_outfit_item(player_id, outfit_id):
+    """读一件装扮的 ItemDetail；读不到就返回 None（不再抛异常）。"""
+    blob = db.get_item_detail(player_id, outfit_id)
+    if not blob:
+        return None
+    item = ItemDetail()
+    try:
+        item.ParseFromString(blob)
+    except Exception:
+        return None
+    return item
+
+
+def _copy_dye_scheme_safe(dst, item, index):
+    """染色方案下标越界时清空，避免 IndexError 打断整个登录流程。"""
+    if item is None:
+        dst.Clear()
+        return
+    schemes = item.main_item.outfit.dye_schemes
+    if index is None:
+        dst.Clear()
+        return
+    try:
+        index = int(index)
+    except (TypeError, ValueError):
+        dst.Clear()
+        return
+    if index < 0 or index >= len(schemes):
+        dst.Clear()
+        return
+    dst.CopyFrom(schemes[index])
+
+
 def make_SceneCharacterOutfitPreset(player_id, outfit, sc=None):
     if sc == None:
         sc = SceneCharacterOutfitPreset()
-    item = ItemDetail()
-    if outfit.hat > 0:
-        item.ParseFromString(db.get_item_detail(player_id, outfit.hat))
-        sc.hat = outfit.hat
-        sc.hat_dye_scheme.CopyFrom(
-            item.main_item.outfit.dye_schemes[outfit.hat_dye_scheme_index]
-        )
-    if outfit.hair > 0:
-        item.ParseFromString(db.get_item_detail(player_id, outfit.hair))
-        sc.hair = outfit.hair
-        sc.hair_dye_scheme.CopyFrom(
-            item.main_item.outfit.dye_schemes[outfit.hair_dye_scheme_index]
-        )
-    if outfit.clothes > 0:
-        item.ParseFromString(db.get_item_detail(player_id, outfit.clothes))
-        sc.clothes = outfit.clothes
-        sc.cloth_dye_scheme.CopyFrom(
-            item.main_item.outfit.dye_schemes[outfit.clothes_dye_scheme_index]
-        )
-    if outfit.ornament > 0:
-        item.ParseFromString(db.get_item_detail(player_id, outfit.ornament))
-        sc.ornament = outfit.ornament
-        sc.orn_dye_scheme.CopyFrom(
-            item.main_item.outfit.dye_schemes[outfit.ornament_dye_scheme_index]
+
+    slots = (
+        ("hat", "hat", "hat_dye_scheme"),
+        ("hair", "hair", "hair_dye_scheme"),
+        ("clothes", "clothes", "cloth_dye_scheme"),
+        ("ornament", "ornament", "orn_dye_scheme"),
+        ("pend_top", "pend_top", "pend_top_dye_scheme"),
+        ("pend_chest", "pend_chest", "pend_chest_dye_scheme"),
+        ("pend_pelvis", "pend_pelvis", "pend_pelvis_dye_scheme"),
+        ("pend_up_face", "pend_up_face", "pend_up_face_dye_scheme"),
+        ("pend_down_face", "pend_down_face", "pend_down_face_dye_scheme"),
+        ("pend_left_hand", "pend_left_hand", "pend_left_hand_dye_scheme"),
+        ("pend_right_hand", "pend_right_hand", "pend_right_hand_dye_scheme"),
+        ("pend_left_foot", "pend_left_foot", "pend_left_foot_dye_scheme"),
+        ("pend_right_foot", "pend_right_foot", "pend_right_foot_dye_scheme"),
+    )
+
+    for item_field, preset_field, dye_field in slots:
+        outfit_id = getattr(outfit, item_field, 0)
+        if not outfit_id:
+            continue
+        setattr(sc, preset_field, outfit_id)
+        item = _load_outfit_item(player_id, outfit_id)
+        _copy_dye_scheme_safe(
+            getattr(sc, dye_field),
+            item,
+            getattr(outfit, item_field + "_dye_scheme_index", 0),
         )
 
     sc.hide_info.CopyFrom(outfit.outfit_hide_info)
-
-    if outfit.pend_top > 0:
-        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_top))
-        sc.pend_top = outfit.pend_top
-        sc.pend_top_dye_scheme.CopyFrom(
-            item.main_item.outfit.dye_schemes[outfit.pend_top_dye_scheme_index]
-        )
-    if outfit.pend_chest > 0:
-        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_chest))
-        sc.pend_chest = outfit.pend_chest
-        sc.pend_chest_dye_scheme.CopyFrom(
-            item.main_item.outfit.dye_schemes[outfit.pend_chest_dye_scheme_index]
-        )
-    if outfit.pend_pelvis > 0:
-        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_pelvis))
-        sc.pend_pelvis = outfit.pend_pelvis
-        sc.pend_pelvis_dye_scheme.CopyFrom(
-            item.main_item.outfit.dye_schemes[outfit.pend_pelvis_dye_scheme_index]
-        )
-    if outfit.pend_up_face > 0:
-        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_up_face))
-        sc.pend_up_face = outfit.pend_up_face
-        sc.pend_up_face_dye_scheme.CopyFrom(
-            item.main_item.outfit.dye_schemes[outfit.pend_up_face_dye_scheme_index]
-        )
-    if outfit.pend_down_face > 0:
-        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_down_face))
-        sc.pend_down_face = outfit.pend_down_face
-        sc.pend_down_face_dye_scheme.CopyFrom(
-            item.main_item.outfit.dye_schemes[outfit.pend_down_face_dye_scheme_index]
-        )
-    if outfit.pend_left_hand > 0:
-        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_left_hand))
-        sc.pend_left_hand = outfit.pend_left_hand
-        sc.pend_left_hand_dye_scheme.CopyFrom(
-            item.main_item.outfit.dye_schemes[outfit.pend_left_hand_dye_scheme_index]
-        )
-    if outfit.pend_right_hand > 0:
-        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_right_hand))
-        sc.pend_right_hand = outfit.pend_right_hand
-        sc.pend_right_hand_dye_scheme.CopyFrom(
-            item.main_item.outfit.dye_schemes[outfit.pend_right_hand_dye_scheme_index]
-        )
-    if outfit.pend_left_foot > 0:
-        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_left_foot))
-        sc.pend_left_foot = outfit.pend_left_foot
-        sc.pend_left_foot_dye_scheme.CopyFrom(
-            item.main_item.outfit.dye_schemes[outfit.pend_left_foot_dye_scheme_index]
-        )
-    if outfit.pend_right_foot > 0:
-        item.ParseFromString(db.get_item_detail(player_id, outfit.pend_right_foot))
-        sc.pend_right_foot = outfit.pend_right_foot
-        sc.pend_right_foot_dye_scheme.CopyFrom(
-            item.main_item.outfit.dye_schemes[outfit.pend_right_foot_dye_scheme_index]
-        )
-
     return sc
 
 
@@ -703,17 +684,15 @@ def make_treasure_box_item(
         {},
     )
     max_level = max(1, min(player_level, world.get("monster_level", player_level)))
-    weapons = {
-        row["item_i_d"]
-        for row in res["Weapon"]["weapon"]["datas"]
-        if row.get("item_i_d") and row.get("new_weapon_system_type") in (1, 2, 3, 4, 5)
-    }
-    armors = {row["i_d"] for row in res["Armor"]["armor"]["datas"]}
+    equipment = random_equipment_ids()
     pools = {tag: [] for tag in (2, 3)}
     for row in res["Item"]["item"]["datas"]:
         tag, iid = row.get("new_bag_item_tag"), row["i_d"]
-        valid = iid in (weapons if tag == 2 else armors)
-        if tag in pools and valid and row.get("quality", 0) <= max(1, world_level):
+        if (
+            tag in pools
+            and iid in equipment
+            and row.get("quality", 0) <= max(1, world_level)
+        ):
             pools[tag].append(iid)
     items = _make_box_extra(*Config.NORMAL_BOX_CURRENCY, player_id)
     kinds = [tag for tag in pools if pools[tag]]

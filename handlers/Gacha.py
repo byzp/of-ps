@@ -57,6 +57,21 @@ def _cost(info, single):
     return int(info.get("consume_item2_i_d", 0) or 0), int(info.get("consume_item2_num", 0) or 0)
 
 
+_QUALITY = None
+
+
+def _quality_of(item_id):
+    """物品品质：3=紫(SR) 4=金(SSR)，取 Item 表配置。"""
+    global _QUALITY
+    if _QUALITY is None:
+        _QUALITY = {
+            e.get("i_d"): int(e.get("quality", 0) or 0)
+            for e in res["Item"]["item"]["datas"]
+            if isinstance(e, dict)
+        }
+    return _QUALITY.get(item_id, 0)
+
+
 @packet_handler(MsgId.GachaReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):

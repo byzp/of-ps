@@ -82,7 +82,7 @@ python main.py
 
 Open another terminal and run (keep this window open):
 ```bash
-mitmdump --mode local -s .\Redirect.py
+mitmdump --mode local:launcher.exe,PCSDKUI.exe,QtWebEngineProcess.exe,ZFGameBrowser.exe --set connection_strategy=lazy -s .\Redirect.py
 ```
 
 - Visit `mitm.it` in your browser

@@ -101,6 +101,14 @@ def init():
         return _thread
 
 
+def _dispatch_action(scene_id, channel_id, notice):
+    """发送一个场景频道内的动作，并转发给对端服务器。"""
+    if notice.from_player_id < 1010000:
+        rsend(MsgId.SendActionNotice, notice, [scene_id, channel_id])
+    for session in get_scene_sessions(scene_id, channel_id):
+        session.send(MsgId.SendActionNotice, notice, 0)
+
+
 def start_loop():
     global _failed, sync_stop
     try:
@@ -206,6 +214,9 @@ def notice_sync_loop():
     global tod_time, game_time_seconds, _rel_time, _last_send_time, _last_stamina_sync_time
     while not _stop_event.is_set() and not sync_stop:
         start_t = time.time()
+
+        # 只在维护会话列表和读取时钟时持有会话锁。广播和数据库操作都使用快照，
+        # 这样动作 worker 可以同时获取其他场景的会话。
         with lock_session:
             if _stop_event.is_set() or sync_stop:
                 _shutdown_sessions_locked(start_t)

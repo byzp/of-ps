@@ -16,7 +16,7 @@ from proto.net_pb2 import (
 import server.scene_data as scene_data
 import utils.db as db
 from utils import achieve_track as _at
-from utils import treasure_box
+from utils import treasure_box, dungeon_state
 from utils.dungeon_reward import dungeon_config, prerequisite_finished
 from utils.pb_create import make_SceneTeam, make_scene_treasure_boxes
 from utils.res_loader import res
@@ -25,6 +25,10 @@ from utils.res_loader import res
 @packet_handler(MsgId.DungeonEnterReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
+        with dungeon_state.player_lock(session.player_id):
+            self._handle(session, data, packet_id)
+
+    def _handle(self, session, data: bytes, packet_id: int):
         req = DungeonEnterReq()
         req.ParseFromString(data)
         rsp = DungeonEnterRsp()

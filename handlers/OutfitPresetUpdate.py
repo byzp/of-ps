@@ -10,9 +10,12 @@ from proto.net_pb2 import (
 
 from server import character_growth as growth
 import utils.db as db
+from utils.trace import trace
 import utils.pb_create as pb_create
 from server.scene_data import up_scene_action
 from utils import achieve_track
+
+logger = logging.getLogger(__name__)
 
 
 OUTFIT_PRESET_LIMIT = 3
@@ -50,6 +53,9 @@ class Handler(PacketHandler):
 
         if req.preset.clothes or req.preset.hat or req.preset.hair or req.preset.ornament:
             achieve_track.report(session, "wear_outfit")
+        trace("preset_update", player=session.player_id, char=req.char_id,
+              idx=req.preset.preset_index, hat=req.preset.hat, hair=req.preset.hair,
+              clothes=req.preset.clothes, ornament=req.preset.ornament, status=rsp.status)
         session.send(MsgId.OutfitPresetUpdateRsp, rsp, packet_id)
         teams = db.get_players_info(session.player_id, "team")
         if teams and req.char_id in teams[0]:

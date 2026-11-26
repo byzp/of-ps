@@ -1,3 +1,5 @@
+import logging
+
 import utils.db as _db
 
 from proto.net_pb2 import ItemDetail as _ID
@@ -9,8 +11,11 @@ import random
 
 from proto.net_pb2 import OutfitColorantSelectReq, OutfitColorantSelectRsp, StatusCode
 from utils.res_loader import res
+from utils.trace import trace
 from utils.algo import SwirlNoiseGenHelper
 from server import character_growth as growth
+
+logger = logging.getLogger(__name__)
 
 
 def ensure_swirl(session):
@@ -74,4 +79,13 @@ class Handler(PacketHandler):
         rsp.param.params.extend(
             session.color_data[0]._swirl_params.copy().reshape(64).tolist()
         )
+        logger.info(
+            "OutfitColorantSelect: player=%s colorant=%s status=%s picture_id=%s",
+            session.player_id,
+            req.colorant_item_id,
+            rsp.status,
+            rsp.param.picture_id,
+        )
+        trace("colorant", player=session.player_id, colorant=req.colorant_item_id,
+              status=rsp.status, pic=rsp.param.picture_id)
         session.send(MsgId.OutfitColorantSelectRsp, rsp, packet_id)

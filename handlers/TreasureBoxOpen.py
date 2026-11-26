@@ -12,10 +12,11 @@ from proto.net_pb2 import (
     ItemDetail,
     StatusCode,
     TreasureBoxLocType_DUNGEON,
+    DungeonOpenFinalBoxNotice,
 )
 
 import utils.db as db
-from utils import achieve_track
+from utils import achieve_track, dungeon_state
 from utils import treasure_box as tb_idx
 from utils.dungeon_reward import (
     material_dungeon,
@@ -33,7 +34,10 @@ from utils.res_loader import res
 @packet_handler(MsgId.TreasureBoxOpenReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
-        with tb_idx.player_box_lock(session.player_id):
+        with (
+            dungeon_state.player_lock(session.player_id),
+            tb_idx.player_box_lock(session.player_id),
+        ):
             self._handle(session, data, packet_id)
 
     def _handle(self, session, data: bytes, packet_id: int):
@@ -138,7 +142,7 @@ class Handler(PacketHandler):
                     ),
                     session.player_id,
                 )
-            elif one_time:
+            elif one_time and not is_dungeon:
                 box_items = make_collection_box_reward(
                     session.player_id,
                     cfg_id,
@@ -155,6 +159,16 @@ class Handler(PacketHandler):
                     scene_id=getattr(session, "scene_id", None),
                     box_id=cfg_id,
                 )
+                if (
+                    is_dungeon
+                    and not is_dynamic
+                    and treasure_cfg
+                    and treasure_cfg.get("new_treasure_box_reward_type") == 2
+                ):
+                    for item_id, count in Config.DUNGEON_FINAL_BOX_REWARDS:
+                        box_items.extend(
+                            _make_box_extra(item_id, count, session.player_id)
+                        )
             for item in box_items:
                 if item.main_item.WhichOneof("item") != "outfit":
                     item.pack_type = ItemDetail.PackType.PackType_TempStorageArea
@@ -164,6 +178,14 @@ class Handler(PacketHandler):
 
         rsp.next_refresh_time = tb.next_refresh_time * 1000
 
+        if opened_now and material_cfg:
+            session.send(
+                MsgId.DungeonOpenFinalBoxNotice,
+                DungeonOpenFinalBoxNotice(
+                    status=StatusCode.StatusCode_OK, dungeon_id=session.dungeon[0]
+                ),
+                0,
+            )
         session.send(MsgId.TreasureBoxOpenRsp, rsp, packet_id)
         if opened_now:
             with achieve_track.batch(session):
@@ -178,8 +200,16 @@ class Handler(PacketHandler):
                         "dungeon_box",
                         dungeon_id=session.dungeon[0],
                         box_kind=(
-                            "yellow"
-                            if box_cfg and box_cfg.get("new_refresh_type") == 4
-                            else "normal"
+                            "normal"
+                            if treasure_cfg
+                            and treasure_cfg.get("new_treasure_box_reward_type") == 1
+                            else None
                         ),
                     )
+                    dg = dungeon_state.load(session.player_id, session.dungeon[0])
+                    if (
+                        treasure_cfg
+                        and treasure_cfg.get("new_treasure_box_reward_type") == 4
+                    ):
+                        dg.is_open_secret_box = True
+                    dungeon_state.save(session, dg)

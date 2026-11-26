@@ -27,6 +27,23 @@ def _dye_cost():
         raise growth.GrowthError(StatusCode.StatusCode_CFG_NOT_FOUND)
     return count
 
+def _fixed_color_of(player_id):
+    """返回当前选中染剂的固定颜色 (r,g,b); 随机色染剂返回 None"""
+    cid = int(_db.get_kv(player_id, "outfit_dye", "selected_colorant", 0) or 0)
+    if not cid:
+        return None
+    for d in res.get("DyeStuff", {}).get("dye_data", {}).get("datas", []) or []:
+        if not isinstance(d, dict) or d.get("i_d") != cid:
+            continue
+        if "color_r" in d or "color_g" in d or "color_b" in d:
+            return (int(d.get("color_r", 0)), int(d.get("color_g", 0)), int(d.get("color_b", 0)))
+        if int(d.get("new_dye_type", 0) or 0) == 1:
+            # 固定色型但配置里省了 0 值字段(如纯黑 000000)
+            return (0, 0, 0)
+        return None
+    return None
+
+
 
 @packet_handler(MsgId.OutfitDyeReq)
 class Handler(PacketHandler):
@@ -74,8 +91,12 @@ class Handler(PacketHandler):
             return
 
         ensure_swirl(session)
+        # 固定色染剂(如 402 纯白 FFFFFF / 404)直接出配置色, 不吃旋涡随机色
+        _fixed = _fixed_color_of(session.player_id)
         color_array = session.color_data[0].get_color_array(req.uvy, 5)
-        if 0 < req.add_rate_color_index <= len(color_array):
+        if _fixed is not None:
+            rsp.pos_color.red, rsp.pos_color.green, rsp.pos_color.blue = _fixed
+        elif 0 < req.add_rate_color_index <= len(color_array):
             color = color_array[req.add_rate_color_index - 1]
             rsp.pos_color.red = int(color[0])
             rsp.pos_color.green = int(color[1])

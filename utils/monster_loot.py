@@ -6,17 +6,13 @@ from config import Config
 from proto.net_pb2 import ItemDetail
 from utils.pb_create import make_item
 from utils.res_loader import res
+from utils.equipment_pool import random_equipment_ids
 
 
 def roll(player_id, player_level, world_level):
     if random.random() >= Config.NORMAL_MONSTER_DROP_CHANCE:
         return []
-    weapon_ids = {
-        row["item_i_d"]
-        for row in res["Weapon"]["weapon"]["datas"]
-        if row.get("item_i_d") and row.get("new_weapon_system_type") in (1, 2, 3, 4, 5)
-    }
-    armor_ids = {row["i_d"] for row in res["Armor"]["armor"]["datas"]}
+    equipment = random_equipment_ids()
     material_ids = {
         row["get_item_i_d"]
         for row in res["Spin"]["spin_item"]["datas"]
@@ -27,9 +23,7 @@ def roll(player_id, player_level, world_level):
     for row in res["Item"]["item"]["datas"]:
         item_id = row["i_d"]
         tag = row.get("new_bag_item_tag")
-        if tag == 2 and item_id not in weapon_ids:
-            continue
-        if tag == 3 and item_id not in armor_ids:
+        if tag in (2, 3) and item_id not in equipment:
             continue
         if tag == 8 and item_id not in material_ids:
             continue

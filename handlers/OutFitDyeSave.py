@@ -25,6 +25,8 @@ def _save_price():
         raise growth.GrowthError(StatusCode.StatusCode_CFG_NOT_FOUND)
     return int(item_id), int(count or 0)
 
+logger = logging.getLogger(__name__)
+
 
 @packet_handler(MsgId.OutFitDyeSaveReq)
 class Handler(PacketHandler):

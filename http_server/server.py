@@ -107,6 +107,24 @@ async def log_requests(request: Request, call_next):
     return response
 
 
+
+PAD_PREFIXES = ("/llllllllllll",)
+
+
+@app.middleware("http")
+async def strip_pad_prefix(request: Request, call_next):
+    path = request.scope.get("path", "")
+    for pad in PAD_PREFIXES:
+        if path.startswith(pad):
+            path = path[len(pad):] or "/"
+            break
+    idx = path.find("/dispatch/")
+    if idx > 0:
+        path = path[idx:]
+    request.scope["path"] = path
+    request.scope["raw_path"] = path.encode()
+    return await call_next(request)
+
 @app.get("/", response_class=PlainTextResponse)
 async def hello_world():
     return "hello, World"
@@ -209,7 +227,9 @@ async def api_register(registration: RegistrationRequest):
 async def api_login(login: LoginRequest):
     user = db.get_sdk_user_info(login.username, login.password)
     if not user:
-        return JSONResponse({"success": False, "msg": "密码错误"}, status_code=200)
+        return JSONResponse(
+            {"success": False, "msg": "Incorrect password."}, status_code=200
+        )
 
     uid = str(user["id"])
     username = user["username"]

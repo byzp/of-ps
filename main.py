@@ -4,6 +4,7 @@ import sys
 import threading
 
 import http_server.server as http_server
+from config import Config
 from network.game_server import GameServer
 import network.remote_link as remote_link
 import server.notice_sync as notice_sync
@@ -48,6 +49,7 @@ def main():
     _stop_once.clear()
     _shutdown_requested.clear()
     logger.info("OverFieldPS Start")
+    logger.info("config: DYE_NO_COST=%s DYE_STUFF_NUM=%s AUTOSAVE_INTERVAL_SEC=%s WORKERS=%s", getattr(Config, "DYE_NO_COST", None), getattr(Config, "DYE_STUFF_NUM", None), getattr(Config, "AUTOSAVE_INTERVAL_SEC", None), getattr(Config, "SESSION_POOL_MAX_WORKERS", None))
 
     if hasattr(sys, "_is_gil_enabled"):
         logger.info(f"GIL enabled: {sys._is_gil_enabled()}")

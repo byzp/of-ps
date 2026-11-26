@@ -77,6 +77,11 @@ class Handler(PacketHandler):
             mail_rewards.settle_temp_pack(session)
         if req.scene_id != session.scene_id:
             mail_rewards.recover_drops(session)
+        if (
+            session.scene_id == Config.TUTORIAL_SCENE_ID
+            and req.scene_id != session.scene_id
+        ):
+            db.del_kv(session.player_id, "profile", "tutorial_pending")
         session.scene_id = req.scene_id
         if target_sid is not None:
             session.channel_id = target_sid.channel_id

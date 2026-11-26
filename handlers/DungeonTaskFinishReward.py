@@ -18,6 +18,10 @@ def _player_values(player_id):
 @packet_handler(MsgId.DungeonTaskFinishRewardReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
+        with dungeon_state.player_lock(session.player_id):
+            self._handle(session, data, packet_id)
+
+    def _handle(self, session, data: bytes, packet_id: int):
         req = DungeonTaskFinishRewardReq()
         req.ParseFromString(data)
         rsp = DungeonTaskFinishRewardRsp()

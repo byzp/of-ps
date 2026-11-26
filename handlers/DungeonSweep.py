@@ -11,7 +11,7 @@ from proto.net_pb2 import (
 
 import utils.db as db
 from utils import item_mgr as items_util
-from utils import achieve_track
+from utils import achieve_track, dungeon_state
 from utils.dungeon_reward import (
     dungeon_config,
     make_dungeon_rewards,
@@ -25,6 +25,10 @@ from utils.reward_resolver import resolve_drop
 @packet_handler(MsgId.DungeonSweepReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
+        with dungeon_state.player_lock(session.player_id):
+            self._handle(session, data, packet_id)
+
+    def _handle(self, session, data: bytes, packet_id: int):
         req = DungeonSweepReq()
         req.ParseFromString(data)
 

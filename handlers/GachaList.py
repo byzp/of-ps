@@ -8,6 +8,7 @@ from handlers.Gacha import _configuration
 from utils.res_loader import res
 from config import Config
 import utils.db as db
+from utils import gacha_prob
 
 
 @packet_handler(MsgId.GachaListReq)
