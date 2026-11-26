@@ -51,6 +51,8 @@ from utils.res_loader import res
 from utils.pb_create import make_SceneDataNotice, make_ScenePlayer
 from utils import quest_track
 from utils import activity_state
+from utils import action_unlock
+from utils import expression_unlock
 from network.remote_link import sync_player
 import server.notice_sync as notice_sync
 from server.scene_data import up_scene_action
@@ -218,6 +220,11 @@ class Handler(PacketHandler):
         for k, v in db.get_bless_tree(session.player_id).items():
             rsp.trees[k].tree_ids.extend(v)
         session.send(MsgId.BlessTreeNotice, rsp, 0)
+
+        # 永久解锁的动作(舞蹈/表情动作道具, kv ns=actions_perm)
+        action_unlock.send_perm_notice(session)
+        # 已解锁的聊天表情(tag=40 道具, kv ns=expr_perm)
+        expression_unlock.send_perm_notice(session)
 
         for notice_cls, notice_msg_id in (
             (IntimacyGiftDayCountNotice, MsgId.IntimacyGiftDayCountNotice),

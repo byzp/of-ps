@@ -22,6 +22,8 @@ from server.scene_data import get_session
 import server.scene_data as scene_data
 import server.notice_sync as notice_sync
 import utils.db as db
+from utils import action_unlock
+from utils import expression_unlock
 from utils.pb_create import make_item
 from utils.pb_create import make_SceneDataNotice
 from network.remote_link import get_connected_servers
@@ -87,6 +89,8 @@ def give(cmds: list):
         return
     for session in target_session:
         chrs = []
+        pend_actions = []  # 本轮要永久解锁的动作 id（tag=12 的舞蹈/表情动作道具）
+        pend_exprs = []  # 本轮要解锁的聊天表情 id（tag=40 道具）
         for i in res["Character"]["character"]["datas"]:
             chrs.append(i["i_d"])
         if cmds[2] == "all":
@@ -99,6 +103,18 @@ def give(cmds: list):
                         tmp.main_item.character,
                     )
                 else:
+                    if action_unlock.action_of_item(tmp.main_item.item_id):
+                        # 舞蹈/表情动作道具：不進背包，改为永久解锁动作
+                        pend_actions.append(
+                            action_unlock.action_of_item(tmp.main_item.item_id)
+                        )
+                        continue
+                    if expression_unlock.expression_of_item(tmp.main_item.item_id):
+                        # 聊天表情道具：不進背包，改为解锁表情
+                        pend_exprs.append(
+                            expression_unlock.expression_of_item(tmp.main_item.item_id)
+                        )
+                        continue
                     if tmp.main_item.item_tag not in [
                         EBagItemTag.EBagItemTag_Weapon,
                         EBagItemTag.EBagItemTag_Armor,
@@ -163,6 +179,16 @@ def give(cmds: list):
                             tmp.main_item.character,
                         )
                     else:
+                        if action_unlock.action_of_item(i["i_d"]):
+                            # 舞蹈/表情动作道具：不進背包，改为永久解锁动作
+                            pend_actions.append(action_unlock.action_of_item(i["i_d"]))
+                            session.send(MsgId.PackNotice, rsp, 0)
+                            break
+                        if expression_unlock.expression_of_item(i["i_d"]):
+                            # 聊天表情道具：不進背包，改为解锁表情
+                            pend_exprs.append(expression_unlock.expression_of_item(i["i_d"]))
+                            session.send(MsgId.PackNotice, rsp, 0)
+                            break
                         if tmp.main_item.item_tag not in [
                             EBagItemTag.EBagItemTag_Weapon,
                             EBagItemTag.EBagItemTag_Armor,
@@ -196,6 +222,18 @@ def give(cmds: list):
                             )
                     session.send(MsgId.PackNotice, rsp, 0)
                     break
+        if pend_actions:
+            new_ids = action_unlock.add_perms(session.player_id, pend_actions)
+            action_unlock.send_perm_notice(session, pend_actions)
+            logger.info(
+                "give: 永久解锁动作 %s (新增 %s)", pend_actions, new_ids or "无"
+            )
+        if pend_exprs:
+            new_expr = expression_unlock.add_perms(session.player_id, pend_exprs)
+            expression_unlock.send_perm_notice(session, pend_exprs)
+            logger.info(
+                "give: 解锁聊天表情 %s (新增 %s)", pend_exprs, new_expr or "无"
+            )
 
 
 def firework(cmds):

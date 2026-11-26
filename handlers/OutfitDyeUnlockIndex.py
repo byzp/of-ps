@@ -11,6 +11,7 @@ from proto.net_pb2 import (
 )
 
 import utils.db as db
+from utils.trace import trace
 from utils import item_mgr
 
 """
@@ -65,5 +66,7 @@ class Handler(PacketHandler):
         pack.items.add().CopyFrom(outfit)
 
         rsp.status = StatusCode.StatusCode_OK
+        trace("dye_unlock", player=session.player_id, outfit=req.outfit_id,
+              index=req.index, status=rsp.status)
         session.send(MsgId.OutfitDyeUnlockIndexRsp, rsp, packet_id)  # 1645,1646
         session.send(MsgId.PackNotice, pack, 0)

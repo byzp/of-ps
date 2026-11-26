@@ -10,9 +10,14 @@ from proto.net_pb2 import (
     StatusCode,
 )
 
+import logging
+
 import utils.db as db
+from utils.trace import trace
 from utils.res_loader import res
 from utils import item_mgr
+
+logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.OutFitDyeSaveReq)
@@ -24,7 +29,8 @@ class Handler(PacketHandler):
         rsp = OutFitDyeSaveRsp()
         pack = None
 
-        if req.is_save_dye_result:
+        import config as _cfg
+        if req.is_save_dye_result and not getattr(_cfg.Config, 'DYE_NO_COST', False):
             pack = PackNotice()
             pack.status = StatusCode.StatusCode_OK
             _price = next(
@@ -54,8 +60,22 @@ class Handler(PacketHandler):
             rsp.scheme_index = req.scheme_index
             rsp.pos_color.CopyFrom(session.color_data[2])
             rsp.is_save_dye_result = True
+            _blob = db.get_item_detail(session.player_id, req.outfit_id)
+            if not _blob:
+                logger.warning(
+                    "OutFitDyeSave: player=%s 没有装扮 %s", session.player_id, req.outfit_id
+                )
+                rsp.status = StatusCode.StatusCode_BAD_REQ
+                session.send(MsgId.OutFitDyeSaveRsp, rsp, packet_id)
+                return
             outfit = ItemDetail()
-            outfit.ParseFromString(db.get_item_detail(session.player_id, req.outfit_id))
+            outfit.ParseFromString(_blob)
+            # 染色方案槽位可能还没解锁(列表更短), 原来直接下标取会 IndexError。
+            while len(outfit.main_item.outfit.dye_schemes) <= req.scheme_index:
+                _s = outfit.main_item.outfit.dye_schemes.add()
+                _s.scheme_index = len(outfit.main_item.outfit.dye_schemes) - 1
+                _s.is_un_lock = True
+            outfit.main_item.outfit.dye_schemes[req.scheme_index].is_un_lock = True
             find = False
             for color in outfit.main_item.outfit.dye_schemes[req.scheme_index].colors:
                 if color.pos == req.pos:
@@ -74,6 +94,21 @@ class Handler(PacketHandler):
                 session.player_id, outfit.SerializeToString(), req.outfit_id
             )
             rsp.items.add().CopyFrom(outfit)
+        logger.info(
+            "OutFitDyeSave: player=%s outfit=%s scheme=%s pos=%s save=%s status=%s color=(%s,%s,%s)",
+            session.player_id,
+            req.outfit_id,
+            req.scheme_index,
+            req.pos,
+            req.is_save_dye_result,
+            rsp.status,
+            session.color_data[2].red,
+            session.color_data[2].green,
+            session.color_data[2].blue,
+        )
+        trace("dye_save", player=session.player_id, outfit=req.outfit_id, scheme=req.scheme_index,
+              pos=req.pos, save=req.is_save_dye_result, status=rsp.status,
+              rgb=(session.color_data[2].red, session.color_data[2].green, session.color_data[2].blue))
         session.send(MsgId.OutFitDyeSaveRsp, rsp, packet_id)
         if pack is not None:
             pack.items.add().CopyFrom(outfit)

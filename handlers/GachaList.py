@@ -7,6 +7,7 @@ from proto.net_pb2 import GachaListReq, GachaListRsp, StatusCode
 from utils.res_loader import res
 from config import Config
 import utils.db as db
+from utils import gacha_prob
 
 
 @packet_handler(MsgId.GachaListReq)
@@ -22,11 +23,11 @@ class Handler(PacketHandler):
             tmp = rsp.gachas.add()
             tmp.gacha_id = data["i_d"]
             tmp.gacha_times = db.get_total_gacha_num(session.player_id, data["i_d"])
-            if data.get("big_guarantee_pool_i_d"):
-                cap = int(data.get("max_times", 0) or 70)
-                tmp.guarantee = max(
-                    0, cap - db.get_gacha_guarantee(session.player_id, data["i_d"])
-                )
+            # 保底剩余：默认所有卡池共享同一个计数（Config.GACHA_PITY_SHARED）
+            type_id = int(data.get("new_u_i_gacha_type") or 2)
+            tmp.guarantee = gacha_prob.remaining(
+                session.player_id, data["i_d"], type_id, data
+            )
             # 自选UP物品(OptionalUpPoolItem 持久化)
             raw = db.get_kv(session.player_id, "gacha_optional_up", str(data["i_d"]))
             if raw:
