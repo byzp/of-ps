@@ -1,3 +1,5 @@
+import logging
+
 import utils.db as _db
 
 from proto.net_pb2 import ItemDetail as _ID
@@ -10,7 +12,10 @@ import random
 
 from proto.net_pb2 import OutfitColorantSelectReq, OutfitColorantSelectRsp, StatusCode
 from utils.res_loader import res
+from utils.trace import trace
 from utils.algo import SwirlNoiseGenHelper
+
+logger = logging.getLogger(__name__)
 
 
 def ensure_swirl(session):
@@ -49,6 +54,11 @@ class Handler(PacketHandler):
         }
         if req.colorant_item_id and _stuffs and (req.colorant_item_id not in _stuffs):
             rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+            logger.warning(
+                "OutfitColorantSelect: player=%s 染剂 %s 不在 DyeStuff 配置内",
+                session.player_id,
+                req.colorant_item_id,
+            )
             session.send(MsgId.OutfitColorantSelectRsp, rsp, packet_id)
             return
         if req.colorant_item_id:
@@ -61,6 +71,11 @@ class Handler(PacketHandler):
                 have = d.main_item.base_item.num > 0
             if not have:
                 rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
+                logger.warning(
+                    "OutfitColorantSelect: player=%s 没有染剂 %s",
+                    session.player_id,
+                    req.colorant_item_id,
+                )
                 session.send(MsgId.OutfitColorantSelectRsp, rsp, packet_id)
                 return
         _db.set_kv(
@@ -75,4 +90,13 @@ class Handler(PacketHandler):
         rsp.param.params.extend(
             session.color_data[0]._swirl_params.copy().reshape(64).tolist()
         )
+        logger.info(
+            "OutfitColorantSelect: player=%s colorant=%s status=%s picture_id=%s",
+            session.player_id,
+            req.colorant_item_id,
+            rsp.status,
+            rsp.param.picture_id,
+        )
+        trace("colorant", player=session.player_id, colorant=req.colorant_item_id,
+              status=rsp.status, pic=rsp.param.picture_id)
         session.send(MsgId.OutfitColorantSelectRsp, rsp, packet_id)

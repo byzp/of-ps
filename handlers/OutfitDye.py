@@ -1,6 +1,7 @@
 from handlers.OutfitColorantSelect import ensure_swirl
 
 import utils.db as _db
+from utils.trace import trace
 
 from utils import item_mgr as _im
 
@@ -18,6 +19,23 @@ from utils import item_mgr
 
 logger = logging.getLogger(__name__)
 
+def _fixed_color_of(player_id):
+    """返回当前选中染剂的固定颜色 (r,g,b); 随机色染剂返回 None"""
+    cid = int(_db.get_kv(player_id, "outfit_dye", "selected_colorant", 0) or 0)
+    if not cid:
+        return None
+    for d in res.get("DyeStuff", {}).get("dye_data", {}).get("datas", []) or []:
+        if not isinstance(d, dict) or d.get("i_d") != cid:
+            continue
+        if "color_r" in d or "color_g" in d or "color_b" in d:
+            return (int(d.get("color_r", 0)), int(d.get("color_g", 0)), int(d.get("color_b", 0)))
+        if int(d.get("new_dye_type", 0) or 0) == 1:
+            # 固定色型但配置里省了 0 值字段(如纯黑 000000)
+            return (0, 0, 0)
+        return None
+    return None
+
+
 
 @packet_handler(MsgId.OutfitDyeReq)
 class Handler(PacketHandler):
@@ -32,8 +50,12 @@ class Handler(PacketHandler):
         rsp.pos_color.pos = req.pos
 
         ensure_swirl(session)
+        # 固定色染剂(如 402 纯白 FFFFFF / 404)直接出配置色, 不吃旋涡随机色
+        _fixed = _fixed_color_of(session.player_id)
         color_array = session.color_data[0].get_color_array(req.uvy, 5)
-        if 0 < req.add_rate_color_index <= len(color_array):
+        if _fixed is not None:
+            rsp.pos_color.red, rsp.pos_color.green, rsp.pos_color.blue = _fixed
+        elif 0 < req.add_rate_color_index <= len(color_array):
             color = color_array[req.add_rate_color_index - 1]
             rsp.pos_color.red = int(color[0])
             rsp.pos_color.green = int(color[1])
@@ -60,6 +82,12 @@ class Handler(PacketHandler):
             if e.get("key") == "Fashion_DyeStuff_Num":
                 _raw = e.get("values")
                 break
+        import config as _cfg
+        _override = int(getattr(_cfg.Config, 'DYE_STUFF_NUM', 0) or 0)
+        if _override > 0:
+            _raw = [_override]
+        elif _raw is not None and getattr(_cfg.Config, 'DYE_NO_COST', False):
+            _raw = None
         if _raw is not None:
             num = int(_raw[0] if isinstance(_raw, (list, tuple)) else _raw)
             colorant = int(
@@ -82,6 +110,23 @@ class Handler(PacketHandler):
         if dye_consumed:
 
             achieve_track.report(session, "outfit_dye")
+        logger.info(
+            "OutfitDye: player=%s outfit=%s pos=%s uvy=%.3f add_idx=%s color=(%s,%s,%s) consumed=%s status=%s",
+            session.player_id,
+            req.outfit_id,
+            req.pos,
+            req.uvy,
+            req.add_rate_color_index,
+            rsp.pos_color.red,
+            rsp.pos_color.green,
+            rsp.pos_color.blue,
+            dye_consumed,
+            rsp.status,
+        )
+        trace("dye", player=session.player_id, outfit=req.outfit_id, pos=req.pos,
+              uvy=round(req.uvy, 3), add_idx=req.add_rate_color_index,
+              rgb=(rsp.pos_color.red, rsp.pos_color.green, rsp.pos_color.blue),
+              consumed=dye_consumed, status=rsp.status)
         session.send(MsgId.OutfitDyeRsp, rsp, packet_id)
         if "rsp1" in locals() and rsp1.items:
             session.send(MsgId.PackNotice, rsp1, 0)

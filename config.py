@@ -31,6 +31,11 @@ class Config:
     # 保底计数是否所有卡池共享（True = 抽任意卡池都累加同一个计数，客户端显示不会再错乱）
     GACHA_PITY_SHARED = True
 
+    # 染色不消耗材料(私服默认 True, 避免"道具数量不足"导致染色失败)
+    DYE_NO_COST = True
+    # 每次染色消耗的染剂数量：0 = 不消耗；填 1 / 5 就按这个数扣
+    DYE_STUFF_NUM = 1
+
     SKIP_QUESTS = False
 
     # 活动秘境仅在窗口内显示。
