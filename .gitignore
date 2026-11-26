@@ -24,3 +24,10 @@ build
 /server.spec
 /link_pool.json
 .idea
+
+# 本地运行产物（不入库）
+/logs/
+*.bak
+*.bak_*
+/run_new.log
+/config.py.bak*
