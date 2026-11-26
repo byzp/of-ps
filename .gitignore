@@ -31,3 +31,6 @@ build
 *.bak_*
 /run_new.log
 /config.py.bak*
+
+# 方案文档不入库（本地留档）
+/docs/
