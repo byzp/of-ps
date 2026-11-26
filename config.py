@@ -16,7 +16,7 @@ class Config:
     GAME_SERVER_IP = "0.0.0.0"  # listen
     GAME_SERVER_PORT = 25566
 
-    SESSION_POOL_MAX_WORKERS = 4
+    SESSION_POOL_MAX_WORKERS = 128
     PACKET_POOL_MAX_WORKERS = 12
     # 动作广播按场景/频道分片。相同频道固定落在同一独立线程，保留广播顺序。
     ACTION_SYNC_WORKERS = 4
@@ -30,6 +30,7 @@ class Config:
     GACHA_PITY_SSR = 70
     # 保底计数是否所有卡池共享（True = 抽任意卡池都累加同一个计数，客户端显示不会再错乱）
     GACHA_PITY_SHARED = True
+
     SKIP_QUESTS = False
 
     # 活动秘境仅在窗口内显示。
@@ -62,6 +63,10 @@ class Config:
     # database
     DB_PATH = "./player.db"
     IN_MEMORY = False  # False=落盘；True=内存库+退出快照
+    # 自动提交：写语句累计到 AUTOSAVE_MAX_DIRTY 条，或距上次提交超过
+    # AUTOSAVE_INTERVAL_SEC 秒时，后台线程提交一次。防止强杀/崩溃丢掉全部改动。
+    AUTOSAVE_INTERVAL_SEC = 2.0
+    AUTOSAVE_MAX_DIRTY = 200
 
     # Package scanning
     HANDLERS_PACKAGE = "handlers"

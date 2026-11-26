@@ -214,4 +214,7 @@ def start():
         host=Config.HTTP_HOST,
         port=Config.HTTP_PORT,
         log_level="warning",
+        # uvicorn 默认会重建 root logger(把 main.py 装的日志文件 handler 冲掉),
+        # 这里禁用它的日志配置, 保证 logs/server.log 一直有输出。
+        log_config=None,
     )
