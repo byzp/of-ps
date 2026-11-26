@@ -171,3 +171,4 @@
 14:32:53 PITY gacha=903008 type=3 cnt=70 cap=70 up=401003 -> 401003
 14:32:53 DRAW gacha=903008 type=3 want=102001 kind=character_sr dup=True out_id=102001 out_tag=7 is_new=False
 14:32:53 DRAW gacha=903008 type=3 want=401003 kind=character_ssr_up dup=True out_id=401003 out_tag=7 is_new=False
+17:12:12 DRAW gacha=203015 type=3 want=102001 kind=character_sr dup=True out_id=102001 out_tag=7 is_new=False
