@@ -1,0 +1,43 @@
+req args='10002' session.player_id=10001
+  resolved player_id=10002
+  fill player_id=10002 cols_row=[10002, '小鱼干', 30, 41102, 1795600000000, 0, 8000, '', '', 5000, 302004, 1795457730, 0, 9999, '1992-01-02', 0, 0]
+  send len=67 hex=0801123f08924e1209e5b08fe9b1bce5b9b2181e208ec1022880c8e690a13430882740c03e60b4b71268c28592d80670924e80018f4e8a010a313939322d30312d3032
+req args='10002' session.player_id=10001
+  resolved player_id=10002
+  fill player_id=10002 cols_row=[10002, '小鱼干', 30, 41102, 1795600000000, 0, 8000, '', '', 5000, 302004, 1795457730, 0, 9999, '1992-01-02', 0, 0]
+  send len=67 hex=0801123f08924e1209e5b08fe9b1bce5b9b2181e208ec1022880c8e690a13430882740c03e60b4b71268c28592d80670924e80018f4e8a010a313939322d30312d3032
+req args='10002' session.player_id=10001
+  resolved player_id=10002
+  fill player_id=10002 cols_row=[10002, '小鱼干', 30, 41102, 1795600000000, 0, 8000, '', '', 5000, 302004, 1795457730, 0, 9999, '1992-01-02', 0, 0]
+  send len=67 hex=0801123f08924e1209e5b08fe9b1bce5b9b2181e208ec1022880c8e690a13430882740c03e60b4b71268c28592d80670924e80018f4e8a010a313939322d30312d3032
+req args='10001' session.player_id=10001
+  resolved player_id=10001
+  fill player_id=10001 cols_row=[10001, '四个喵', 50, 41101, 1795620168967, 0, 8000, '', '', 5000, 302003, 1795457730, 0, 9999, '1992-01-02', 0, 0]
+  send len=69 hex=0801124108914e1209e59b9be4b8aae596b51832208dc1022887cab59aa13430882740c03e480160b3b71268c28592d80670914e80018f4e8a010a313939322d30312d3032
+req args='10003' session.player_id=10001
+  resolved player_id=None
+  send len=2 hex=0801
+req args='10003' session.player_id=10001
+  resolved player_id=None
+  send len=2 hex=0801
+req args='10003' session.player_id=10001
+  resolved player_id=None
+  send len=2 hex=0801
+req args='10003' session.player_id=10001
+  resolved player_id=None
+  send len=2 hex=0801
+req args='10003' session.player_id=10001
+  resolved player_id=None
+  send len=2 hex=0801
+req args='10003' session.player_id=10001
+  resolved player_id=None
+  send len=2 hex=0801
+req args='10003' session.player_id=10001
+  resolved player_id=None
+  send len=2 hex=0801
+req args='10003' session.player_id=10001
+  resolved player_id=None
+  send len=2 hex=0801
+req args='10003' session.player_id=10001
+  resolved player_id=None
+  send len=2 hex=0801

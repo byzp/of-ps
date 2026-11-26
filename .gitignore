@@ -17,6 +17,7 @@ build
 /player.db-wal
 /.vscode
 /venv
+/.venv
 /star.bat
 /dist
 /main.spec

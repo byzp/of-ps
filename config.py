@@ -4,17 +4,17 @@ from proto.net_pb2 import EArchaeologyType, EBagItemTag, LifeType, QuestStatus
 class Config:
     # HTTP Server
     HTTP_HOST = "0.0.0.0"
-    HTTP_PORT = 21000
-    # RES_VERSION = "2026-10-21-14-05-50_2026-11-07-22-39-35" # cn
-    RES_VERSION = "2026-10-24-12-00-58_2026-11-23-15-53-19"  # global
+    HTTP_PORT = 25565
+    # RES_VERSION = "2026-10-21-14-05-50_2026-11-25-19-54-41" # cn
+    RES_VERSION = "2026-10-21-14-05-50_2026-11-25-19-54-41"  # global
     RES_URL = "http://cdn-of.inutan.com/Resources;https://cdn-of.inutan.com/Resources;http://127.0.0.1:21000/Resources"
 
     GAME_SERVER_GADGET_IP = "127.0.0.1"  # access
-    GAME_SERVER_GADGET_PORT = 11033
+    GAME_SERVER_GADGET_PORT = 25566
 
     # Game Server
     GAME_SERVER_IP = "0.0.0.0"  # listen
-    GAME_SERVER_PORT = 11033
+    GAME_SERVER_PORT = 25566
 
     SESSION_POOL_MAX_WORKERS = 4
     PACKET_POOL_MAX_WORKERS = 12
@@ -26,6 +26,10 @@ class Config:
 
     VERIFY_TOKEN = False
     REJECT_PAYMENT = False  # CreatePayOrderReq
+    # 抽卡 SSR 保底抽数：0 = 用官方配置（限时池 70），填 90 就是 90 抽必出
+    GACHA_PITY_SSR = 70
+    # 保底计数是否所有卡池共享（True = 抽任意卡池都累加同一个计数，客户端显示不会再错乱）
+    GACHA_PITY_SHARED = True
     SKIP_QUESTS = False
 
     # 活动秘境仅在窗口内显示。
@@ -57,7 +61,7 @@ class Config:
 
     # database
     DB_PATH = "./player.db"
-    IN_MEMORY = True  # False=落盘；True=内存库+退出快照
+    IN_MEMORY = False  # False=落盘；True=内存库+退出快照
 
     # Package scanning
     HANDLERS_PACKAGE = "handlers"

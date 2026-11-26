@@ -55,6 +55,24 @@ async def log_requests(request: Request, call_next):
     return response
 
 
+
+PAD_PREFIXES = ("/llllllllllll",)
+
+
+@app.middleware("http")
+async def strip_pad_prefix(request: Request, call_next):
+    path = request.scope.get("path", "")
+    for pad in PAD_PREFIXES:
+        if path.startswith(pad):
+            path = path[len(pad):] or "/"
+            break
+    idx = path.find("/dispatch/")
+    if idx > 0:
+        path = path[idx:]
+    request.scope["path"] = path
+    request.scope["raw_path"] = path.encode()
+    return await call_next(request)
+
 @app.get("/", response_class=PlainTextResponse)
 async def hello_world():
     return "hello, World"

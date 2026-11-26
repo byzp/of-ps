@@ -1,0 +1,55 @@
+2026-11-26 13:05:24,748 - __main__ - INFO - OverFieldPS Start
+2026-11-26 13:05:24,749 - __main__ - INFO - GIL enabled: True
+Uncaught exception in thread <Thread(Thread-2 (_prompt_loop), started daemon 17088)>:
+Traceback (most recent call last):
+  File "C:\Users\Administrator\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\Lib\threading.py", line 1075, in _bootstrap_inner
+    self.run()
+  File "C:\Users\Administrator\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\Lib\threading.py", line 1012, in run
+    self._target(*self._args, **self._kwargs)
+  File "D:\OpenSpace_Extract_unity\新的\utils\cmd.py", line 129, in _prompt_loop
+    session = PromptSession()
+              ^^^^^^^^^^^^^^^
+  File "D:\OpenSpace_Extract_unity\新的\venv\Lib\site-packages\prompt_toolkit\shortcuts\prompt.py", line 484, in __init__
+    self.app = self._create_application(editing_mode, erase_when_done)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OpenSpace_Extract_unity\新的\venv\Lib\site-packages\prompt_toolkit\shortcuts\prompt.py", line 753, in _create_application
+    application: Application[_T] = Application(
+                                   ^^^^^^^^^^^^
+  File "D:\OpenSpace_Extract_unity\新的\venv\Lib\site-packages\prompt_toolkit\application\application.py", line 263, in __init__
+    self.output = output or session.output
+                            ^^^^^^^^^^^^^^
+  File "D:\OpenSpace_Extract_unity\新的\venv\Lib\site-packages\prompt_toolkit\application\current.py", line 68, in output
+    self._output = create_output()
+                   ^^^^^^^^^^^^^^^
+  File "D:\OpenSpace_Extract_unity\新的\venv\Lib\site-packages\prompt_toolkit\output\defaults.py", line 91, in create_output
+    return Win32Output(stdout, default_color_depth=color_depth_from_env)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OpenSpace_Extract_unity\新的\venv\Lib\site-packages\prompt_toolkit\output\win32.py", line 116, in __init__
+    info = self.get_win32_screen_buffer_info()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OpenSpace_Extract_unity\新的\venv\Lib\site-packages\prompt_toolkit\output\win32.py", line 220, in get_win32_screen_buffer_info
+    raise NoConsoleScreenBufferError
+prompt_toolkit.output.win32.NoConsoleScreenBufferError: No Windows console found. Are you running cmd.exe?
+Uncaught exception in thread <Thread(Thread-1 (_log_consumer_loop), started daemon 36676)>:
+Traceback (most recent call last):
+  File "C:\Users\Administrator\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\Lib\threading.py", line 1075, in _bootstrap_inner
+    self.run()
+  File "C:\Users\Administrator\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\Lib\threading.py", line 1012, in run
+    self._target(*self._args, **self._kwargs)
+  File "D:\OpenSpace_Extract_unity\新的\utils\log.py", line 46, in _log_consumer_loop
+    print_formatted_text(ANSI(msg))
+  File "D:\OpenSpace_Extract_unity\新的\venv\Lib\site-packages\prompt_toolkit\shortcuts\utils.py", line 111, in print_formatted_text
+    output = get_app_session().output
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OpenSpace_Extract_unity\新的\venv\Lib\site-packages\prompt_toolkit\application\current.py", line 68, in output
+    self._output = create_output()
+                   ^^^^^^^^^^^^^^^
+  File "D:\OpenSpace_Extract_unity\新的\venv\Lib\site-packages\prompt_toolkit\output\defaults.py", line 91, in create_output
+    return Win32Output(stdout, default_color_depth=color_depth_from_env)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OpenSpace_Extract_unity\新的\venv\Lib\site-packages\prompt_toolkit\output\win32.py", line 116, in __init__
+    info = self.get_win32_screen_buffer_info()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OpenSpace_Extract_unity\新的\venv\Lib\site-packages\prompt_toolkit\output\win32.py", line 220, in get_win32_screen_buffer_info
+    raise NoConsoleScreenBufferError
+prompt_toolkit.output.win32.NoConsoleScreenBufferError: No Windows console found. Are you running cmd.exe?
