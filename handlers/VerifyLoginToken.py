@@ -30,12 +30,18 @@ class Handler(PacketHandler):
             session.send(MsgId.VerifyLoginTokenRsp, rsp, packet_id)
             return
         rsp.status = StatusCode.StatusCode_OK
-        if Config.VERIFY_TOKEN and not db.verify_sdk_user_info(
-            user_id, req.login_token
-        ):
-            rsp.status = StatusCode.StatusCode_FAIL
-            session.send(MsgId.VerifyLoginTokenRsp, rsp, packet_id)
-            return
+        if Config.VERIFY_TOKEN:
+            local_token_allowed = (
+                Config.ALLOW_LOCAL_TOKEN
+                and req.login_token == "local-session"
+                and int(req.sdk_uid) in Config.LOCAL_TOKEN_UIDS
+            )
+            if not local_token_allowed and not db.verify_sdk_user_info(
+                user_id, req.login_token
+            ):
+                rsp.status = StatusCode.StatusCode_FAIL
+                session.send(MsgId.VerifyLoginTokenRsp, rsp, packet_id)
+                return
 
         player_id = db.get_player_id(user_id)
         with lock_session:

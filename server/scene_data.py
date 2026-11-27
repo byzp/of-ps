@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional, List
 logger = logging.getLogger(__name__)
 
 _scene: Dict[int, Dict[int, Dict[int, Any]]] = defaultdict(lambda: defaultdict(dict))
+_scene_snapshot: Dict[int, Dict[int, Dict[int, Any]]] = defaultdict(lambda: defaultdict(dict))
 _action: List = []
 _scene_action: Dict[int, Dict[int, List]] = defaultdict(lambda: defaultdict(list))
 _chat_msg: List = []
@@ -169,9 +170,64 @@ def up_recorder(scene_id: int, channel_id: int, player_id: int, rec_data: Any) -
     with lock_scene:
         with lock_rec_list:
             _scene[scene_id][channel_id][player_id] = rec_data
+            _scene_snapshot[scene_id][channel_id][player_id] = rec_data
             rec = (scene_id, channel_id)
             if rec not in _rec_list:
                 _rec_list.append(rec)
+
+
+def get_scene_snapshot_unlocked(scene_id: int, channel_id: int):
+    return dict(_scene_snapshot[scene_id][channel_id])
+
+
+def get_scene_snapshot(scene_id: int, channel_id: int):
+    with lock_scene:
+        return get_scene_snapshot_unlocked(scene_id, channel_id)
+
+
+def remove_scene_snapshot(scene_id: int, channel_id: int, player_id: int) -> None:
+    with lock_scene:
+        players = _scene_snapshot.get(scene_id, {}).get(channel_id)
+        if players is not None:
+            players.pop(player_id, None)
+
+
+def clear_scene_snapshots() -> None:
+    with lock_scene:
+        _scene_snapshot.clear()
+
+
+def export_scene_snapshots():
+    with lock_scene:
+        return {
+            int(scene_id): {
+                int(channel_id): {
+                    int(player_id): value.SerializeToString()
+                    for player_id, value in players.items()
+                }
+                for channel_id, players in channels.items()
+            }
+            for scene_id, channels in _scene_snapshot.items()
+        }
+
+
+def import_scene_snapshots(snapshot) -> None:
+    from proto.net_pb2 import PlayerRecorderData
+
+    restored = {}
+    for scene_id, channels in snapshot.items():
+        restored[int(scene_id)] = {}
+        for channel_id, players in channels.items():
+            target = restored[int(scene_id)][int(channel_id)] = {}
+            for player_id, payload in players.items():
+                value = PlayerRecorderData()
+                value.ParseFromString(payload)
+                target[int(player_id)] = value
+    with lock_scene:
+        _scene_snapshot.clear()
+        for scene_id, channels in restored.items():
+            for channel_id, players in channels.items():
+                _scene_snapshot[scene_id][channel_id].update(players)
 
 
 def up_action(scene_id: int, channel_id: int, msg) -> None:

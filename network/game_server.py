@@ -3,12 +3,13 @@ import os
 import socket
 import time
 from concurrent.futures import ThreadPoolExecutor
-from threading import Event, Lock
+from threading import Event, Lock, Thread, current_thread
 
 from config import Config
 from network.game_session import GameSession
 from network.packet_factory import PacketFactory
-from server.scene_data import _session_list as session_list, lock_session
+from server import lobby_state, shared_projection
+from server.scene_data import _session_list as session_list, lock_session, remove_scene_snapshot
 import server.notice_sync as notice_sync
 
 logger = logging.getLogger(__name__)
@@ -27,8 +28,16 @@ class GameServer:
         self._started = Event()
         self._stopped = Event()
         self._stop_lock = Lock()
+        self._maintenance_stop = Event()
+        self._maintenance_thread = None
+        self._last_snapshot_at = 0.0
         self._session_pool = ThreadPoolExecutor(
             max_workers=Config.SESSION_POOL_MAX_WORKERS, thread_name_prefix="session"
+        )
+        self.host_id = Config.LOBBY_HOST_ID
+        self.epoch = 1
+        self.lease = lobby_state.LobbyHostLease(
+            self.host_id, self.epoch, Config.LOBBY_LEASE_SECONDS
         )
 
     def start(self):
@@ -38,6 +47,22 @@ class GameServer:
                 if self._started.is_set() or self._stopped.is_set():
                     raise RuntimeError("GameServer instance cannot be started twice")
                 PacketFactory.initialize_handlers(Config.HANDLERS_PACKAGE)
+                if Config.LOBBY_STATE_PATH:
+                    saved = lobby_state.load_lobby_state(Config.LOBBY_STATE_PATH)
+                    if saved is not None:
+                        lobby_state.restore_lobby_state(saved, current_epoch=0)
+                        self.epoch = int(saved["epoch"]) + 1
+                        self.lease = lobby_state.LobbyHostLease(
+                            self.host_id,
+                            self.epoch,
+                            Config.LOBBY_LEASE_SECONDS,
+                        )
+                        logger.info(
+                            "Restored lobby snapshot from %s at epoch %s",
+                            Config.LOBBY_STATE_PATH,
+                            self.epoch,
+                        )
+                lobby_state.activate_host_lease(self.lease)
                 self._discard_stale_sessions()
 
                 self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -62,6 +87,13 @@ class GameServer:
                 logger.info("Game server started on port %s", self.server_socket.getsockname()[1])
                 logger.info("For help, type 'help'")
                 self.notice_thread = notice_sync.init()
+                self._maintenance_stop.clear()
+                self._maintenance_thread = Thread(
+                    target=self._maintenance_loop,
+                    daemon=True,
+                    name="lobby-host-maintenance",
+                )
+                self._maintenance_thread.start()
 
             self._started.set()
             while self.running:
@@ -120,6 +152,42 @@ class GameServer:
         finally:
             # Also releases wait_started() when stop races with startup.
             self._started.set()
+            if not self.running and not self._stopped.is_set():
+                self.stop()
+
+    def _maintenance_loop(self):
+        interval = min(
+            Config.LOBBY_LEASE_SECONDS / 3.0,
+            Config.LOBBY_SNAPSHOT_INTERVAL_SEC,
+        )
+        while not self._maintenance_stop.wait(interval):
+            try:
+                self.lease.renew()
+            except Exception:
+                logger.exception("Lobby host lease renewal failed")
+                self.running = False
+                return
+            if (
+                Config.LOBBY_STATE_PATH
+                and time.monotonic() - self._last_snapshot_at
+                >= Config.LOBBY_SNAPSHOT_INTERVAL_SEC
+            ):
+                try:
+                    for projection in shared_projection.store.prune_restored(
+                        Config.LOBBY_RESTORED_PROJECTION_TTL_SEC
+                    ):
+                        remove_scene_snapshot(
+                            projection.scene_id,
+                            projection.channel_id,
+                            projection.player_id,
+                        )
+                    lobby_state.persist_lobby_state(
+                        Config.LOBBY_STATE_PATH,
+                        lobby_state.capture_lobby_state(self.host_id, self.epoch),
+                    )
+                    self._last_snapshot_at = time.monotonic()
+                except Exception:
+                    logger.exception("Unable to persist periodic lobby snapshot")
 
     def _expire_queued_sessions(self):
         now = time.monotonic()
@@ -154,7 +222,25 @@ class GameServer:
                 return
             self.running = False
             self._started.set()
+            self._maintenance_stop.set()
+            maintenance_thread = self._maintenance_thread
+            self._maintenance_thread = None
+            if (
+                maintenance_thread is not None
+                and maintenance_thread is not current_thread()
+            ):
+                maintenance_thread.join()
             first_error = None
+
+            if Config.LOBBY_STATE_PATH:
+                try:
+                    lobby_state.persist_lobby_state(
+                        Config.LOBBY_STATE_PATH,
+                        lobby_state.capture_lobby_state(self.host_id, self.epoch),
+                    )
+                except Exception as error:
+                    first_error = error
+                    logger.exception("Unable to persist lobby snapshot")
 
             listener = self.server_socket
             self.server_socket = None
@@ -213,6 +299,7 @@ class GameServer:
             finally:
                 self._stopped.set()
 
+            lobby_state.deactivate_host_lease(self.lease)
             if first_error is not None:
                 raise RuntimeError("GameServer shutdown completed with errors") from first_error
 

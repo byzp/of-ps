@@ -48,6 +48,15 @@ class Handler(PacketHandler):
         req = SendChatMsgReq()
         req.ParseFromString(data)
 
+        rate_limiter = getattr(session, "rate_limiter", None)
+        if rate_limiter is not None and not rate_limiter.allow("chat"):
+            session.send(
+                MsgId.SendChatMsgRsp,
+                SendChatMsgRsp(status=StatusCode.StatusCode_REQUESTS_TOO_FREQUENT),
+                packet_id,
+            )
+            return
+
         # 聊天表情须在 Chat.chat_emotion 配置内(0=无); 校验须先于广播
         emotions = {
             item["i_d"]

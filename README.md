@@ -2,7 +2,7 @@
 
 [中文介绍](https://github.com/byzp/of-ps/blob/main/README_zh.md)
 
-> 本地加固分支 `lab/v3.0-hardening` 包含 303 个处理器、奖励/社交/装备/活动/支付安全状态机和完整测试。详见[本地加固说明](docs/hardening-v3.0.md)。该分支尚未合并上游 PR #29。
+> 本地加固分支 `lab/v3.0-hardening` 包含 303 个处理器、奖励/社交/装备/活动/支付安全状态机和完整测试。详见[本地加固说明](docs/hardening-v3.0.md)。公共大厅实验位于 `lab/public-lobby-phase0`，尚未合并上游 PR #29。
 
 ## Deployment
 
@@ -100,6 +100,31 @@ Find `launcher.exe` in the game folder (e.g. from TapTap):
 E:\TapTap\PC Games\176228\launcher.exe
 ```
 
+## Public Lobby Experiment (In Progress)
+
+The experiment branch adds shared player projections, persistent channel snapshots, low-frequency global plus AOI position sync, separate normal/bulk send queues, multiplayer metrics, host leases, and snapshot failover. It does **not** yet provide public automatic host election, multi-shard coordination, client prediction, or dozens-of-real-clients acceptance, and must not be described as a production-ready public lobby.
+
+Key settings in `config.py`:
+
+- `SCENE_GLOBAL_SYNC_INTERVAL`: global position snapshot interval, default `0.5` seconds.
+- `SCENE_AOI_RADIUS`: high-frequency nearby-player radius, default `80`.
+- `LOBBY_STATE_PATH`: lobby snapshot path; `None` disables persistence.
+- `LOBBY_HOST_ID`, `LOBBY_LEASE_SECONDS`, `LOBBY_SNAPSHOT_INTERVAL_SEC`: host identity, lease, and periodic snapshot settings.
+- `LOBBY_RESTORED_PROJECTION_TTL_SEC`: expiry for restored projections without an active session, default `30` seconds, preventing ghost players.
+- `AUTO_GENERATE_PLAYER_NAME`: generates a default name and skips client onboarding.
+- `ALLOW_LOCAL_TOKEN`, `LOCAL_TOKEN_UIDS`: local-test token allowlist, disabled by default.
+- `CHAT_RATE_LIMIT_*`, `ACTION_RATE_LIMIT_*`, `EMOJI_RATE_LIMIT_*`: per-session token-bucket rates and burst capacities for chat, actions, and emoji.
+
+Common validation commands:
+
+```bash
+python -m pytest -q tests
+python tools/lobby_loadtest.py --help
+python tools/lobby_failover_e2e.py
+```
+
+`tools/lobby_e2e.py` requires a running server that allows the local test token and checks two-client login, mutual position visibility, chat, and emoji broadcast. `tools/lobby_failover_e2e.py` starts two windowless server processes, kills the host, and verifies snapshot restore, epoch advancement, and renewed interaction.
+
 ## Available Console Commands
 
 All commands are defined in [`utils/cmd.py`](./utils/cmd.py) and [`utils/cmd_exec.py`](./utils/cmd_exec.py).
@@ -146,6 +171,10 @@ All commands are defined in [`utils/cmd.py`](./utils/cmd.py) and [`utils/cmd_exe
 - **Force-save data to database**
    ```
    save
+   ```
+- **Show process-local multiplayer metrics**
+   ```
+   metrics
    ```
 - **Stop the server**
    ```

@@ -26,6 +26,7 @@ class PacketFactory:
     _accepting = False
     _pending = set()
     _pending_sizes = {}
+    _pending_bytes = 0
     MAX_PENDING_PACKETS = max(32, Config.PACKET_POOL_MAX_WORKERS * 8)
     MAX_PENDING_BYTES = 32 * 1024 * 1024
 
@@ -75,7 +76,7 @@ class PacketFactory:
 
         with cls._state_lock:
             executor = cls._executor
-            pending_bytes = sum(cls._pending_sizes.values())
+            pending_bytes = cls._pending_bytes
             if (
                 not cls._accepting
                 or executor is None
@@ -94,6 +95,7 @@ class PacketFactory:
                 else:
                     cls._pending.add(future)
                     cls._pending_sizes[future] = len(data)
+                    cls._pending_bytes += len(data)
                     future.add_done_callback(cls._packet_done)
 
         if rejected:
@@ -106,6 +108,7 @@ class PacketFactory:
     def _packet_done(cls, future):
         with cls._state_lock:
             cls._pending.discard(future)
+            cls._pending_bytes -= cls._pending_sizes.pop(future, 0)
 
     @classmethod
     def _handle_packet(cls, handler, session, data: bytes, packet_id: int, msg_id: int):
@@ -143,6 +146,8 @@ class PacketFactory:
             executor.shutdown(wait=True, cancel_futures=True)
         with cls._state_lock:
             cls._pending.clear()
+            cls._pending_sizes.clear()
+            cls._pending_bytes = 0
             cls._handlers.clear()
 
     @classmethod

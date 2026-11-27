@@ -20,6 +20,7 @@ from proto.net_pb2 import (
 
 import server.scene_data as scene_data
 import server.notice_sync as notice_sync
+from server import shared_projection
 import utils.db as db
 from utils.res_loader import res
 from utils import refresh
@@ -82,11 +83,17 @@ class Handler(PacketHandler):
             and req.scene_id != session.scene_id
         ):
             db.del_kv(session.player_id, "profile", "tutorial_pending")
+        scene_data.remove_scene_snapshot(
+            session.scene_id, session.channel_id, session.player_id
+        )
         session.scene_id = req.scene_id
         if target_sid is not None:
             session.channel_id = target_sid.channel_id
         else:
             session.channel_id = req.channel_label or session.player_id
+        shared_projection.store.move(
+            session.player_id, session.scene_id, session.channel_id
+        )
         scene_data.save_session_location(session, force=True)
 
         # 主线任务条件: 进入指定空间

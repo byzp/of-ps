@@ -508,7 +508,11 @@ def init_player(player_id):
 def _init_player(player_id):
     """初始化新用户数据"""
     cur_time = int(time.time())
-    player_name = ""
+    player_name = (
+        Config.DEFAULT_PLAYER_NAME.format(player_id=player_id)
+        if Config.AUTO_GENERATE_PLAYER_NAME
+        else ""
+    )
     player_unlock_data = (
         res.get("PlayerUnlock", {}).get("player_unlock", {}).get("datas", [])
     )

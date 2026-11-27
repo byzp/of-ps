@@ -9,13 +9,15 @@ class Config:
     # RES_VERSION = "2026-10-21-14-05-50_2026-11-07-22-39-35" # cn
     RES_VERSION = "2026-10-24-12-00-58_2026-11-23-15-53-19"  # global
     RES_URL = "http://cdn-of.inutan.com/Resources;https://cdn-of.inutan.com/Resources;http://127.0.0.1:21000/Resources"
-
-    GAME_SERVER_GADGET_IP = "127.0.0.1"  # access
-    GAME_SERVER_GADGET_PORT = 25566
+    SS_SERVER_URL = "https://te-of.inutan.com"
+    PAY_URL = "http://api-callback-of.inutan.com:19701"
+    PHOTO_SHARE_CDN_URL = "https://cdn-photo-of.inutan.com/cn_prod_main"
 
     # Game Server
     GAME_SERVER_IP = "127.0.0.1"  # listen
     GAME_SERVER_PORT = 11033
+    GAME_SERVER_GADGET_IP = GAME_SERVER_IP  # access
+    GAME_SERVER_GADGET_PORT = GAME_SERVER_PORT
 
     SESSION_POOL_MAX_WORKERS = 128
     PACKET_POOL_MAX_WORKERS = 12
@@ -23,9 +25,66 @@ class Config:
     ACTION_SYNC_WORKERS = 4
     SERVER_MAX_TPS = 120
     COMPRESS_THRESHOLD = 1200
+    SCENE_GLOBAL_SYNC_INTERVAL = 0.5
+    SCENE_AOI_RADIUS = 80.0
+    METRICS_LOG_INTERVAL_SEC = 30.0
+    CHAT_RATE_LIMIT_PER_SEC = 2.0
+    CHAT_RATE_LIMIT_BURST = 5
+    ACTION_RATE_LIMIT_PER_SEC = 5.0
+    ACTION_RATE_LIMIT_BURST = 10
+    EMOJI_RATE_LIMIT_PER_SEC = 3.0
+    EMOJI_RATE_LIMIT_BURST = 8
+    LOBBY_HOST_ID = "local-host"
+    LOBBY_LEASE_SECONDS = 10.0
+    LOBBY_STATE_PATH = None
+    LOBBY_SNAPSHOT_INTERVAL_SEC = 1.0
+    LOBBY_RESTORED_PROJECTION_TTL_SEC = 30.0
     DEBUG_PACKET_PASS = [1007, 1008, 1203, 1206, 2201, 2202]
 
+    @classmethod
+    def validate(cls):
+        errors = []
+        for name in (
+            "HTTP_PORT",
+            "GAME_SERVER_PORT",
+            "GAME_SERVER_GADGET_PORT",
+        ):
+            value = getattr(cls, name)
+            if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= 65535:
+                errors.append(f"{name} must be an integer in 1..65535")
+        if cls.GAME_SERVER_GADGET_PORT != cls.GAME_SERVER_PORT:
+            errors.append(
+                "GAME_SERVER_GADGET_PORT must match GAME_SERVER_PORT; "
+                "use an external proxy if the advertised port must differ"
+            )
+        if cls.SCENE_GLOBAL_SYNC_INTERVAL <= 0:
+            errors.append("SCENE_GLOBAL_SYNC_INTERVAL must be positive")
+        if cls.SCENE_AOI_RADIUS < 0:
+            errors.append("SCENE_AOI_RADIUS must be non-negative")
+        if cls.LOBBY_LEASE_SECONDS <= 0:
+            errors.append("LOBBY_LEASE_SECONDS must be positive")
+        if cls.LOBBY_SNAPSHOT_INTERVAL_SEC <= 0:
+            errors.append("LOBBY_SNAPSHOT_INTERVAL_SEC must be positive")
+        if cls.LOBBY_RESTORED_PROJECTION_TTL_SEC <= 0:
+            errors.append("LOBBY_RESTORED_PROJECTION_TTL_SEC must be positive")
+        for name in (
+            "CHAT_RATE_LIMIT_PER_SEC",
+            "CHAT_RATE_LIMIT_BURST",
+            "ACTION_RATE_LIMIT_PER_SEC",
+            "ACTION_RATE_LIMIT_BURST",
+            "EMOJI_RATE_LIMIT_PER_SEC",
+            "EMOJI_RATE_LIMIT_BURST",
+        ):
+            if getattr(cls, name) <= 0:
+                errors.append(f"{name} must be positive")
+        if errors:
+            raise ValueError("Invalid network configuration: " + "; ".join(errors))
+
     VERIFY_TOKEN = True
+    ALLOW_LOCAL_TOKEN = False
+    LOCAL_TOKEN_UIDS = ()
+    AUTO_GENERATE_PLAYER_NAME = True
+    DEFAULT_PLAYER_NAME = "旅人{player_id}"
     REJECT_PAYMENT = True  # CreatePayOrderReq
     ALLOW_AUTO_REGISTER = False
     SKIP_QUESTS = False

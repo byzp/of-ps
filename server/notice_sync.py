@@ -16,6 +16,7 @@ from proto.net_pb2 import (
 )
 from network.msg_id import MsgId
 from network.remote_link import rsend
+from server import lobby_state, shared_projection
 from server.scene_data import (
     _action as action,
     _chat_msg as chat_msg,
@@ -23,17 +24,21 @@ from server.scene_data import (
     _scene as scene,
     _scene_action as scene_action,
     _session_list as session_list,
+    clear_scene_snapshots,
+    get_scene_snapshot_unlocked,
     lock_action,
     lock_chat_msg,
     lock_rec_list,
     lock_scene,
     lock_scene_action,
     lock_session,
+    remove_scene_snapshot,
     save_session_location,
     up_scene_action,
 )
 import utils.db as db
 from utils import item_mgr as items_util, mail_rewards, weather
+from utils import metrics as metrics_registry
 from utils.res_loader import res
 
 logger = logging.getLogger(__name__)
@@ -59,6 +64,8 @@ _thread = None
 _stamina_thread = None
 _failed = False
 sync_stop = False
+_last_metrics_log = 0.0
+_last_global_position_sync = {}
 
 
 def set_time_of_day(seconds):
@@ -130,6 +137,155 @@ def failed():
         return _failed
 
 
+def _active_channel_count_locked():
+    channels = set()
+    active = 0
+    for session in session_list:
+        if getattr(session, "running", False) and getattr(session, "logged_in", False):
+            active += 1
+            channels.add((session.scene_id, session.channel_id))
+            shared_projection.store.touch(session.player_id)
+    return active, len(channels)
+
+
+def _record_cycle_metrics(
+    use_time,
+    active_sessions,
+    channel_count,
+    action_count,
+    scene_count,
+    chat_count,
+    position_count,
+):
+    metrics_registry.metrics.inc("ofps.notice.cycles_total")
+    metrics_registry.metrics.observe("ofps.notice.cycle_duration_seconds", use_time)
+    if use_time > 1.0 / max_tps:
+        metrics_registry.metrics.inc("ofps.notice.over_budget_total")
+    metrics_registry.metrics.set("ofps.notice.active_sessions", active_sessions)
+    metrics_registry.metrics.set("ofps.notice.channels", channel_count)
+    metrics_registry.metrics.inc("ofps.notice.action_messages", action_count)
+    metrics_registry.metrics.inc("ofps.notice.scene_messages", scene_count)
+    metrics_registry.metrics.inc("ofps.notice.chat_messages", chat_count)
+    metrics_registry.metrics.inc("ofps.notice.position_players", position_count)
+
+
+def _append_position_records(response, records):
+    for player_id, value in records:
+        item = response.data.add()
+        item.player_id = player_id
+        item.data.add().CopyFrom(value)
+
+
+def _position_response(records):
+    response = PlayerSceneSyncDataNotice(status=StatusCode.StatusCode_OK)
+    _append_position_records(response, records)
+    return response
+
+
+def _broadcast_position_updates(start_t):
+    radius_squared = Config.SCENE_AOI_RADIUS * Config.SCENE_AOI_RADIUS
+    for scene_id, channel_id in rec_list:
+        updated_records = list(scene[scene_id][channel_id].items())
+        snapshot_records = list(
+            get_scene_snapshot_unlocked(scene_id, channel_id).items()
+        )
+        local_updated = [
+            (player_id, value)
+            for player_id, value in updated_records
+            if player_id < 1010000
+        ]
+        remote_updated = [
+            (player_id, value)
+            for player_id, value in updated_records
+            if player_id >= 1010000
+        ]
+        local_snapshot = [
+            (player_id, value)
+            for player_id, value in snapshot_records
+            if player_id < 1010000
+        ]
+        remote_snapshot = [
+            (player_id, value)
+            for player_id, value in snapshot_records
+            if player_id >= 1010000
+        ]
+
+        key = (scene_id, channel_id)
+        global_due = (
+            radius_squared <= 0
+            or start_t - _last_global_position_sync.get(key, 0.0)
+            >= Config.SCENE_GLOBAL_SYNC_INTERVAL
+        )
+        if global_due:
+            _last_global_position_sync[key] = start_t
+
+        rsend(
+            MsgId.PlayerSceneSyncDataNotice,
+            _position_response(local_snapshot if global_due else local_updated),
+            [scene_id, channel_id],
+        )
+
+        channel_sessions = [
+            session
+            for session in session_list
+            if getattr(session, "running", False)
+            and getattr(session, "logged_in", False)
+            and session.scene_id == scene_id
+            and session.channel_id == channel_id
+        ]
+        projection_by_player = {
+            player_id: shared_projection.store.get(player_id)
+            for player_id, _ in local_updated
+        }
+        global_response = None
+        if global_due:
+            global_response = _position_response(local_snapshot)
+            _append_position_records(global_response, remote_snapshot)
+        fallback_response = None
+        for session in channel_sessions:
+            projection = shared_projection.store.get(session.player_id)
+            if global_due or projection is None:
+                selected = local_snapshot
+                remote_selected = remote_snapshot
+                if global_response is not None:
+                    response = global_response
+                else:
+                    if fallback_response is None:
+                        fallback_response = _position_response(local_snapshot)
+                        _append_position_records(fallback_response, remote_snapshot)
+                    response = fallback_response
+                metrics_registry.metrics.inc(
+                    "ofps.notice.position_global_sends"
+                )
+            else:
+                selected = []
+                for player_id, value in local_updated:
+                    other = projection_by_player.get(player_id)
+                    if (
+                        player_id == session.player_id
+                        or other is None
+                        or projection.squared_distance(other) <= radius_squared
+                    ):
+                        selected.append((player_id, value))
+                remote_selected = remote_updated
+                response = _position_response(selected)
+                _append_position_records(response, remote_selected)
+                metrics_registry.metrics.inc("ofps.notice.position_aoi_sends")
+                metrics_registry.metrics.inc(
+                    "ofps.notice.position_aoi_candidates", len(local_updated)
+                )
+
+            if not selected and not remote_selected:
+                continue
+            session.send(MsgId.PlayerSceneSyncDataNotice, response, 0)
+            metrics_registry.metrics.inc(
+                "ofps.notice.position_players_sent",
+                len(selected) + len(remote_selected),
+            )
+        scene[scene_id][channel_id].clear()
+    rec_list.clear()
+
+
 def stop():
     """Wake both loops, wait for stamina writes, then wait for the final save."""
     with _lifecycle_lock:
@@ -188,6 +344,8 @@ def _cleanup_disconnected_locked(timestamp):
         server_data.action_type = SceneActionType.SceneActionType_LEAVE
         up_scene_action(session.scene_id, session.channel_id, notice)
         session.logged_in = False
+        shared_projection.store.remove(session.player_id)
+        remove_scene_snapshot(session.scene_id, session.channel_id, session.player_id)
 
     session_list[:] = [session for session in session_list if getattr(session, "running", False)]
 
@@ -208,12 +366,22 @@ def _shutdown_sessions_locked(timestamp):
         session.logged_in = False
     # A same-process restart must not inherit remote or local session objects.
     session_list.clear()
+    shared_projection.store.clear()
+    clear_scene_snapshots()
+    _last_global_position_sync.clear()
 
 
 def notice_sync_loop():
-    global tod_time, game_time_seconds, _rel_time, _last_send_time, _last_stamina_sync_time
+    global tod_time, game_time_seconds, _rel_time, _last_send_time, _last_stamina_sync_time, _last_metrics_log
     while not _stop_event.is_set() and not sync_stop:
+        if not lobby_state.host_lease_is_valid():
+            _stop_event.wait(0.1)
+            continue
         start_t = time.time()
+        action_count = 0
+        scene_count = 0
+        chat_count = 0
+        position_count = 0
 
         # 只在维护会话列表和读取时钟时持有会话锁。广播和数据库操作都使用快照，
         # 这样动作 worker 可以同时获取其他场景的会话。
@@ -223,6 +391,7 @@ def notice_sync_loop():
                 return
 
             _cleanup_disconnected_locked(start_t)
+            active_sessions, channel_count = _active_channel_count_locked()
             elapsed_real = start_t - _rel_time
             if elapsed_real > 0:
                 previous_weather = weather.weather_at(int(game_time_seconds // 3600))
@@ -239,6 +408,7 @@ def notice_sync_loop():
                             session.send(MsgId.SceneWeatherChangeNotice, notice, 0)
             with lock_action:
                 # 1970 玩家动作广播
+                action_count = len(action)
                 for scene_id, channel_id, action_notice in action:
                     if action_notice.from_player_id < 1010000:
                         rsend(MsgId.SendActionNotice, action_notice, [scene_id, channel_id])
@@ -274,6 +444,11 @@ def notice_sync_loop():
                                         notice,
                                         [scene_id, channel_id],
                                     )
+                scene_count = sum(
+                    len(channel)
+                    for scene_t in scene_action.values()
+                    for channel in scene_t.values()
+                )
                 scene_action.clear()
             with lock_chat_msg:
                 for session in session_list:
@@ -291,35 +466,32 @@ def notice_sync_loop():
                 for msg in chat_msg:
                     if msg[3].msg.player_id < 1010000:
                         rsend(MsgId.ChatMsgNotice, msg[3], [msg[0], msg[1], msg[2]])
+                chat_count = len(chat_msg)
                 chat_msg.clear()
             with lock_scene:
                 with lock_rec_list:
-                    # 1206 玩家动作同步
-                    for scene_id, channel_id in rec_list:
-                        response = PlayerSceneSyncDataNotice()
-                        response.status = StatusCode.StatusCode_OK
-                        other_notice = []
-                        for player_id, value in scene[scene_id][channel_id].items():
-                            if player_id < 1010000:
-                                tmp = response.data.add()
-                                tmp.player_id = player_id
-                                tmp.data.add().CopyFrom(value)
-                            else:
-                                other_notice.append((player_id, value))
-                        rsend(1206, response, [scene_id, channel_id])
-                        for player_id, value in other_notice:
-                            tmp = response.data.add()
-                            tmp.player_id = player_id
-                            tmp.data.add().CopyFrom(value)
-                        scene[scene_id][channel_id].clear()
-                        for session in session_list:
-                            if session.scene_id == scene_id and session.channel_id == channel_id:
-                                session.send(MsgId.PlayerSceneSyncDataNotice, response, 0)
-                    rec_list.clear()
+                    position_count = sum(
+                        len(scene[scene_id][channel_id])
+                        for scene_id, channel_id in rec_list
+                    )
+                    _broadcast_position_updates(start_t)
             if start_t - _last_stamina_sync_time > STAMINA_INTERVAL:
                 _stamina_requested.set()
                 _last_stamina_sync_time = start_t
         use_time = time.time() - start_t
+        _record_cycle_metrics(
+            use_time,
+            active_sessions,
+            channel_count,
+            action_count,
+            scene_count,
+            chat_count,
+            position_count,
+        )
+        metrics_now = time.time()
+        if metrics_now - _last_metrics_log >= Config.METRICS_LOG_INTERVAL_SEC:
+            logger.info("metrics snapshot: %s", metrics_registry.metrics.snapshot())
+            _last_metrics_log = metrics_now
         wait_time = 1.0 / max_tps - use_time
         if use_time > 1:
             logger.debug("notice sync time: %s", use_time)

@@ -11,6 +11,7 @@ import server.notice_sync as notice_sync
 import server.photo_share as photo_share
 import utils.cmd as cmd
 import utils.db as db
+from utils import metrics as metrics_registry
 import utils.res_loader as res_loader
 
 logging.basicConfig(
@@ -48,8 +49,18 @@ def _shutdown_step(name, action):
 def main():
     _stop_once.clear()
     _shutdown_requested.clear()
+    Config.validate()
     logger.info("OverFieldPS Start")
-    logger.info("config: DYE_NO_COST=%s DYE_STUFF_NUM=%s AUTOSAVE_INTERVAL_SEC=%s WORKERS=%s", getattr(Config, "DYE_NO_COST", None), getattr(Config, "DYE_STUFF_NUM", None), getattr(Config, "AUTOSAVE_INTERVAL_SEC", None), getattr(Config, "SESSION_POOL_MAX_WORKERS", None))
+    logger.info(
+        "config: HTTP=%s:%s GAME=%s:%s DISPATCH=%s:%s WORKERS=%s",
+        Config.HTTP_HOST,
+        Config.HTTP_PORT,
+        Config.GAME_SERVER_IP,
+        Config.GAME_SERVER_PORT,
+        Config.GAME_SERVER_GADGET_IP,
+        Config.GAME_SERVER_GADGET_PORT,
+        Config.SESSION_POOL_MAX_WORKERS,
+    )
 
     if hasattr(sys, "_is_gil_enabled"):
         logger.info(f"GIL enabled: {sys._is_gil_enabled()}")
@@ -143,6 +154,7 @@ def main():
 
     if not shutdown_ok:
         raise RuntimeError("One or more shutdown steps failed")
+    logger.info("metrics snapshot: %s", metrics_registry.metrics.snapshot())
     logger.info("Exited cleanly")
 
 

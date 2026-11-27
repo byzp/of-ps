@@ -60,4 +60,6 @@ class Handler(PacketHandler):
         rsp.reconnect_success = bool(req.is_reconnect and restored_location)
         rsp.scene_id = session.scene_id
         rsp.channel_id = session.channel_id
+        session.player_name = rsp.player_name
+        session.logged_in = True
         session.send(MsgId.PlayerLoginRsp, rsp, packet_id)  # 1003,1004

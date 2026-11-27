@@ -24,6 +24,7 @@ import server.notice_sync as notice_sync
 import utils.db as db
 from utils import action_unlock
 from utils import expression_unlock
+from utils import metrics as metrics_registry
 from utils.pb_create import make_item
 from utils.pb_create import make_SceneDataNotice
 from network.remote_link import get_connected_servers
@@ -54,6 +55,8 @@ def cmd_exec(cmd: str):
             players(cmds)
         case "save":
             db.save()
+        case "metrics":
+            logger.info("metrics snapshot: %s", metrics_registry.metrics.snapshot())
         case _:
             logger.warning("Unknown command. Type help to list available commands.")
 

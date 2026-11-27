@@ -22,6 +22,7 @@ from proto.net_pb2 import (
     PlayerInfo,
     ScenePlayer,
 )
+from server import lobby_state
 from server.scene_data import (
     get_session,
     up_action,
@@ -637,6 +638,9 @@ def _add_remote_player(origin, info):
 def _process(data, addr):
     global _name
     msg = _unpack(data)
+    if not lobby_state.host_lease_is_valid():
+        logger.warning("Discarding link message from %s: host lease expired", addr)
+        return
     now = time.monotonic()
     with _lock:
         if msg.id in _seen_msgs:
@@ -996,7 +1000,11 @@ def stop():
 
 
 def rsend(msg_id, proto_msg, datas=None):
-    if not Config.LINK_OTHER_SERVER or _stopped.is_set():
+    if (
+        not Config.LINK_OTHER_SERVER
+        or _stopped.is_set()
+        or not lobby_state.host_lease_is_valid()
+    ):
         return
     msg = _make_msg(LinkMessage.DATA)
     if datas:

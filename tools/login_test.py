@@ -16,12 +16,13 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from proto.net_pb2 import *
+from config import Config
 import requests
 from urllib.parse import urlparse, parse_qs
 
-HOST = "127.0.0.1"
-PORT = 11033
-API_URL = f"http://{HOST}:21000/api/login"
+HOST = Config.GAME_SERVER_IP
+PORT = Config.GAME_SERVER_PORT
+API_URL = f"http://{Config.HTTP_HOST}:{Config.HTTP_PORT}/api/login"
 HEADERS = {"Content-Type": "application/json"}
 
 GROUP_RESULTS = []

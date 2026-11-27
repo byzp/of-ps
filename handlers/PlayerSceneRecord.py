@@ -1,9 +1,7 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-
-
 from proto.net_pb2 import PlayerSceneRecordReq
-
+from server import shared_projection
 from server.scene_data import up_recorder, save_session_location
 
 
@@ -13,6 +11,12 @@ class Handler(PacketHandler):
         req = PlayerSceneRecordReq()
         req.ParseFromString(data)
 
+        shared_projection.store.update_from_recorder(
+            session.player_id,
+            session.scene_id,
+            session.channel_id,
+            req.data,
+        )
         up_recorder(
             session.scene_id,
             session.channel_id,

@@ -183,6 +183,7 @@ def _prompt_loop():
                             "players\n",
                             "link\n",
                             "save\n",
+                            "metrics\n",
                             "stop\n",
                             "help",
                         )

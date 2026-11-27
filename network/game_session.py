@@ -13,6 +13,9 @@ from config import Config
 from network.msg_id import MsgId
 from network.packet_factory import PacketFactory
 from proto.net_pb2 import PacketHead, PosColor, ScenePlayer
+from server import lobby_state
+from utils import metrics as metrics_registry
+from utils.rate_limit import SessionRateLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -65,10 +68,12 @@ class GameSession:
         "created_at",
         "run_started",
         "_send_queue",
+        "_bulk_send_queue",
         "_send_lock",
         "_send_event",
         "_send_thread",
         "_send_queued_bytes",
+        "_bulk_send_queued_bytes",
         "_close_lock",
         "closed",
         "_seq_id",
@@ -97,6 +102,7 @@ class GameSession:
         "verified",
         "logged_in",
         "remote",
+        "rate_limiter",
     )
 
     HEADER_LENGTH = 2
@@ -121,6 +127,7 @@ class GameSession:
     WRITE_TIMEOUT = 10.0
 
     def __init__(self, client_socket: socket.socket, address):
+        metrics_registry.metrics.inc("ofps.sessions.created_total")
         self.socket = client_socket
         self.address = address
         self._close_lock = Lock()
@@ -138,10 +145,12 @@ class GameSession:
         self.run_started = False
 
         self._send_queue = deque()
+        self._bulk_send_queue = deque()
         self._send_lock = Lock()
         self._send_event = Event()
         self._send_thread = None
         self._send_queued_bytes = 0
+        self._bulk_send_queued_bytes = 0
 
         self._write_head_buf = bytearray(128)
         self._seq_id = 1
@@ -170,6 +179,22 @@ class GameSession:
         self.verified = False
         self.logged_in = False
         self.remote = False
+        self.rate_limiter = SessionRateLimiter(
+            {
+                "chat": (
+                    Config.CHAT_RATE_LIMIT_PER_SEC,
+                    Config.CHAT_RATE_LIMIT_BURST,
+                ),
+                "action": (
+                    Config.ACTION_RATE_LIMIT_PER_SEC,
+                    Config.ACTION_RATE_LIMIT_BURST,
+                ),
+                "emoji": (
+                    Config.EMOJI_RATE_LIMIT_PER_SEC,
+                    Config.EMOJI_RATE_LIMIT_BURST,
+                ),
+            }
+        )
 
     def run(self):
         self.run_started = True
@@ -235,12 +260,15 @@ class GameSession:
                     continue
                 if n == 0:
                     break
+                metrics_registry.metrics.inc("ofps.network.bytes_received_total", n)
+                metrics_registry.metrics.inc("ofps.network.recv_calls_total")
                 if self._recv_len == 0:
                     self._recv_started = time.monotonic()
                 self._recv_len += n
                 last_activity = time.monotonic()
                 self._process_buffer()
         except _ProtocolError as error:
+            metrics_registry.metrics.inc("ofps.network.protocol_errors_total")
             logger.warning("Protocol error from %s: %s", self.address, error)
         except socket.timeout:
             logger.debug("Socket timeout: %s", self.address)
@@ -319,8 +347,21 @@ class GameSession:
             if head.msg_id not in Config.DEBUG_PACKET_PASS:
                 logger.debug("Received message: %s", id_to_name.get(head.msg_id))
 
+            metrics_registry.metrics.inc("ofps.network.packets_received_total")
+            try:
+                lobby_state.assert_host_authority()
+            except lobby_state.StaleEpochError:
+                metrics_registry.metrics.inc("ofps.lobby.stale_host_requests_total")
+                logger.warning("Rejecting packet from %s: host lease expired", self.address)
+                self.running = False
+                return
+            handler_started = time.perf_counter()
             accepted = PacketFactory.process_packet(
                 head.msg_id, body, head.packet_id, self
+            )
+            metrics_registry.metrics.observe(
+                "ofps.network.handler_duration_seconds",
+                time.perf_counter() - handler_started,
             )
             if accepted is False or not self.running:
                 return
@@ -346,23 +387,41 @@ class GameSession:
 
         task = SendTask(msg_id, data_bytes, packet_id, is_bin)
         overflow = False
+        bulk = msg_id == MsgId.PlayerSceneSyncDataNotice
         with self._send_lock:
             # close() sets running before taking this lock, so a producer cannot
             # enqueue behind a completed close.
             if not self.running:
                 return False
+            total_tasks = len(self._send_queue) + len(self._bulk_send_queue)
+            total_bytes = self._send_queued_bytes + self._bulk_send_queued_bytes
             if (
-                len(self._send_queue) >= self.MAX_SEND_QUEUE_TASKS
-                or self._send_queued_bytes + len(data_bytes) > self.MAX_SEND_QUEUE_BYTES
+                total_tasks >= self.MAX_SEND_QUEUE_TASKS
+                or total_bytes + len(data_bytes) > self.MAX_SEND_QUEUE_BYTES
             ):
                 overflow = True
+            elif bulk:
+                self._bulk_send_queue.append(task)
+                self._bulk_send_queued_bytes += len(data_bytes)
+                metrics_registry.metrics.inc("ofps.network.bulk_send_queue_tasks")
+                metrics_registry.metrics.inc(
+                    "ofps.network.bulk_send_queue_bytes", len(data_bytes)
+                )
+                if len(self._bulk_send_queue) == 1:
+                    self._send_event.set()
             else:
                 self._send_queue.append(task)
                 self._send_queued_bytes += len(data_bytes)
                 if len(self._send_queue) == 1:
                     self._send_event.set()
+            if not overflow:
+                metrics_registry.metrics.inc("ofps.network.send_queue_tasks")
+                metrics_registry.metrics.inc(
+                    "ofps.network.send_queue_bytes", len(data_bytes)
+                )
 
         if overflow:
+            metrics_registry.metrics.inc("ofps.network.send_queue_overflows_total")
             logger.warning("Send queue overflow: %s", self.address)
             self.close()
             return False
@@ -371,6 +430,7 @@ class GameSession:
     def _send_loop(self):
         sock = self.socket
         queue = self._send_queue
+        bulk_queue = self._bulk_send_queue
         lock = self._send_lock
         event = self._send_event
         out_buf = bytearray(65536)
@@ -384,14 +444,34 @@ class GameSession:
             tasks = []
             queued_bytes = 0
             with lock:
-                while queue and len(tasks) < self._SEND_BATCH_LIMIT:
+                normal_limit = max(1, self._SEND_BATCH_LIMIT * 4 // 5)
+                while queue and len(tasks) < normal_limit:
                     if tasks and queued_bytes + len(queue[0].data) > self._SEND_BATCH_BYTES:
                         break
                     task = queue.popleft()
                     tasks.append(task)
                     queued_bytes += len(task.data)
                     self._send_queued_bytes -= len(task.data)
-                if not queue:
+                    metrics_registry.metrics.inc("ofps.network.send_queue_tasks", -1)
+                    metrics_registry.metrics.inc(
+                        "ofps.network.send_queue_bytes", -len(task.data)
+                    )
+                while bulk_queue and len(tasks) < self._SEND_BATCH_LIMIT:
+                    if tasks and queued_bytes + len(bulk_queue[0].data) > self._SEND_BATCH_BYTES:
+                        break
+                    task = bulk_queue.popleft()
+                    tasks.append(task)
+                    queued_bytes += len(task.data)
+                    self._bulk_send_queued_bytes -= len(task.data)
+                    metrics_registry.metrics.inc("ofps.network.bulk_send_queue_tasks", -1)
+                    metrics_registry.metrics.inc(
+                        "ofps.network.bulk_send_queue_bytes", -len(task.data)
+                    )
+                    metrics_registry.metrics.inc("ofps.network.send_queue_tasks", -1)
+                    metrics_registry.metrics.inc(
+                        "ofps.network.send_queue_bytes", -len(task.data)
+                    )
+                if not queue and not bulk_queue:
                     event.clear()
 
             if not tasks:
@@ -449,6 +529,12 @@ class GameSession:
             if current_offset > 0 and self.running:
                 try:
                     sock.sendall(memoryview(out_buf)[:current_offset])
+                    metrics_registry.metrics.inc(
+                        "ofps.network.bytes_sent_total", current_offset
+                    )
+                    metrics_registry.metrics.inc(
+                        "ofps.network.packets_sent_total", len(tasks)
+                    )
                 except OSError:
                     self.close()
                     break
@@ -471,6 +557,7 @@ class GameSession:
                 self.closed.set()
                 return
             self.running = False
+            metrics_registry.metrics.inc("ofps.sessions.closed_total")
             self._send_event.set()
             try:
                 self.socket.shutdown(socket.SHUT_RDWR)
@@ -481,8 +568,30 @@ class GameSession:
             except OSError:
                 pass
             with self._send_lock:
+                if self._send_queue:
+                    metrics_registry.metrics.inc(
+                        "ofps.network.send_queue_tasks", -len(self._send_queue)
+                    )
+                    metrics_registry.metrics.inc(
+                        "ofps.network.send_queue_bytes", -self._send_queued_bytes
+                    )
+                if self._bulk_send_queue:
+                    metrics_registry.metrics.inc(
+                        "ofps.network.bulk_send_queue_tasks", -len(self._bulk_send_queue)
+                    )
+                    metrics_registry.metrics.inc(
+                        "ofps.network.bulk_send_queue_bytes", -self._bulk_send_queued_bytes
+                    )
+                    metrics_registry.metrics.inc(
+                        "ofps.network.send_queue_tasks", -len(self._bulk_send_queue)
+                    )
+                    metrics_registry.metrics.inc(
+                        "ofps.network.send_queue_bytes", -self._bulk_send_queued_bytes
+                    )
                 self._send_queue.clear()
+                self._bulk_send_queue.clear()
                 self._send_queued_bytes = 0
+                self._bulk_send_queued_bytes = 0
             self.closed.set()
 
     def wait_closed(self, timeout=None):

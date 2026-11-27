@@ -3,7 +3,7 @@
 协议：[u16 BE headLen][PacketHead][body]，PacketHead 是 protobuf。
 
 用法：
-    venv\\Scripts\\python.exe tools\\loadtest.py --host 127.0.0.1 --port 25566 --clients 100 --seconds 20
+    venv\\Scripts\\python.exe tools\\loadtest.py --host 127.0.0.1 --port 11033 --clients 100 --seconds 20
     venv\\Scripts\\python.exe tools\\loadtest.py --clients 100 --ramp 0.02   # 每 20ms 建一个连接
 
 输出：连接成功率、心跳成功率、RTT p50/p95/p99/max，以及失败原因分布。
@@ -129,7 +129,7 @@ def pct(values, p):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="127.0.0.1")
-    ap.add_argument("--port", type=int, default=25566)
+    ap.add_argument("--port", type=int, default=11033)
     ap.add_argument("--clients", type=int, default=100)
     ap.add_argument("--seconds", type=float, default=20)
     ap.add_argument("--interval", type=float, default=1.0, help="心跳间隔秒")

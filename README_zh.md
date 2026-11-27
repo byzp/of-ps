@@ -1,6 +1,6 @@
 # of-ps
 
-> 本地加固分支 `lab/v3.0-hardening` 包含 303 个处理器、奖励/社交/装备/活动/支付安全状态机和完整测试。详见[本地加固说明](docs/hardening-v3.0.md)。该分支尚未合并上游 PR #29。
+> 本地加固分支 `lab/v3.0-hardening` 包含 303 个处理器、奖励/社交/装备/活动/支付安全状态机和完整测试。详见[本地加固说明](docs/hardening-v3.0.md)。公共大厅实验位于 `lab/public-lobby-phase0`，尚未合并上游 PR #29。
 
 ## 部署方法
 
@@ -98,6 +98,31 @@
    1. 直接找到taptap的游戏文件夹，选择launcher.exe运行
    2. 例如`E:\TapTap\PC Games\176228\launcher.exe`
 
+## 公共大厅实验（进行中）
+
+当前实验分支提供共享玩家投影、持久频道快照、低频全局 + AOI 高频位置同步、普通/批量双发送队列、联机指标、主机租约与快照故障转移。它尚未完成公网自动选主、多分片、客户端预测或真实客户端数十人验收，不应视为已可公开运营的数十人大厅。
+
+关键配置位于 `config.py`：
+
+- `SCENE_GLOBAL_SYNC_INTERVAL`：全局位置快照间隔，默认 `0.5` 秒。
+- `SCENE_AOI_RADIUS`：附近玩家高频同步半径，默认 `80`。
+- `LOBBY_STATE_PATH`：大厅快照路径；设为 `None` 时关闭持久化。
+- `LOBBY_HOST_ID`、`LOBBY_LEASE_SECONDS`、`LOBBY_SNAPSHOT_INTERVAL_SEC`：主机标识、租约和周期快照。
+- `LOBBY_RESTORED_PROJECTION_TTL_SEC`：无活跃会话的恢复投影过期时间，默认 `30` 秒，避免幽灵玩家。
+- `AUTO_GENERATE_PLAYER_NAME`：自动生成默认玩家名，跳过客户端新手登记。
+- `ALLOW_LOCAL_TOKEN`、`LOCAL_TOKEN_UIDS`：仅限本机测试的 token 白名单，默认关闭。
+- `CHAT_RATE_LIMIT_*`、`ACTION_RATE_LIMIT_*`、`EMOJI_RATE_LIMIT_*`：聊天、动作、表情的会话级令牌桶限流和突发容量。
+
+常用验证命令：
+
+```bash
+python -m pytest -q tests
+python tools/lobby_loadtest.py --help
+python tools/lobby_failover_e2e.py
+```
+
+`tools/lobby_e2e.py` 需要一个已启动且允许本机测试 token 的服务，检查双客户端登录、位置互见、聊天和表情广播；`tools/lobby_failover_e2e.py` 会自行启动两个无窗口服务进程，强杀主机后验证快照恢复、epoch 递增和重新交互。
+
 ## 可用控制台命令
 
 所有可用命令均定义在 [`utils/cmd.py`](./utils/cmd.py) 与 [`utils/cmd_exec.py`](./utils/cmd_exec.py) 中。
@@ -141,6 +166,10 @@
    ```
    save
    ```
+- 查看进程内联机指标
+  ```
+  metrics
+  ```
 - 停止服务器
    ```
    stop
