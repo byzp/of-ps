@@ -5,7 +5,7 @@ from proto.net_pb2 import ExploreCollectRewardReq, ExploreCollectRewardRsp, Pack
 import utils.garden_state as garden_state
 import utils.db as db
 from utils import achieve_track, item_mgr
-from handlers.Explore import area_rewards
+from handlers.Explore import area_rewards, load_area_state, save_area_state
 
 
 @packet_handler(MsgId.ExploreCollectRewardReq)
@@ -30,9 +30,15 @@ class Handler(PacketHandler):
                 (item_id, Config.EXPLORE_COLLECT_REWARD_COUNT)
                 for item_id, _ in area_rewards(req.explore_id)
             ]
-            with item_mgr.player_lock(session.player_id), db.transaction():
-                state = garden_state.get_explore(session.player_id, req.explore_id)
-                if state.get("collect_reward"):
+            with (
+                item_mgr.player_lock(session.player_id),
+                item_mgr.deferred_notifications(),
+                db.transaction(),
+            ):
+                state = load_area_state(session.player_id, req.explore_id)
+                if state["times"] < 1:
+                    rsp.status = StatusCode.StatusCode_EXPLORE_NOT_FINISH
+                elif state.get("collect_reward"):
                     rsp.status = StatusCode.StatusCode_REPEAT_GET_REWARD
                 else:
                     item_mgr.grant_items(
@@ -43,7 +49,7 @@ class Handler(PacketHandler):
                         session=session,
                     )
                     state["collect_reward"] = True
-                    garden_state.set_explore(session.player_id, req.explore_id, state)
+                    save_area_state(session.player_id, req.explore_id, state)
                     rsp.status = StatusCode.StatusCode_OK
                 garden_state.fill_explore_info(rsp.explore, req.explore_id, state)
         except (item_mgr.EconomyConfigError, TypeError, ValueError):

@@ -592,9 +592,25 @@ def _load_order(order_id):
     if raw is None:
         raise PaymentError("order_not_found", "Payment order does not exist")
     try:
-        return json.loads(bytes(raw).decode("utf-8"))
+        order = json.loads(bytes(raw).decode("utf-8"))
     except (TypeError, ValueError, UnicodeDecodeError) as error:
         raise PaymentError("bad_request", "Stored payment order is corrupt") from error
+    if not isinstance(order, dict):
+        raise PaymentError("bad_request", "Stored payment order is corrupt")
+    return order
+
+
+def _load_event(event_id):
+    raw = db.get_kv(0, _EVENT_NAMESPACE, event_id)
+    if raw is None:
+        return None
+    try:
+        event = json.loads(bytes(raw).decode("utf-8"))
+    except (TypeError, ValueError, UnicodeDecodeError) as error:
+        raise PaymentError("bad_request", "Stored payment event is corrupt") from error
+    if not isinstance(event, dict) or not isinstance(event.get("order_id"), str):
+        raise PaymentError("bad_request", "Stored payment event is corrupt")
+    return event
 
 
 def settle_payment_order(payload, secret, grant, now=None):
@@ -622,10 +638,9 @@ def settle_payment_order(payload, secret, grant, now=None):
             # Replay detection deliberately precedes expiry validation: an exact
             # duplicate of an already-fulfilled callback remains idempotent.
             order = verify_order(_load_order(order_id), secret)
-            event_raw = db.get_kv(0, _EVENT_NAMESPACE, event_id)
-            if event_raw is not None:
-                event = json.loads(bytes(event_raw).decode("utf-8"))
-                if event.get("order_id") != order_id:
+            event = _load_event(event_id)
+            if event is not None:
+                if event["order_id"] != order_id:
                     raise PaymentError("conflict", "Callback event belongs to another order")
                 if (
                     order["status"] == "fulfilled"
@@ -649,8 +664,13 @@ def settle_payment_order(payload, secret, grant, now=None):
                     raise PaymentError(code, message)
 
             trade_raw = db.get_kv(0, _TRADE_NAMESPACE, trade_no)
-            if trade_raw is not None and bytes(trade_raw).decode("utf-8") != order_id:
-                raise PaymentError("conflict", "Provider trade belongs to another order")
+            if trade_raw is not None:
+                try:
+                    trade_order_id = bytes(trade_raw).decode("ascii")
+                except (TypeError, UnicodeDecodeError) as error:
+                    raise PaymentError("bad_request", "Stored payment trade is corrupt") from error
+                if trade_order_id != order_id:
+                    raise PaymentError("conflict", "Provider trade belongs to another order")
 
             fulfilled = dict(order)
             fulfilled["status"] = "fulfilled"

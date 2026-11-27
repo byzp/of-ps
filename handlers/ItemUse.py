@@ -60,7 +60,7 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
         rsp = ItemUseRsp()
         rsp.dungeon_id = session.dungeon[0] if session.dungeon else 0
-        if req.num <= 0:
+        if req.num <= 0 or req.choose_item_id:
             rsp.status = StatusCode.StatusCode_BAD_REQ
             session.send(MsgId.ItemUseRsp, rsp, packet_id)
             return
@@ -105,7 +105,11 @@ class Handler(PacketHandler):
             return
 
         pack = PackNotice(status=StatusCode.StatusCode_OK)
-        with item_mgr.player_lock(session.player_id), db.transaction():
+        with (
+            item_mgr.player_lock(session.player_id),
+            item_mgr.deferred_notifications(),
+            db.transaction(),
+        ):
             if not item_mgr.consume_items(
                 session.player_id,
                 [(req.item_id, req.num)],

@@ -64,7 +64,11 @@ class Handler(PacketHandler):
         if recover_sec <= 0:
             recover_sec = Config.GAME_COIN_RECOVER_SECONDS_FALLBACK
 
-        buy_count = req.buy_count if req.buy_count > 0 else 1
+        if req.buy_count <= 0:
+            rsp.status = StatusCode.StatusCode_BAD_REQ
+            session.send(MsgId.BuyGameCoinRsp, rsp, packet_id)
+            return
+        buy_count = req.buy_count
         now = int(time.time())
         player_id = session.player_id
 

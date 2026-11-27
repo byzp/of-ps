@@ -1,3 +1,5 @@
+import logging
+
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 from proto.net_pb2 import (

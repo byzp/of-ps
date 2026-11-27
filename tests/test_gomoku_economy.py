@@ -22,6 +22,7 @@ from server import gomoku
 # 先加载 db，稳定项目现有的 pb_create/achieve_track 导入顺序。
 import utils.db as db
 from utils import item_mgr
+import utils.res_loader as res_loader
 import handlers.GomokuOnlinePlayerLeave as leave
 import handlers.GomokuOnlinePlayerPlaceStone as place
 import handlers.GomokuOnlinePlayerReady as ready
@@ -42,6 +43,10 @@ class FakeSession:
 
 
 class GomokuEconomyTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        res_loader.init()
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.old_path = Config.DB_PATH

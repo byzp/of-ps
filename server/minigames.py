@@ -17,7 +17,7 @@ import time
 import uuid
 
 from config import Config
-from proto.net_pb2 import MPPlayRoomSettlementNotice, StatusCode
+from proto.net_pb2 import MPPlayRoomSettlementNotice, PackNotice, StatusCode
 from server import mp_room_rewards
 from utils import item_mgr
 import utils.db as db
@@ -149,7 +149,7 @@ def _reward_plan(run, star):
 def _grant(player_id, rewards):
     if not rewards:
         return []
-    granted = []
+    granted = PackNotice(status=StatusCode.StatusCode_OK).items
     item_mgr.grant_items(player_id, rewards, rsp_items=granted, session=None)
     return [base64.b64encode(item.SerializeToString()).decode("ascii") for item in granted]
 
@@ -159,31 +159,45 @@ def settle(team, star, now_ms=None):
     if isinstance(star, bool) or not isinstance(star, int) or not 0 <= star <= 3:
         raise RoomStateError("invalid room star")
     now_ms = int(time.time() * 1000 if now_ms is None else now_ms)
-    with lock, db.transaction():
+    with lock:
         run = ensure_run(team)
         if run["status"] == "settled":
             return run, False
         if run["status"] != "active" or not run.get("start_ms"):
             raise RoomStateError("room has not started")
-        duration = max(0, now_ms - int(run["start_ms"]))
         items, quota_kind, quota_items = _reward_plan(run, star)
         member_ids = sorted(int(pid) for pid in run["members"])
+        # 必须先按玩家 id 排序获取全部玩家锁, 再进入 DB 事务。
         with ExitStack() as stack:
             for player_id in member_ids:
                 stack.enter_context(item_mgr.player_lock(player_id))
-            results = {}
-            for player_id in member_ids:
-                base = _grant(player_id, items)
-                extra = []
-                if quota_kind and quota_items and mp_room_rewards.consume(player_id, quota_kind, "day", 1):
-                    extra = _grant(player_id, quota_items)
-                results[str(player_id)] = {"items": base, "extra_items": extra}
-            run["status"] = "settled"
-            run["star"] = int(star)
-            run["duration_ms"] = duration
-            run["end_ms"] = now_ms
-            run["results"] = results
-            save_run(run)
+            with db.transaction():
+                run = load_run(run["run_id"])
+                if run is None:
+                    raise RoomStateError("room run disappeared")
+                if run["status"] == "settled":
+                    return run, False
+                if run["status"] != "active" or not run.get("start_ms"):
+                    raise RoomStateError("room has not started")
+                duration = max(0, now_ms - int(run["start_ms"]))
+                results = {}
+                for player_id in member_ids:
+                    base = _grant(player_id, items)
+                    extra = []
+                    if quota_kind and quota_items and mp_room_rewards.consume(
+                        player_id, quota_kind, "day", 1
+                    ):
+                        extra = _grant(player_id, quota_items)
+                    results[str(player_id)] = {
+                        "items": base,
+                        "extra_items": extra,
+                    }
+                run["status"] = "settled"
+                run["star"] = int(star)
+                run["duration_ms"] = duration
+                run["end_ms"] = now_ms
+                run["results"] = results
+                save_run(run)
         return run, True
 
 
@@ -215,7 +229,7 @@ def collapse_failure(session):
     channel_id = int(getattr(session, "channel_id", 0) or 0)
     identity = f"{player_id}:{scene_id}:{channel_id}"
     now_ms = int(time.time() * 1000)
-    with lock, db.transaction():
+    with lock, item_mgr.player_lock(player_id), db.transaction():
         latest = _decode(db.get_kv(player_id, "collapse_fail", identity)) or {}
         if now_ms - int(latest.get("time_ms", 0)) < _COLLAPSE_DEDUP_SECONDS * 1000:
             return False, latest.get("failure_id")

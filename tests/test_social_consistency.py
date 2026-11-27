@@ -574,6 +574,39 @@ class SocialConsistencyTests(unittest.TestCase):
         self.assertEqual(social.unread_count(1, 2), 0)
         self.assertEqual(len(second.responses(MsgId.ChatMsgNotice)), count)
 
+    def test_private_chat_stress_preserves_bounded_history_and_unread_across_restart(self):
+        first, second = self.sessions[1], self.sessions[2]
+        self.make_friends()
+        workers = 8
+        per_worker = 400
+
+        def send_batch(worker):
+            sender = FakeSession(1)
+            statuses = []
+            for offset in range(per_worker):
+                index = worker * per_worker + offset
+                statuses.append(
+                    self.send(sender, second, f"stress-{index}", index + 1).status
+                )
+            return statuses
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+            batches = list(executor.map(send_batch, range(workers)))
+        statuses = [status for batch in batches for status in batch]
+        self.assertEqual(statuses, [StatusCode.StatusCode_OK] * (workers * per_worker))
+        history = self.raw_history(1, 2)
+        self.assertEqual(len(history), 50)
+        self.assertTrue(all(message["text"].startswith("stress-") for message in history))
+        self.assertEqual(social.unread_count(2, 1), workers * per_worker)
+        self.assertEqual(len(second.responses(MsgId.ChatMsgNotice)), workers * per_worker)
+
+        db.exit()
+        db.init()
+        restored = self.raw_history(1, 2)
+        self.assertEqual(len(restored), 50)
+        self.assertTrue(all(message["text"].startswith("stress-") for message in restored))
+        self.assertEqual(social.unread_count(2, 1), workers * per_worker)
+
     def test_concurrent_private_retries_are_idempotent_across_restart(self):
         first, second = self.sessions[1], self.sessions[2]
         self.make_friends()

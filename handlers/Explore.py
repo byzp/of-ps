@@ -4,7 +4,7 @@ import time as _t
 from config import Config
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-from proto.net_pb2 import ExploreReq, ExploreRsp, StatusCode
+from proto.net_pb2 import ExploreReq, ExploreRsp, PackNotice, StatusCode
 import utils.db as db
 import utils.garden_state as garden_state
 from utils import item_mgr
@@ -72,6 +72,66 @@ def validate_duration(cfg):
     return duration
 
 
+def _default_activity_state():
+    return {"times": 0, "start_time": 0, "is_quick_finish": False, "collectable": False}
+
+
+def load_activity_state(player_id, key):
+    """读取并校验活动探索状态; 损坏或负数字段按配置错误拒绝。"""
+    raw = db.get_kv(player_id, "activity_explore", key, b"")
+    try:
+        state = _pk.loads(raw) if raw else {}
+    except (_pk.UnpicklingError, EOFError, AttributeError, ImportError, IndexError) as exc:
+        raise item_mgr.EconomyConfigError("corrupt activity explore state") from exc
+    if not isinstance(state, dict):
+        raise item_mgr.EconomyConfigError("invalid activity explore state")
+    state = dict(state)
+    state["times"] = item_mgr.validate_counter(
+        int(state.get("times", 0)), label="explore times"
+    )
+    state["start_time"] = item_mgr.validate_counter(
+        int(state.get("start_time", 0) or 0), label="explore start time"
+    )
+    for field in ("is_quick_finish", "collectable"):
+        value = state.get(field, False)
+        if not isinstance(value, bool):
+            raise item_mgr.EconomyConfigError("invalid explore state flag")
+        state[field] = value
+    return state
+
+
+def save_activity_state(player_id, key, state):
+    db.set_kv(player_id, "activity_explore", key, _pk.dumps(state))
+
+
+def load_area_state(player_id, explore_id):
+    try:
+        state = garden_state.get_explore(player_id, explore_id)
+    except (_pk.UnpicklingError, EOFError, AttributeError, ImportError, IndexError) as exc:
+        raise item_mgr.EconomyConfigError("corrupt area explore state") from exc
+    if not isinstance(state, dict):
+        raise item_mgr.EconomyConfigError("invalid area explore state")
+    state = dict(state)
+    state["times"] = item_mgr.validate_counter(
+        int(state.get("times", 0)), label="explore times"
+    )
+    state["start_time"] = item_mgr.validate_count(
+        int(state.get("start_time", 0) or 0),
+        allow_zero=True,
+        label="explore start time",
+    )
+    for field in ("is_quick_finish", "collect_reward"):
+        value = state.get(field, False)
+        if not isinstance(value, bool):
+            raise item_mgr.EconomyConfigError("invalid explore state flag")
+        state[field] = value
+    return state
+
+
+def save_area_state(player_id, explore_id, state):
+    garden_state.set_explore(player_id, explore_id, state)
+
+
 @packet_handler(MsgId.ExploreReq)
 class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
@@ -80,12 +140,15 @@ class Handler(PacketHandler):
         rsp = ExploreRsp(is_activity=req.is_activity)
         try:
             if req.is_activity:
-                self._start_activity(session, req, rsp)
+                pack = self._start_activity(session, req, rsp)
             else:
-                self._start_area(session, req, rsp)
+                pack = self._start_area(session, req, rsp)
         except (item_mgr.EconomyConfigError, TypeError, ValueError):
             rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+            pack = None
         session.send(MsgId.ExploreRsp, rsp, packet_id)
+        if pack is not None and pack.items:
+            session.send(MsgId.PackNotice, pack, 0)
 
     @staticmethod
     def _start_activity(session, req, rsp):
@@ -100,13 +163,14 @@ class Handler(PacketHandler):
             int(cfg.get("max_times", 0) or 0), allow_zero=True, label="explore limit"
         )
         key = str(cfg["i_d"])
-        with item_mgr.player_lock(session.player_id), db.transaction():
-            raw = db.get_kv(session.player_id, "activity_explore", key, b"")
-            state = _pk.loads(raw) if raw else {}
-            times = item_mgr.validate_counter(
-                int(state.get("times", 0)), label="explore times"
-            )
-            start = int(state.get("start_time", 0) or 0)
+        with (
+            item_mgr.player_lock(session.player_id),
+            item_mgr.deferred_notifications(),
+            db.transaction(),
+        ):
+            state = load_activity_state(session.player_id, key)
+            times = state["times"]
+            start = state["start_time"]
             if start:
                 rsp.status = StatusCode.StatusCode_EXPLORE_IN_PROGRESS
             elif max_times and times >= max_times:
@@ -120,7 +184,7 @@ class Handler(PacketHandler):
                     ),
                     collectable=False,
                 )
-                db.set_kv(session.player_id, "activity_explore", key, _pk.dumps(state))
+                save_activity_state(session.player_id, key, state)
                 rsp.status = StatusCode.StatusCode_OK
                 info = rsp.explore
                 info.explore_id = cfg["i_d"]
@@ -148,21 +212,34 @@ class Handler(PacketHandler):
         if need_item:
             item_mgr.validate_stackable_item_id(need_item)
             item_mgr.validate_count(need_count, label="explore entry cost")
-        with item_mgr.player_lock(session.player_id), db.transaction():
+        pack = PackNotice(status=StatusCode.StatusCode_OK)
+        with (
+            item_mgr.player_lock(session.player_id),
+            item_mgr.deferred_notifications(),
+            db.transaction(),
+        ):
             level_row = db.get_players_info(session.player_id, "level")
             level = int(level_row[0] or 0) if level_row else 0
             if need_level and level < need_level:
                 rsp.status = StatusCode.StatusCode_PLAYER_LEVEL_LIMIT
                 return
-            if need_item and item_mgr.get_num(session.player_id, need_item) < need_count:
-                rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
-                return
-            state = garden_state.get_explore(session.player_id, req.explore_id)
+            state = load_area_state(session.player_id, req.explore_id)
             if int(state.get("start_time", 0) or 0):
                 rsp.status = StatusCode.StatusCode_EXPLORE_IN_PROGRESS
-            else:
-                state["start_time"] = garden_state.now_ms()
-                state["is_quick_finish"] = False
-                garden_state.set_explore(session.player_id, req.explore_id, state)
-                rsp.status = StatusCode.StatusCode_OK
+                garden_state.fill_explore_info(rsp.explore, req.explore_id, state)
+                return
+            if need_item and not item_mgr.consume_items(
+                session.player_id,
+                [(need_item, need_count)],
+                pack_notice=pack,
+                session=session,
+            ):
+                rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
+                garden_state.fill_explore_info(rsp.explore, req.explore_id, state)
+                return pack
+            state["start_time"] = garden_state.now_ms()
+            state["is_quick_finish"] = False
+            save_area_state(session.player_id, req.explore_id, state)
+            rsp.status = StatusCode.StatusCode_OK
             garden_state.fill_explore_info(rsp.explore, req.explore_id, state)
+            return pack

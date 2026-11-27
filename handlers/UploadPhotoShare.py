@@ -21,6 +21,12 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = UploadPhotoShareRsp()
+        if not ps._snapshot_valid[0]:
+            # Do not accept data that cannot be durably persisted while the
+            # authoritative snapshot is unavailable.
+            rsp.status = StatusCode.StatusCode_SYS_ERR
+            session.send(MsgId.UploadPhotoShareRsp, rsp, packet_id)
+            return
         if len(req.file) > Config.PHOTO_MAX_BYTES:
             rsp.status = StatusCode.StatusCode_BAD_REQ
             session.send(MsgId.UploadPhotoShareRsp, rsp, packet_id)

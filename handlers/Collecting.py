@@ -32,20 +32,33 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = CollectingRsp()
-
+        notice = PackNotice(status=StatusCode.StatusCode_OK)
         collection_type = 0
-        for collection_t in res["CollectionItem"]["collection_item"]["datas"]:
-            if collection_t["i_d"] == req.item_id:
-                collection_type = collection_t["new_collection_type"]
+        collection_cfg = None
+        item_cfg = None
+        for entry in res["CollectionItem"]["collection_item"]["datas"]:
+            if entry["i_d"] == req.item_id:
+                collection_type = entry["new_collection_type"]
+                collection_cfg = entry
                 break
         if not collection_type:
             rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
             session.send(MsgId.CollectingRsp, rsp, packet_id)
             return
-        rsp.status = StatusCode.StatusCode_OK
-
-        if db.get_collection(session.player_id, req.item_id):
-            rsp.status = StatusCode.StatusCode_ALREADY_COLLECTED
+        for entry in res["Item"]["item"]["datas"]:
+            if entry.get("i_d") == req.item_id:
+                item_cfg = entry
+                break
+        if item_cfg is None:
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+            session.send(MsgId.CollectingRsp, rsp, packet_id)
+            return
+        item_id = item_cfg["text_i_d"]
+        rewards = [(item_id, 1)] if item_id else []
+        try:
+            item_mgr.validate_rewards(rewards)
+        except item_mgr.EconomyConfigError:
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
             session.send(MsgId.CollectingRsp, rsp, packet_id)
             return
 
@@ -54,40 +67,57 @@ class Handler(PacketHandler):
         collection.item_map[req.item_id].item_id = req.item_id
         if collection_type in Config.COLLECTING_AUTO_REWARD_TYPES:
             collection.item_map[req.item_id].status = RewardStatus.Reward
-        db.set_collection(
-            session.player_id,
-            req.item_id,
-            collection_type,
-            collection.item_map[req.item_id].SerializeToString(),
-        )
-        collected = collection_state.scene_items(session.player_id, session.scene_id)
-        collection_state.fill_progress(
-            collection, session.scene_id, len(collected.get(collection_type, ()))
-        )
+        try:
+            with item_mgr.player_lock(session.player_id), item_mgr.deferred_notifications(), db.transaction():
+                if db.get_collection(session.player_id, req.item_id):
+                    rsp.status = StatusCode.StatusCode_ALREADY_COLLECTED
+                    del rsp.collections[:]
+                else:
+                    # 持久 claim 是并发最终门禁; 状态与奖励任一失败都整体回滚。
+                    if not db.try_claim(
+                        session.player_id, "collection_collect", req.item_id
+                    ):
+                        rsp.status = StatusCode.StatusCode_ALREADY_COLLECTED
+                        del rsp.collections[:]
+                    else:
+                        db.set_collection(
+                            session.player_id,
+                            req.item_id,
+                            collection_type,
+                            collection.item_map[req.item_id].SerializeToString(),
+                        )
+                        if rewards:
+                            item_mgr.grant_items(
+                                session.player_id,
+                                rewards,
+                                rsp_items=rsp.items,
+                                pack_notice=notice,
+                                session=session,
+                            )
+                        collected = collection_state.scene_items(
+                            session.player_id, session.scene_id
+                        )
+                        collection_state.fill_progress(
+                            collection,
+                            session.scene_id,
+                            len(collected.get(collection_type, ())),
+                        )
+                        rsp.status = StatusCode.StatusCode_OK
+        except item_mgr.EconomyConfigError:
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+            del rsp.collections[:]
+            del rsp.items[:]
+            del notice.items[:]
 
-        rsp1 = PackNotice()
-        rsp1.status = StatusCode.StatusCode_OK
-
-        # 成就计数: 按 collection 子类归因到当前世界(见 utils/achieve_track)
-        # 未具名类型(8/9/11)不计成就子类, 但同样推进场景探索度
+        session.send(MsgId.CollectingRsp, rsp, packet_id)
+        if rsp.status != StatusCode.StatusCode_OK:
+            return
         with achieve_track.batch(session):
-            for item_t in res["Item"]["item"]["datas"]:
-                if item_t.get("i_d") == req.item_id:
-                    item_mgr.grant_items(
-                        session.player_id,
-                        [(item_t["text_i_d"], 1)],
-                        rsp_items=rsp.items,
-                        pack_notice=rsp1,
-                        session=session,
-                    )
-                    break
             sub = Config.COLL_TYPE_TO_SUB.get(collection_type)
             if sub:
                 achieve_track.collection(session, sub, coll_type=collection_type)
             else:
                 achieve_track.explore_collect(session, collection_type)
-            # 成就: 找回[指定收藏品]
             achieve_track.report(session, "collect", match=req.item_id)
-            session.send(MsgId.CollectingRsp, rsp, packet_id)
-            if len(rsp1.items):
-                session.send(MsgId.PackNotice, rsp1, 0)
+        if notice.items:
+            session.send(MsgId.PackNotice, notice, 0)

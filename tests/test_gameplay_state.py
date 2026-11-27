@@ -59,8 +59,22 @@ class GameplayStateTests(unittest.TestCase):
         session = FakeSession()
         store = {}
         request = GatherReq()
-        request.gather_item.index = 3
-        request.gather_item.reward = res_loader.res['Gather']['gather_reward']['datas'][0]['i_d']
+        scene = next(
+            row for row in res_loader.res["ScenesConfigAsset"]["Scenes"]
+            if row["ID"] == session.scene_id
+        )
+        point = next(
+            pointer
+            for group in scene["GatherPointSetInfo"]
+            for point_group in group["GatherPointSets"]
+            for pointer in point_group["LifeGatherPointers"]
+        )
+        gather_group = next(
+            row for row in res_loader.res["Gather"]["gather"]["datas"]
+            if row["i_d"] == point["GatherID"]
+        )
+        request.gather_item.index = point["Index"]
+        request.gather_item.reward = gather_group["gather_group_info"][0]["reward"]
         with patch.object(db, 'get_kv', side_effect=lambda player, ns, key, default=0: store.get((ns, key), default)), \
              patch.object(db, 'set_kv', side_effect=lambda player, ns, key, value: store.__setitem__((ns, key), value)), \
              patch.object(db, 'transaction', side_effect=contextlib.nullcontext), \

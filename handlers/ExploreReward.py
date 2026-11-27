@@ -1,4 +1,3 @@
-import pickle as _pk
 import time as _t
 
 from config import Config
@@ -12,6 +11,10 @@ from handlers.Explore import (
     activity_config,
     activity_rewards,
     area_rewards,
+    load_activity_state,
+    load_area_state,
+    save_activity_state,
+    save_area_state,
     validate_duration,
 )
 
@@ -49,10 +52,13 @@ class Handler(PacketHandler):
         duration = validate_duration(cfg)
         rewards = activity_rewards(cfg)
         key = str(cfg["i_d"])
-        with item_mgr.player_lock(session.player_id), db.transaction():
-            raw = db.get_kv(session.player_id, "activity_explore", key, b"")
-            state = _pk.loads(raw) if raw else {}
-            start = int(state.get("start_time", 0) or 0)
+        with (
+            item_mgr.player_lock(session.player_id),
+            item_mgr.deferred_notifications(),
+            db.transaction(),
+        ):
+            state = load_activity_state(session.player_id, key)
+            start = state["start_time"]
             if not start:
                 rsp.status = StatusCode.StatusCode_EXPLORE_NOT_FINISH
                 return
@@ -73,7 +79,7 @@ class Handler(PacketHandler):
             state.pop("start_time", None)
             state["is_quick_finish"] = False
             state["collectable"] = False
-            db.set_kv(session.player_id, "activity_explore", key, _pk.dumps(state))
+            save_activity_state(session.player_id, key, state)
             rsp.status = StatusCode.StatusCode_OK
             info = rsp.explore
             info.explore_id = req.explore_id
@@ -94,9 +100,13 @@ class Handler(PacketHandler):
             (item_id, item_mgr.checked_mul(Config.EXPLORE_REWARD_COUNT_PER_ITEM, 1))
             for item_id, _ in area_rewards(req.explore_id)
         ]
-        with item_mgr.player_lock(session.player_id), db.transaction():
-            state = garden_state.get_explore(session.player_id, req.explore_id)
-            start = int(state.get("start_time", 0) or 0)
+        with (
+            item_mgr.player_lock(session.player_id),
+            item_mgr.deferred_notifications(),
+            db.transaction(),
+        ):
+            state = load_area_state(session.player_id, req.explore_id)
+            start = state["start_time"]
             if not start:
                 rsp.status = StatusCode.StatusCode_EXPLORE_NOT_FINISH
                 garden_state.fill_explore_info(rsp.explore, req.explore_id, state)
@@ -119,6 +129,6 @@ class Handler(PacketHandler):
             )
             state["start_time"] = 0
             state["is_quick_finish"] = False
-            garden_state.set_explore(session.player_id, req.explore_id, state)
+            save_area_state(session.player_id, req.explore_id, state)
             rsp.status = StatusCode.StatusCode_OK
             garden_state.fill_explore_info(rsp.explore, req.explore_id, state)

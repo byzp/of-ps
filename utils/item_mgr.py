@@ -5,6 +5,7 @@ from config import Config
 import logging
 import threading
 from contextlib import contextmanager
+from contextvars import ContextVar
 
 from proto.net_pb2 import (
     Character,
@@ -26,10 +27,43 @@ from utils.res_loader import res
 logger = logging.getLogger(__name__)
 
 _locks = {}  # player_id -> threading.RLock
+_notification_queue = ContextVar("item_mgr_notification_queue", default=None)
 
 
 class EconomyConfigError(ValueError):
     """经济配置缺失或非法; 调用方必须拒绝本次请求。"""
+
+
+@contextmanager
+def deferred_notifications():
+    """把通知延后到最外层经济事务成功提交之后。
+
+    未配合显式事务使用时退化为立即执行, 保持其它调用方的既有行为。
+    回调异常不会回滚已经提交的物品收支。
+    """
+    current = _notification_queue.get()
+    pending = []
+    token = _notification_queue.set(pending)
+    try:
+        yield
+    except BaseException:
+        pending.clear()
+        raise
+    finally:
+        _notification_queue.reset(token)
+    if current is None:
+        for callback in pending:
+            callback()
+    else:
+        current.extend(pending)
+
+
+def _notify(callback):
+    pending = _notification_queue.get()
+    if pending is None:
+        callback()
+    else:
+        pending.append(callback)
 
 
 def player_lock(player_id):
@@ -518,28 +552,36 @@ def grant_items(
 
     # 通知和成就只在数据库提交后执行, 不参与经济写入的回滚边界。
     if level_exp is not None:
-        notice = PlayerLevelExpNotice()
-        notice.status = StatusCode.StatusCode_OK
-        notice.level, notice.exp = level_exp
-        session.send(MsgId.PlayerLevelExpNotice, notice, 0)
-        achieve_track.report(session, "player_level", level=level_exp[0])
+        def level_notice(level_exp=level_exp):
+            notice = PlayerLevelExpNotice()
+            notice.status = StatusCode.StatusCode_OK
+            notice.level, notice.exp = level_exp
+            session.send(MsgId.PlayerLevelExpNotice, notice, 0)
+            achieve_track.report(session, "player_level", level=level_exp[0])
+        _notify(level_notice)
     if session is not None:
         for item_id, num in rewards:
-            achieve_track.report(session, "gain_item", match=item_id, amount=num)
+            _notify(lambda item_id=item_id, num=num: achieve_track.report(
+                session, "gain_item", match=item_id, amount=num
+            ))
     if session is not None and new_unlocks:
-        for function_id in new_unlocks:
-            unlock_notice = PlayerUnlockFunctionNotice()
-            unlock_notice.status = StatusCode.StatusCode_OK
-            unlock_notice.unlock_functions.append(function_id)
-            session.send(MsgId.PlayerUnlockFunctionNotice, unlock_notice, 0)
+        def unlock_notices():
+            for function_id in new_unlocks:
+                unlock_notice = PlayerUnlockFunctionNotice()
+                unlock_notice.status = StatusCode.StatusCode_OK
+                unlock_notice.unlock_functions.append(function_id)
+                session.send(MsgId.PlayerUnlockFunctionNotice, unlock_notice, 0)
+        _notify(unlock_notices)
     if auto_notice is not None and auto_notice.items:
-        session.send(MsgId.PackNotice, auto_notice, 0)
+        _notify(lambda: session.send(MsgId.PackNotice, auto_notice, 0))
     if session is not None:
-        for ability_id in new_abilities:
-            notice = PlayerAbilityUnlockNotice()
-            notice.status = StatusCode.StatusCode_OK
-            notice.ability_id = ability_id
-            session.send(MsgId.PlayerAbilityUnlockNotice, notice, 0)
+        def ability_notices():
+            for ability_id in new_abilities:
+                notice = PlayerAbilityUnlockNotice()
+                notice.status = StatusCode.StatusCode_OK
+                notice.ability_id = ability_id
+                session.send(MsgId.PlayerAbilityUnlockNotice, notice, 0)
+        _notify(ability_notices)
     return totals
 
 
@@ -551,21 +593,72 @@ def needs_temp_pack(detail):
     )
 
 
-def pickup_rewards(session, items, rsp_items, pack_notice, to_inventory=False):
-    """保留掉落实例与属性，统一拾取同步；扫荡可直接入仓库。"""
+def validate_pickup_item(detail):
+    """在领取去重或任何写库前验证掉落快照, 防止损坏/伪造物品入包。"""
+    if not isinstance(detail, ItemDetail):
+        raise EconomyConfigError("pickup item must be ItemDetail")
+    item_id = detail.main_item.item_id
+    row = validate_item_id(item_id)
+    which = detail.main_item.WhichOneof("item")
+    if not which:
+        raise EconomyConfigError("pickup item has no payload")
+    expected_tag = row.get("new_bag_item_tag")
+    if expected_tag is not None and detail.main_item.item_tag != expected_tag:
+        raise EconomyConfigError("pickup item tag does not match Item config")
+    if which == "base_item":
+        if detail.main_item.base_item.item_id != item_id:
+            raise EconomyConfigError("pickup base item id mismatch")
+        validate_count(detail.main_item.base_item.num, label="pickup item count")
+    elif which in ("weapon", "armor", "poster", "treasure", "pet"):
+        instance_id = getattr(detail.main_item, which).instance_id
+        validate_counter(instance_id, allow_zero=False, label="pickup instance id")
+    return detail
+
+
+def pickup_rewards(
+    session,
+    items,
+    rsp_items,
+    pack_notice,
+    to_inventory=False,
+    *,
+    staged_temp_pack=None,
+    temp_pack_start=None,
+):
+    """保留掉落实例与属性，统一拾取同步；扫荡可直接入仓库。
+
+    调用方必须持有玩家锁并处于 DB 事务中。传 staged_temp_pack 时只暂存
+    会话态, 由调用方在事务提交后合并, 避免保存失败却留下可再次领取的标记。
+    """
+    if staged_temp_pack is None and temp_pack_start is None:
+        temp_pack = session.temp_pack
+    elif staged_temp_pack is not None:
+        temp_pack = staged_temp_pack
+    else:
+        raise EconomyConfigError("staged pickup requires a staging list")
+    start = len(session.temp_pack) if temp_pack_start is None else temp_pack_start
+    validate_counter(start, label="temporary pack size")
+    if start > Config.TEMP_PACK_MAX:
+        raise EconomyConfigError("temporary pack size overflow")
+    for source in items:
+        validate_pickup_item(source)
     for source in items:
         item = ItemDetail()
         item.CopyFrom(source)
         item.pack_type = ItemDetail.PackType.PackType_Inventory
         instance_id = 0
         if _is_instance(item):
-            mark_new_item(session.player_id, item)
             which = item.main_item.WhichOneof("item")
             instance_id = getattr(item.main_item, which).instance_id
+            if db.get_item_detail(session.player_id, None, instance_id):
+                raise EconomyConfigError("pickup instance already exists")
+            mark_new_item(session.player_id, item)
             db.set_item_detail(
                 session.player_id, item.SerializeToString(), None, instance_id
             )
-            achieve_track.report(session, "gain_item", match=item.main_item.item_id)
+            _notify(lambda item_id=item.main_item.item_id: achieve_track.report(
+                session, "gain_item", match=item_id
+            ))
         else:
             count = (
                 item.main_item.base_item.num
@@ -581,7 +674,8 @@ def pickup_rewards(session, items, rsp_items, pack_notice, to_inventory=False):
                     session=session,
                 )
                 continue
-            # 材料先存实际库存，客户端本次只显示临时包中的获得量。
+            # 材料拾取时只累计一次正式库存; 临时包保存同一次获得的快照,
+            # 入库/丢弃时转正或扣除, 不能再次 grant。
             totals = grant_items(
                 session.player_id,
                 [(item.main_item.item_id, count)],
@@ -593,13 +687,15 @@ def pickup_rewards(session, items, rsp_items, pack_notice, to_inventory=False):
             rsp_items.add().CopyFrom(item)
             pack_notice.items.add().CopyFrom(item)
             continue
+        if start + len(temp_pack) >= Config.TEMP_PACK_MAX:
+            raise EconomyConfigError("temporary pack is full")
         item.pack_type = ItemDetail.PackType.PackType_TempPack
-        item.main_item.temp_pack_index = len(session.temp_pack) + 1
+        item.main_item.temp_pack_index = start + len(temp_pack) + 1
         rsp_items.add().CopyFrom(item)
         pack_notice.items.add().CopyFrom(item)
         # 首获提示只属于本次拾取；排序、入库等临时包回放不再提示。
         item.main_item.is_new = False
-        session.temp_pack.append((instance_id, item.SerializeToString()))
+        temp_pack.append((instance_id, item.SerializeToString()))
 
 
 def consume_items(player_id, cost_list, pack_notice=None, session=None):
@@ -644,5 +740,7 @@ def consume_items(player_id, cost_list, pack_notice=None, session=None):
     if session is not None:
         for item_id, num in costs:
             if item_id == 101 and num > 0:
-                achieve_track.report(session, "spend_coin", amount=num)
+                _notify(lambda num=num: achieve_track.report(
+                    session, "spend_coin", amount=num
+                ))
     return True

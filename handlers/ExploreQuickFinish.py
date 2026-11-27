@@ -1,12 +1,18 @@
-import pickle as _pk
-
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 from proto.net_pb2 import ExploreQuickFinishReq, ExploreQuickFinishRsp, PackNotice, StatusCode
 import utils.garden_state as garden_state
 import utils.db as db
 from utils import item_mgr
-from handlers.Explore import activity_config, validate_duration, validate_quick_cost
+from handlers.Explore import (
+    activity_config,
+    load_activity_state,
+    load_area_state,
+    save_activity_state,
+    save_area_state,
+    validate_duration,
+    validate_quick_cost,
+)
 
 
 @packet_handler(MsgId.ExploreQuickFinishReq)
@@ -37,10 +43,13 @@ class Handler(PacketHandler):
         validate_duration(cfg)
         cost_item, cost_count = validate_quick_cost(cfg)
         key = str(cfg["i_d"])
-        with item_mgr.player_lock(session.player_id), db.transaction():
-            raw = db.get_kv(session.player_id, "activity_explore", key, b"")
-            state = _pk.loads(raw) if raw else {}
-            if not int(state.get("start_time", 0) or 0):
+        with (
+            item_mgr.player_lock(session.player_id),
+            item_mgr.deferred_notifications(),
+            db.transaction(),
+        ):
+            state = load_activity_state(session.player_id, key)
+            if not state["start_time"]:
                 rsp.status = StatusCode.StatusCode_EXPLORE_NOT_EXISTS
                 return
             info = rsp.explore
@@ -58,7 +67,7 @@ class Handler(PacketHandler):
                     rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
                     return
                 state["is_quick_finish"] = True
-                db.set_kv(session.player_id, "activity_explore", key, _pk.dumps(state))
+                save_activity_state(session.player_id, key, state)
                 info.is_quick_finish = True
             rsp.status = StatusCode.StatusCode_OK
 
@@ -70,9 +79,13 @@ class Handler(PacketHandler):
             return
         validate_duration(cfg)
         cost_item, cost_count = validate_quick_cost(cfg)
-        with item_mgr.player_lock(session.player_id), db.transaction():
-            state = garden_state.get_explore(session.player_id, req.explore_id)
-            if not int(state.get("start_time", 0) or 0):
+        with (
+            item_mgr.player_lock(session.player_id),
+            item_mgr.deferred_notifications(),
+            db.transaction(),
+        ):
+            state = load_area_state(session.player_id, req.explore_id)
+            if not state["start_time"]:
                 rsp.status = StatusCode.StatusCode_EXPLORE_NOT_EXISTS
                 garden_state.fill_explore_info(rsp.explore, req.explore_id, state)
                 return
@@ -87,6 +100,6 @@ class Handler(PacketHandler):
                     garden_state.fill_explore_info(rsp.explore, req.explore_id, state)
                     return
                 state["is_quick_finish"] = True
-                garden_state.set_explore(session.player_id, req.explore_id, state)
+                save_area_state(session.player_id, req.explore_id, state)
             rsp.status = StatusCode.StatusCode_OK
             garden_state.fill_explore_info(rsp.explore, req.explore_id, state)

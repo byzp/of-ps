@@ -38,63 +38,67 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = ItemSweepRsp()
-        rsp.status = StatusCode.StatusCode_OK
-
-        count = req.count
-        if not req.item_id or count <= 0:
+        notice = PackNotice(status=StatusCode.StatusCode_OK)
+        if not req.item_id or req.count <= 0:
             rsp.status = StatusCode.StatusCode_BAD_REQ
-            session.send(MsgId.ItemSweepRsp, rsp, packet_id)  # 1355,1356
+            session.send(MsgId.ItemSweepRsp, rsp, packet_id)
             return
-
-        player_level = db.get_players_info(session.player_id, "level")[0]
-        cfg = _quick_cfg(req.item_id, player_level)
-        if not cfg:
-            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
-            session.send(MsgId.ItemSweepRsp, rsp, packet_id)  # 1355,1356
-            return
-
-        per_round = cfg.get("num", 0)
-        if not per_round or count % per_round:
-            rsp.status = StatusCode.StatusCode_BAD_REQ
-            session.send(MsgId.ItemSweepRsp, rsp, packet_id)  # 1355,1356
-            return
-        rounds = count // per_round
-        gain = count
-        cost = cfg.get("need_vitality", 0) * rounds
-        gain_exp = cost * Config.EXP_PER_VITALITY
-
-        if not req.is_sweep:
-            # 预览: 只返回将要获得的物品, 不扣体力不入库
-            tmp = rsp.rewards.add()
-            tmp.main_item.item_id = req.item_id
-            tmp.main_item.base_item.item_id = req.item_id
-            tmp.main_item.base_item.num = gain
-            session.send(MsgId.ItemSweepRsp, rsp, packet_id)  # 1355,1356
-            return
-
-        notice = PackNotice()
-        notice.status = StatusCode.StatusCode_OK
-        if cost and not item_mgr.consume_items(
-            session.player_id,
-            [(Config.VITALITY_ITEM_ID, cost)],
-            pack_notice=notice,
-            session=session,
-        ):
-            rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
-            session.send(MsgId.ItemSweepRsp, rsp, packet_id)  # 1355,1356
-            return
-        reward_list = [(req.item_id, gain)]
-        if gain_exp > 0:
-            reward_list.append((1, gain_exp))
-
-        with achieve_track.batch(session):
-            item_mgr.grant_items(
-                session.player_id,
-                reward_list,
-                rsp_items=rsp.rewards,
-                pack_notice=notice,
-                session=session,
+        try:
+            count = item_mgr.validate_count(req.count, label="sweep count")
+            player_level = db.get_players_info(session.player_id, "level")[0]
+            cfg = _quick_cfg(req.item_id, player_level)
+            if not cfg:
+                raise item_mgr.EconomyConfigError("missing quick obtaining config")
+            per_round = item_mgr.validate_count(cfg.get("num", 0), label="sweep yield")
+            if count % per_round:
+                rsp.status = StatusCode.StatusCode_BAD_REQ
+                session.send(MsgId.ItemSweepRsp, rsp, packet_id)
+                return
+            rounds = count // per_round
+            gain = item_mgr.checked_mul(per_round, rounds)
+            vitality = item_mgr.validate_count(
+                cfg.get("need_vitality", 0), allow_zero=True, label="sweep vitality"
             )
-            session.send(MsgId.ItemSweepRsp, rsp, packet_id)  # 1355,1356
-            if len(notice.items):
-                session.send(MsgId.PackNotice, notice, 0)  # 1400
+            cost = item_mgr.checked_mul(vitality, rounds) if vitality else 0
+            gain_exp = (
+                item_mgr.checked_mul(cost, Config.EXP_PER_VITALITY) if cost else 0
+            )
+            item_mgr.validate_stackable_item_id(req.item_id)
+            item_mgr.validate_stackable_item_id(Config.VITALITY_ITEM_ID)
+            reward_list = [(req.item_id, gain)]
+            if gain_exp > 0:
+                reward_list.append((1, gain_exp))
+            item_mgr.validate_rewards(reward_list)
+
+            if not req.is_sweep:
+                tmp = rsp.rewards.add()
+                tmp.main_item.item_id = req.item_id
+                tmp.main_item.base_item.item_id = req.item_id
+                tmp.main_item.base_item.num = gain
+                rsp.status = StatusCode.StatusCode_OK
+            else:
+                with item_mgr.player_lock(session.player_id), item_mgr.deferred_notifications(), db.transaction():
+                    if cost and not item_mgr.consume_items(
+                        session.player_id,
+                        [(Config.VITALITY_ITEM_ID, cost)],
+                        pack_notice=notice,
+                        session=session,
+                    ):
+                        rsp.status = StatusCode.StatusCode_ITEM_NOT_ENOUGH
+                    else:
+                        item_mgr.grant_items(
+                            session.player_id,
+                            reward_list,
+                            rsp_items=rsp.rewards,
+                            pack_notice=notice,
+                            session=session,
+                        )
+                        rsp.status = StatusCode.StatusCode_OK
+        except item_mgr.EconomyConfigError:
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+            del rsp.rewards[:]
+            del notice.items[:]
+
+        session.send(MsgId.ItemSweepRsp, rsp, packet_id)
+        if rsp.status == StatusCode.StatusCode_OK and notice.items:
+            session.send(MsgId.PackNotice, notice, 0)

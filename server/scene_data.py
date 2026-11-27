@@ -1,4 +1,7 @@
+import logging
+import math
 import pickle
+import queue
 import threading
 import time
 from collections import defaultdict
@@ -37,11 +40,51 @@ _LOCATION_SAVE_INTERVAL = 2.0
 _last_location_save = {}
 
 
+def _known_scene_ids():
+    from config import Config
+    from utils.res_loader import res
+
+    known = {Config.TUTORIAL_SCENE_ID, 9999}
+    for scene_ids in Config.WORLD_SCENES.values():
+        known.update(int(scene_id) for scene_id in scene_ids)
+    scene_rows = res.get("Scene", {}).get("scene", {}).get("datas", ())
+    known.update(
+        int(row["i_d"])
+        for row in scene_rows
+        if isinstance(row, dict) and row.get("i_d")
+    )
+    section = res.get("ScenesConfigAsset", {}).get("Scenes", ())
+    scene_assets = section.get("datas", ()) if isinstance(section, dict) else section
+    if isinstance(scene_assets, (list, tuple)):
+        known.update(
+            int(row["ID"])
+            for row in scene_assets
+            if isinstance(row, dict) and row.get("ID")
+        )
+    return known
+
+
+def valid_location(scene_id, channel_id):
+    """场景/频道只能来自服务端配置, 不接受持久化层中的任意正整数。"""
+    if (
+        isinstance(scene_id, bool)
+        or isinstance(channel_id, bool)
+        or not isinstance(scene_id, int)
+        or not isinstance(channel_id, int)
+        or not 0 < scene_id <= 0xFFFFFFFF
+        or not 0 < channel_id <= 0xFFFFFFFF
+    ):
+        return False
+    return scene_id in _known_scene_ids()
+
+
 def save_session_location(session, force=False):
+    if not valid_location(session.scene_id, session.channel_id):
+        return False
     now = time.monotonic()
     previous = _last_location_save.get(session.player_id, 0.0)
     if not force and now - previous < _LOCATION_SAVE_INTERVAL:
-        return
+        return True
     position = session.pos.get(session.scene_id)
     rotation = session.scene_player.team.char1.rot
     payload = {
@@ -53,6 +96,7 @@ def save_session_location(session, force=False):
     import utils.db as db
     db.set_kv(session.player_id, _LOCATION_NS, _LOCATION_KEY, pickle.dumps(payload))
     _last_location_save[session.player_id] = now
+    return True
 
 
 def load_session_location(player_id):
@@ -64,12 +108,12 @@ def load_session_location(player_id):
         payload = pickle.loads(raw)
         if not isinstance(payload, dict):
             return None
-        scene_id = int(payload["scene_id"])
-        channel_id = int(payload["channel_id"])
-        if scene_id <= 0 or channel_id <= 0:
+        scene_id = payload["scene_id"]
+        channel_id = payload["channel_id"]
+        if not valid_location(scene_id, channel_id):
             return None
         return payload
-    except (KeyError, TypeError, ValueError, pickle.UnpicklingError):
+    except (KeyError, TypeError, ValueError, pickle.UnpicklingError, EOFError):
         return None
 
 
@@ -78,17 +122,23 @@ def restore_session_location(session):
     if not payload:
         return False
     from proto.net_pb2 import Vector3
-    session.scene_id = int(payload["scene_id"])
-    session.channel_id = int(payload["channel_id"])
+    scene_id = payload["scene_id"]
+    channel_id = payload["channel_id"]
     position = Vector3()
     rotation = Vector3()
     try:
         position.ParseFromString(payload.get("position", b""))
         rotation.ParseFromString(payload.get("rotation", b""))
-    except DecodeError:
+    except (DecodeError, TypeError):
         return False
+    for vector in (position, rotation):
+        if not all(math.isfinite(value) for value in (vector.x, vector.y, vector.z)):
+            return False
+    # 全部验证成功后才修改会话, 损坏记录不会把玩家留在一个半恢复的场景。
+    session.scene_id = scene_id
+    session.channel_id = channel_id
     if position.SerializeToString():
-        session.pos[session.scene_id] = position
+        session.pos[scene_id] = position
         session.scene_player.team.char1.pos.CopyFrom(position)
     if rotation.SerializeToString():
         session.scene_player.team.char1.rot.CopyFrom(rotation)

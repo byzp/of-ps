@@ -44,10 +44,18 @@ class Handler(PacketHandler):
                     record["favorites"].discard(session.player_id)
                 case PhotoOperateType.PhotoOperateType_DEL:
                     if record["player_id"] == session.player_id:
-                        del ps.photos[req.code]
                         path = os.path.join("data/photos", f"{req.code}.bin")
-                        if os.path.isfile(path):
-                            os.unlink(path)
+                        try:
+                            if os.path.isfile(path):
+                                os.unlink(path)
+                        except OSError:
+                            # Keep the record when its file cannot be removed;
+                            # otherwise a later restart sees a live record whose
+                            # only photo was silently lost.
+                            logger.exception("Could not delete photo file %s", path)
+                            rsp.status = StatusCode.StatusCode_FAIL
+                        else:
+                            del ps.photos[req.code]
                     else:
                         rsp.status = StatusCode.StatusCode_FAIL
                 case PhotoOperateType.PhotoOperateType_MOVE:
