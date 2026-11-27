@@ -60,6 +60,8 @@ def main():
     signal.signal(signal.SIGINT, _graceful_exit)
     if hasattr(signal, "SIGHUP"):
         signal.signal(signal.SIGHUP, _graceful_exit)
+    if hasattr(signal, "SIGBREAK"):
+        signal.signal(signal.SIGBREAK, _graceful_exit)
 
     stop_event = None
     http_thread = None

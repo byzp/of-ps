@@ -55,7 +55,7 @@ def cmd_exec(cmd: str):
         case "save":
             db.save()
         case _:
-            logger.warning("Unknow command.")
+            logger.warning("Unknown command. Type help to list available commands.")
 
 
 def link(cmds):

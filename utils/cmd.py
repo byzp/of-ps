@@ -124,9 +124,25 @@ else:
 sys.excepthook = _handle_uncaught_main
 
 
+def _interactive_console_available():
+    try:
+        return sys.stdin is not None and sys.stdin.isatty()
+    except Exception:
+        return False
+
+
 def _prompt_loop():
     global _sigint_count, _sigint_deadline, _session
-    session = PromptSession()
+    if not _interactive_console_available():
+        logging.info("Interactive console unavailable; running without the command prompt")
+        _stop_event.wait()
+        return
+    try:
+        session = PromptSession()
+    except Exception as error:
+        logging.warning("Interactive console could not be initialized; running without the command prompt: %s", error)
+        _stop_event.wait()
+        return
     _session = session
     try:
         with patch_stdout():
@@ -165,8 +181,10 @@ def _prompt_loop():
                             "tpd player_id/all dungeon_id\n",
                             "kick player_id/all\n",
                             "players\n",
-                            "link",
-                            "save",
+                            "link\n",
+                            "save\n",
+                            "stop\n",
+                            "help",
                         )
                         continue
                     cmd_exec.cmd_exec(cmd)

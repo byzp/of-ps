@@ -228,7 +228,7 @@ async def api_login(login: LoginRequest):
     user = db.get_sdk_user_info(login.username, login.password)
     if not user:
         return JSONResponse(
-            {"success": False, "msg": "Incorrect password."}, status_code=200
+            {"success": False, "msg": "Invalid username or password."}, status_code=401
         )
 
     uid = str(user["id"])

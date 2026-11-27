@@ -4,6 +4,7 @@ import json
 import os
 import sqlite3
 import tempfile
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -18,6 +19,8 @@ import http_server.server as http_server
 import server.photo_share as photo_share
 import server.scene_data as scene_data
 import utils.db as db
+import utils.cmd as cmd
+import utils.log as log_module
 import utils.pb_create as pb_create
 import utils.res_loader as res_loader
 
@@ -371,7 +374,43 @@ class LocationPersistenceTests(unittest.TestCase):
         self.assertEqual(session.scene_player.team.char1.rot, Vector3(x=1, y=2, z=3))
 
 
+class HeadlessConsoleTests(unittest.TestCase):
+    def test_headless_prompt_waits_for_service_shutdown(self):
+        old_stop = cmd._stop_event
+        cmd._stop_event = threading.Event()
+        try:
+            with patch.object(cmd.sys, "stdin") as stdin:
+                stdin.isatty.return_value = False
+                thread = threading.Thread(target=cmd._prompt_loop, daemon=True)
+                thread.start()
+                time.sleep(0.05)
+                self.assertTrue(thread.is_alive())
+                self.assertFalse(cmd._stop_event.is_set())
+                cmd._stop_event.set()
+                thread.join(2)
+                self.assertFalse(thread.is_alive())
+        finally:
+            cmd._stop_event = old_stop
+
+    def test_log_output_falls_back_when_prompt_toolkit_has_no_console(self):
+        with patch.object(log_module, "print_formatted_text", side_effect=RuntimeError("no console")), \
+             patch("builtins.print") as output:
+            log_module._emit("synthetic")
+        output.assert_called_once_with("synthetic")
+
+
 class HttpHardeningTests(unittest.TestCase):
+    def test_invalid_login_uses_generic_unauthorized_response(self):
+        with patch.object(http_server.db, "get_sdk_user_info", return_value=None):
+            response = asyncio.run(http_server.api_login(
+                http_server.LoginRequest(username="missing-user", password="wrong-password"),
+            ))
+        payload = json.loads(response.body)
+        self.assertEqual(response.status_code, 401)
+        self.assertFalse(payload["success"])
+        self.assertEqual(payload["msg"], "Invalid username or password.")
+        self.assertNotIn("user_token", payload)
+
     def test_registration_does_not_return_token(self):
         with tempfile.TemporaryDirectory() as directory:
             old_path = Config.DB_PATH

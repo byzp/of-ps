@@ -29,6 +29,16 @@ build
 /logs/
 *.bak
 *.bak_*
+*.zip
+*.pcap
+*.pcapng
+*.etl
+*.key
+*.pem
+*.env
+.env.*
+*.exe
+*.dll
 /run_new.log
 /config.py.bak*
 

@@ -29,7 +29,7 @@
 C:\OverFieldLab\runtime\ofps-venv\Scripts\python.exe -m pytest -q tests
 ```
 
-基线结果：`907 passed, 88 subtests passed`。采集 / 掉落 / 拾取专项修复后必须复跑。
+基线结果：`911 passed, 88 subtests passed`（2026-11-27 全量复跑）。采集 / 掉落 / 拾取专项修复后必须复跑。
 
 ## 当前专项
 
@@ -38,6 +38,7 @@ C:\OverFieldLab\runtime\ofps-venv\Scripts\python.exe -m pytest -q tests
 - 支付订单、事件和交易记录损坏时受控拒绝且不发奖；间隙奖励移除 `10/10` 伪造兜底，要求完成状态、所有权/成员资格、权威配置和原子领取。
 - 原始 TCP 分片、粘包、未认证重放和异常包纳入自动验收。
 - 沙袋自动保存加锁读取状态，并在数据库关闭后安全退出，避免关停竞态。
+- 无控制台/重定向场景下禁用交互命令提示，日志输出回退到普通文本；服务继续运行，可响应 SIGINT/SIGTERM/SIGBREAK 正常关停。
 - 社交压力覆盖 8 线程 × 400 条私聊：3200 条请求/通知全部成功，未读数与最近 50 条历史在重启后保持一致。
 - 网络层 40 周期 / 2000 次登录断线烟测残留会话为 0；1000 次登录性能基线约 39.91 登录/秒，tracemalloc 峰值约 75MB。
 

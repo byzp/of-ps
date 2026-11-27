@@ -73,6 +73,8 @@ pip install -r requirements-server.txt
 pip install -r requirements-client.txt
 ```
 
+Optional standalone build: install `pyinstaller` in the same environment before running `build.bat`.
+
 ### 4. Start the Server
 
 Open a terminal and run (keep this window open):
@@ -164,7 +166,7 @@ The interconnection module allows servers to discover each other and link, enabl
 python utils/kcp/setup.py build_ext --inplace
 ```
 
-If you experience frequent disconnections, increase `KCP_MINRTO` at line 69 in `utils/kcp/_kcp.c`, then recompile.
+If you experience frequent disconnections, increase `KCP_MINRTO` in `utils/kcp/ikcp.c` or `utils/kcp/_kcp.cpp`, then recompile.
 
 ## 
 

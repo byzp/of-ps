@@ -30,6 +30,16 @@ def _format_record_to_ansi(record):
     return color + text + Style.RESET_ALL
 
 
+def _emit(msg):
+    try:
+        print_formatted_text(ANSI(msg))
+    except Exception:
+        try:
+            print(msg)
+        except Exception:
+            pass
+
+
 def _log_consumer_loop(q: queue.Queue, stop_event: threading.Event):
     while not stop_event.is_set():
         if q.empty():
@@ -38,12 +48,12 @@ def _log_consumer_loop(q: queue.Queue, stop_event: threading.Event):
         record = q.get_nowait()
 
         msg = _format_record_to_ansi(record)
-        print_formatted_text(ANSI(msg))
+        _emit(msg)
 
     while not q.empty():
         record = q.get_nowait()
         msg = _format_record_to_ansi(record)
-        print_formatted_text(ANSI(msg))
+        _emit(msg)
 
 
 def start(stop_event: threading.Event = None):
