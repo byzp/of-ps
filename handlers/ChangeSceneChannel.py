@@ -15,15 +15,18 @@ from proto.net_pb2 import (
     PackNotice,
     SceneActionType,
     ChatMsgRecordInitNotice,
+    SceneWeatherChangeNotice,
 )
 
 import server.scene_data as scene_data
+import server.notice_sync as notice_sync
 import utils.db as db
 from utils.res_loader import res
 from utils import refresh
 from utils import mail_rewards
 from utils.pb_create import make_SceneDataNotice
 from utils import achieve_track
+from utils import weather
 
 
 @packet_handler(MsgId.ChangeSceneChannelReq)
@@ -84,6 +87,7 @@ class Handler(PacketHandler):
             session.channel_id = target_sid.channel_id
         else:
             session.channel_id = req.channel_label or session.player_id
+        scene_data.save_session_location(session, force=True)
 
         # 主线任务条件: 进入指定空间
 
@@ -103,6 +107,11 @@ class Handler(PacketHandler):
         rsp = SceneDataNotice()
         rsp.CopyFrom(make_SceneDataNotice(session))
         session.send(MsgId.SceneDataNotice, rsp, 0)
+        weather_notice = SceneWeatherChangeNotice(
+            status=StatusCode.StatusCode_OK,
+            weather_type=weather.weather_at(int(notice_sync.game_time_seconds // 3600)),
+        )
+        session.send(MsgId.SceneWeatherChangeNotice, weather_notice, 0)
 
         for i in db.get_chat_history(session.player_id):
             if not i["msg"]:

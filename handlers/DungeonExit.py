@@ -47,6 +47,7 @@ class Handler(PacketHandler):
             dg.exit_times += 1
             db.set_dungeon(session.player_id, dg.dungeon_id, dg.SerializeToString())
         session.dungeon = [0, 0, 0, -1]
+        session.dungeon_token = ""
         session.send(MsgId.DungeonExitRsp, rsp, packet_id)
 
         cs = ChangeSceneChannelRsp()

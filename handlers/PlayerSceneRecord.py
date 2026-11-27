@@ -4,7 +4,7 @@ from network.msg_id import MsgId
 
 from proto.net_pb2 import PlayerSceneRecordReq
 
-from server.scene_data import up_recorder
+from server.scene_data import up_recorder, save_session_location
 
 
 @packet_handler(MsgId.PlayerSceneRecordReq)
@@ -24,7 +24,7 @@ class Handler(PacketHandler):
         rec = req.data.char_recorder_data_lst
         if rec:
             rec = rec[0]
-            if rec.pos.x != 0:
-                session.scene_player.team.char1.pos.CopyFrom(rec.pos)
-                session.scene_player.team.char1.rot.CopyFrom(rec.rot)
-                session.pos[session.scene_id] = rec.pos
+            session.scene_player.team.char1.pos.CopyFrom(rec.pos)
+            session.scene_player.team.char1.rot.CopyFrom(rec.rot)
+            session.pos[session.scene_id] = rec.pos
+            save_session_location(session)

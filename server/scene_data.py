@@ -1,7 +1,11 @@
 import logging
+import math
+import pickle
 import queue
 import threading
+import time
 from collections import defaultdict
+from google.protobuf.message import DecodeError
 from typing import Any, Dict, Optional, List
 
 logger = logging.getLogger(__name__)
@@ -29,6 +33,116 @@ lock_scene_action = threading.Lock()
 lock_chat_msg = threading.Lock()
 lock_session = threading.Lock()
 lock_rec_list = threading.Lock()
+
+_LOCATION_NS = "player_location"
+_LOCATION_KEY = "last"
+_LOCATION_SAVE_INTERVAL = 2.0
+_last_location_save = {}
+
+
+def _known_scene_ids():
+    from config import Config
+    from utils.res_loader import res
+
+    known = {Config.TUTORIAL_SCENE_ID, 9999}
+    for scene_ids in Config.WORLD_SCENES.values():
+        known.update(int(scene_id) for scene_id in scene_ids)
+    scene_rows = res.get("Scene", {}).get("scene", {}).get("datas", ())
+    known.update(
+        int(row["i_d"])
+        for row in scene_rows
+        if isinstance(row, dict) and row.get("i_d")
+    )
+    section = res.get("ScenesConfigAsset", {}).get("Scenes", ())
+    scene_assets = section.get("datas", ()) if isinstance(section, dict) else section
+    if isinstance(scene_assets, (list, tuple)):
+        known.update(
+            int(row["ID"])
+            for row in scene_assets
+            if isinstance(row, dict) and row.get("ID")
+        )
+    return known
+
+
+def valid_location(scene_id, channel_id):
+    """场景/频道只能来自服务端配置, 不接受持久化层中的任意正整数。"""
+    if (
+        isinstance(scene_id, bool)
+        or isinstance(channel_id, bool)
+        or not isinstance(scene_id, int)
+        or not isinstance(channel_id, int)
+        or not 0 < scene_id <= 0xFFFFFFFF
+        or not 0 < channel_id <= 0xFFFFFFFF
+    ):
+        return False
+    return scene_id in _known_scene_ids()
+
+
+def save_session_location(session, force=False):
+    if not valid_location(session.scene_id, session.channel_id):
+        return False
+    now = time.monotonic()
+    previous = _last_location_save.get(session.player_id, 0.0)
+    if not force and now - previous < _LOCATION_SAVE_INTERVAL:
+        return True
+    position = session.pos.get(session.scene_id)
+    rotation = session.scene_player.team.char1.rot
+    payload = {
+        "scene_id": int(session.scene_id),
+        "channel_id": int(session.channel_id),
+        "position": position.SerializeToString() if position is not None else b"",
+        "rotation": rotation.SerializeToString() if rotation is not None else b"",
+    }
+    import utils.db as db
+    db.set_kv(session.player_id, _LOCATION_NS, _LOCATION_KEY, pickle.dumps(payload))
+    _last_location_save[session.player_id] = now
+    return True
+
+
+def load_session_location(player_id):
+    import utils.db as db
+    raw = db.get_kv(player_id, _LOCATION_NS, _LOCATION_KEY)
+    if not raw:
+        return None
+    try:
+        payload = pickle.loads(raw)
+        if not isinstance(payload, dict):
+            return None
+        scene_id = payload["scene_id"]
+        channel_id = payload["channel_id"]
+        if not valid_location(scene_id, channel_id):
+            return None
+        return payload
+    except (KeyError, TypeError, ValueError, pickle.UnpicklingError, EOFError):
+        return None
+
+
+def restore_session_location(session):
+    payload = load_session_location(session.player_id)
+    if not payload:
+        return False
+    from proto.net_pb2 import Vector3
+    scene_id = payload["scene_id"]
+    channel_id = payload["channel_id"]
+    position = Vector3()
+    rotation = Vector3()
+    try:
+        position.ParseFromString(payload.get("position", b""))
+        rotation.ParseFromString(payload.get("rotation", b""))
+    except (DecodeError, TypeError):
+        return False
+    for vector in (position, rotation):
+        if not all(math.isfinite(value) for value in (vector.x, vector.y, vector.z)):
+            return False
+    # 全部验证成功后才修改会话, 损坏记录不会把玩家留在一个半恢复的场景。
+    session.scene_id = scene_id
+    session.channel_id = channel_id
+    if position.SerializeToString():
+        session.pos[scene_id] = position
+        session.scene_player.team.char1.pos.CopyFrom(position)
+    if rotation.SerializeToString():
+        session.scene_player.team.char1.rot.CopyFrom(rotation)
+    return True
 
 
 def get_session():
@@ -180,7 +294,9 @@ def up_chat_msg(chat_channel_id: int, scene_id: int, channel_id: int, notice) ->
 
 
 def get_scene_id(player_id: int) -> Optional[int]:
-    return 9999
+    saved = load_session_location(player_id)
+    if saved:
+        return int(saved["scene_id"])
     with lock_scene:
         for scene_id, channels in _scene.items():
             for channel_id, players in channels.items():
@@ -190,13 +306,15 @@ def get_scene_id(player_id: int) -> Optional[int]:
 
 
 def get_channel_id(player_id: int) -> Optional[int]:
-    return 1
+    saved = load_session_location(player_id)
+    if saved:
+        return int(saved["channel_id"])
     with lock_scene:
         for scene_id, channels in _scene.items():
             for channel_id, players in channels.items():
                 if player_id in players:
                     return channel_id
-    return 9999
+    return 1
 
 
 def get_scene_player(scene_id, channel_id):

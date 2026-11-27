@@ -1,13 +1,10 @@
-import pickle as _pk
-
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 
 
 from proto.net_pb2 import ExploreInitReq, ExploreInitRsp, StatusCode
 import utils.garden_state as garden_state
-import utils.db as db
-from utils.res_loader import res
+from handlers.Explore import _rows, load_activity_state, load_area_state
 
 """
 # 探索初始化 1819 1820
@@ -27,26 +24,24 @@ class Handler(PacketHandler):
         rsp.status = StatusCode.StatusCode_OK
 
         for explore_id in garden_state.explore_area_ids():
-            e = garden_state.get_explore(session.player_id, explore_id)
+            try:
+                e = load_area_state(session.player_id, explore_id)
+            except (ValueError, TypeError):
+                continue
             garden_state.fill_explore_info(rsp.explore.add(), explore_id, e)
 
-        # activity_explore: Explore.explore_activity(单活动 901)状态回填
-        _act = next(iter(res["Explore"]["explore_activity"]["datas"]), None)
-        if _act:
-            _raw = db.get_kv(
-                session.player_id,
-                "activity_explore",
-                str(_act["i_d"]),
-                b"",
-            )
-
-            st = _pk.loads(_raw) if _raw else {}
+        # activity_explore: 回填全部已配置活动, 损坏记录不伪造完成状态。
+        for activity in _rows("Explore", "explore_activity"):
+            try:
+                st = load_activity_state(session.player_id, str(activity["i_d"]))
+            except (KeyError, ValueError, TypeError):
+                continue
             info = rsp.activity_explore.add()
-            info.explore_id = _act["i_d"]
-            info.times = int(st.get("times", 0))
-            info.is_quick_finish = bool(st.get("is_quick_finish"))
-            if st.get("start_time"):
-                info.start_time = int(st["start_time"])
-                info.collect_reward = bool(st.get("collectable"))
+            info.explore_id = activity["i_d"]
+            info.times = st["times"]
+            info.is_quick_finish = st["is_quick_finish"]
+            if st["start_time"]:
+                info.start_time = st["start_time"]
+                info.collect_reward = st["collectable"]
 
         session.send(MsgId.ExploreInitRsp, rsp, packet_id)  # 1819,1820

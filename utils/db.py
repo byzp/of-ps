@@ -1,4 +1,6 @@
 import datetime
+import hashlib
+import hmac
 import logging
 import os
 import pickle
@@ -6,7 +8,9 @@ import secrets
 import sqlite3
 import threading
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 
 from config import Config
 from proto.net_pb2 import (
@@ -36,6 +40,13 @@ conn = None
 db = None
 # RLock: SIGTERM 处理器与主线程同线程, 可能在已持锁处打断, 需可重入
 lock_db = threading.RLock()
+
+# 自动提交(autosave)状态：写语句计数 + 上次提交时间。
+# 见 docs/数据库与存档优化方案.md：execute() 本身不 commit，靠这里定时/按量提交，
+# 避免进程被强杀时丢掉自启动以来的全部改动。
+_dirty = 0
+_last_commit = time.time()
+_WRITE_PREFIXES = ("INSERT", "UPDATE", "DELETE", "REPLACE")
 
 
 class db_result:
@@ -69,12 +80,16 @@ class db_warp:
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
 
     def execute(self, *args, **kwargs):
+        global _dirty
         with self._rw_lock:
             # execute 后的取值和游标释放同样会访问共享连接，必须一并持锁。
             # 不向 handler 暴露原始游标，避免锁外 fetch 与其他线程的 SQL 并发。
             cur = self._conn.execute(*args, **kwargs)
             rows = cur.fetchall()
             cur.close()
+            sql = args[0] if args and isinstance(args[0], str) else ""
+            if sql.lstrip()[:6].upper().startswith(_WRITE_PREFIXES):
+                _dirty += 1
             return db_result(rows)
 
     def execute_async(self, *args, **kwargs):
@@ -83,48 +98,75 @@ class db_warp:
 
 def exit():
     global db, conn
+    save()
     with lock_db:
         if conn is None:
-            return  # 已关闭(幂等)
-        conn.commit()
-        if Config.IN_MEMORY:
-            disk = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
-            conn.backup(disk)
-            disk.commit()
-            disk.close()
+            return
         conn.close()
         conn = None
         db = None
 
 
-def save():
-    with lock_db:
-        if conn is None:
-            return  # 已关闭(幂等)
-        conn.commit()
-        if Config.IN_MEMORY:
-            disk = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
+def _write_memory_snapshot():
+    temporary = Config.DB_PATH + '.tmp-' + uuid.uuid4().hex
+    try:
+        disk = sqlite3.connect(temporary, check_same_thread=False)
+        try:
             conn.backup(disk)
             disk.commit()
+        finally:
+            disk.close()
+        os.replace(temporary, Config.DB_PATH)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def save():
+    global _dirty, _last_commit
+    with lock_db:
+        if conn is None:
+            return
+        conn.commit()
+        if Config.IN_MEMORY:
+            _write_memory_snapshot()
+
+
+@contextmanager
+def transaction():
+    with lock_db:
+        if conn is None:
+            raise RuntimeError('Database is not initialized.')
+        if conn.in_transaction:
+            yield
+            return
+        conn.execute('BEGIN IMMEDIATE')
+        try:
+            yield
+        except Exception:
+            conn.rollback()
+            raise
+        else:
+            conn.commit()
 
 
 def init():
-    # 初始化数据库连接,仅主线程调用,无需加锁
+    global db, conn
+    parent = os.path.dirname(os.path.abspath(Config.DB_PATH))
+    os.makedirs(parent, exist_ok=True)
     if not os.path.exists(Config.DB_PATH):
         logger.warning("database not exists!")
-    global db, conn
     if Config.IN_MEMORY:
         disk = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
-        conn = sqlite3.connect(":memory:", check_same_thread=False)
+        conn = sqlite3.connect(":memory:", check_same_thread=False, isolation_level=None)
         disk.backup(conn)
         disk.close()
-        conn.execute("PRAGMA journal_mode = WAL;")
-        conn.execute("PRAGMA synchronous = OFF;")
-        conn.commit()
     else:
-        conn = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
-        conn.execute("PRAGMA journal_mode = WAL;")
-        conn.commit()
+        conn = sqlite3.connect(Config.DB_PATH, check_same_thread=False, isolation_level=None)
+    conn.execute("PRAGMA journal_mode = WAL;")
+    conn.execute("PRAGMA synchronous = FULL;")
+    conn.execute("PRAGMA foreign_keys = ON;")
+    conn.execute("PRAGMA busy_timeout = 10000;")
 
     db = db_warp(conn)
 
@@ -265,8 +307,7 @@ def init():
             achieve_id INTEGER NOT NULL,
             achieve_blob BLOB NOT NULL,
             PRIMARY KEY (player_id, achieve_id),
-            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE,
-            FOREIGN KEY(achieve_id) REFERENCES players(player_id) ON DELETE CASCADE
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
 
         CREATE TABLE IF NOT EXISTS instance (
@@ -417,8 +458,39 @@ def init():
             FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
         );
 
-        INSERT OR IGNORE INTO users (id, username, password, user_token) VALUES (1000000, "", "", "");
+        INSERT OR IGNORE INTO players (player_id, player_name, account_type) VALUES (0, "", 9999);
     """)
+    _repair_achieve_schema()
+
+
+def _repair_achieve_schema():
+    invalid = any(
+        row[2] == 'players' and row[3] == 'achieve_id'
+        for row in conn.execute('PRAGMA foreign_key_list(achieve)')
+    )
+    if not invalid:
+        return
+    with transaction():
+        conn.execute('''CREATE TABLE achieve__new (
+            player_id INTEGER NOT NULL,
+            achieve_id INTEGER NOT NULL,
+            achieve_blob BLOB NOT NULL,
+            PRIMARY KEY (player_id, achieve_id),
+            FOREIGN KEY(player_id) REFERENCES players(player_id) ON DELETE CASCADE
+        )''')
+        conn.execute('INSERT OR REPLACE INTO achieve__new(player_id,achieve_id,achieve_blob) SELECT player_id,achieve_id,achieve_blob FROM achieve')
+        conn.execute('DROP TABLE achieve')
+        conn.execute('ALTER TABLE achieve__new RENAME TO achieve')
+
+    # 补索引：只补真正缺的（其余表的复合主键已覆盖 player_id 前缀，再建是浪费空间）。
+    # 全部 IF NOT EXISTS，可在老库上反复执行。
+    conn.executescript("""
+        CREATE UNIQUE INDEX IF NOT EXISTS ux_players_id ON players (player_id);
+        CREATE INDEX IF NOT EXISTS idx_gacha_record_player ON gacha_record (player_id, gacha_id, id DESC);
+        CREATE INDEX IF NOT EXISTS idx_turntable_record_player ON turntable_record (player_id, activity_id, draw_time DESC);
+        CREATE INDEX IF NOT EXISTS idx_photo_shares_player ON photo_shares (player_id);
+    """)
+    conn.commit()
 
 
 def _quest_trackers(player_id):
@@ -429,6 +501,11 @@ def _quest_trackers(player_id):
 
 
 def init_player(player_id):
+    with transaction():
+        _init_player(player_id)
+
+
+def _init_player(player_id):
     """初始化新用户数据"""
     cur_time = int(time.time())
     player_name = ""
@@ -570,43 +647,75 @@ def init_player(player_id):
 
 
 def verify_sdk_user_info(user_id, login_token):
+    if not login_token:
+        return False
     cur = db.execute(
-        "SELECT id, username, user_token FROM users WHERE id = ? AND user_token = ?",
-        (
-            user_id,
-            login_token,
-        ),
+        "SELECT user_token FROM users WHERE id = ?",
+        (user_id,),
     )
     row = cur.fetchone()
-    if row:
-        return True
-    return False
+    return bool(row and hmac.compare_digest(str(row[0]), str(login_token)))
+
+
+_PASSWORD_PREFIX = 'pbkdf2_sha256'
+
+
+def _hash_password(password):
+    salt = secrets.token_hex(16)
+    iterations = 210000
+    digest = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('ascii'), iterations)
+    return f'{_PASSWORD_PREFIX}${iterations}${salt}${digest.hex()}'
+
+
+def _verify_password(stored, password):
+    if stored.startswith(_PASSWORD_PREFIX + '$'):
+        try:
+            _, iterations, salt, expected = stored.split('$', 3)
+            actual = hashlib.pbkdf2_hmac(
+                'sha256', password.encode('utf-8'), salt.encode('ascii'), int(iterations)
+            ).hex()
+            return hmac.compare_digest(actual, expected)
+        except (ValueError, TypeError):
+            return False
+    return hmac.compare_digest(str(stored), password)
+
+
+def create_sdk_user(username, password):
+    username = username.strip()
+    if not 1 <= len(username) <= 64:
+        raise ValueError('Username must contain 1 to 64 characters.')
+    if not 8 <= len(password) <= 128:
+        raise ValueError('Password must contain 8 to 128 characters.')
+    with lock_db:
+        if conn.execute('SELECT 1 FROM users WHERE username=?', (username,)).fetchone():
+            raise ValueError('Username already exists.')
+        token = secrets.token_hex(16)
+        try:
+            cursor = conn.execute(
+                'INSERT INTO users(username,password,user_token) VALUES(?,?,?)',
+                (username, _hash_password(password), token),
+            )
+        except sqlite3.IntegrityError as error:
+            raise ValueError('Username already exists.') from error
+        return {'id': cursor.lastrowid, 'username': username, 'user_token': token}
 
 
 def get_sdk_user_info(username, password):
-
     cur = db.execute(
         "SELECT id, password, user_token FROM users WHERE username = ?",
         (username,),
     )
     row = cur.fetchone()
     if row:
-        if row[1] == password:
-            return {"id": row[0], "username": username, "user_token": row[2]}
-        else:
+        if not _verify_password(row[1], password):
             return None
-    else:
-
-        auth_token = secrets.token_hex(16)
-        cur = db.execute(
-            "INSERT INTO users (username, password, user_token) VALUES (?, ?, ?)",
-            (username, password, auth_token),
-        )
-        return {
-            "id": get_sdk_user_info(username, password)["id"],
-            "username": username,
-            "user_token": auth_token,
-        }
+        if not row[1].startswith(_PASSWORD_PREFIX + '$'):
+            with lock_db:
+                conn.execute('UPDATE users SET password=? WHERE id=?', (_hash_password(password), row[0]))
+        return {"id": row[0], "username": username, "user_token": row[2]}
+    if Config.ALLOW_AUTO_REGISTER:
+        return create_sdk_user(username, password)
+    return None
 
 
 def get_user_id(sdk_id):
@@ -2262,5 +2371,5 @@ def set_encounter_state(player_id, encounter_id, state, box_id=0):
 
 def get_player_ids():
     """全部已知玩家 id(榜单等跨玩家聚合用)"""
-    cur = db.execute("SELECT player_id FROM players;")
+    cur = db.execute("SELECT player_id FROM players WHERE player_id<>0;")
     return [r[0] for r in cur.fetchall()]

@@ -1,22 +1,33 @@
-from network.packet_handler import PacketHandler, packet_handler
-from network.msg_id import MsgId
 import logging
 
+from network.msg_id import MsgId
+from network.packet_handler import PacketHandler, packet_handler
 from proto.net_pb2 import SPOperateReq, SPOperateRsp, SPOperateType, StatusCode
-
-import server.photo_share as ps
-from utils.res_loader import res
+from server import payment_security
 
 logger = logging.getLogger(__name__)
 
+_PASSWORD_PREFIX = "pbkdf2_sha256"
+
 
 def _password_length():
-    """SP 二级密码长度(GlobalConfig.SecondaryVerificationPasswordLength)"""
-    for e in res["GlobalConfig"]["config"]["datas"]:
-        if e.get("key") == "SecondaryVerificationPasswordLength":
-            return int(e["values"][0])
-        pass
-    return 6
+    return payment_security.password_length()
+
+
+def _hash_password(password):
+    return payment_security.hash_password(password)
+
+
+def _verify_password(stored, password):
+    return payment_security.verify_password(stored, password)
+
+
+_OPERATIONS = {
+    SPOperateType.SPOperateType_Open: "open",
+    SPOperateType.SPOperateType_Change: "change",
+    SPOperateType.SPOperateType_Check: "check",
+    SPOperateType.SPOperateType_Close: "close",
+}
 
 
 @packet_handler(MsgId.SPOperateReq)
@@ -25,46 +36,39 @@ class Handler(PacketHandler):
         req = SPOperateReq()
         req.ParseFromString(data)
 
-        rsp = SPOperateRsp()
-        rsp.status = StatusCode.StatusCode_OK
-        rsp.operate_type = req.operate_type
+        rsp = SPOperateRsp(operate_type=req.operate_type, status=StatusCode.StatusCode_OK)
+        operation = _OPERATIONS.get(req.operate_type)
+        if operation is None:
+            rsp.status = StatusCode.StatusCode_BAD_REQ
+            session.send(MsgId.SPOperateRsp, rsp, packet_id)
+            return
 
-        # SP 推测为隐私空间/二级密码: Open 设置密码, Change 改密, Check 校验, Close 关闭
-        # 状态经 photo_share 快照持久化
-        with ps.lock_sp:
-            state = ps.sp_state.setdefault(
-                session.player_id, {"password": "", "open": False}
+        try:
+            ok, reason, state, verified_hash = payment_security.secondary_password_operation(
+                session.player_id, operation, req.password, req.old_password
             )
-            match req.operate_type:
-                case SPOperateType.SPOperateType_Open:
-                    if len(req.password) != _password_length():
-                        rsp.status = StatusCode.StatusCode_FAIL
-                        rsp.sp_check_status = False
-                    else:
-                        state["password"] = req.password
-                        state["open"] = True
-                        rsp.sp_check_status = True
-                case SPOperateType.SPOperateType_Change:
-                    if state["password"] and req.old_password != state["password"]:
-                        rsp.status = StatusCode.StatusCode_FAIL
-                        rsp.sp_check_status = False
-                    else:
-                        state["password"] = req.password
-                        rsp.sp_check_status = True
-                case SPOperateType.SPOperateType_Check:
-                    rsp.sp_check_status = req.password == state["password"]
-                    if not rsp.sp_check_status:
-                        rsp.status = StatusCode.StatusCode_FAIL
-                case SPOperateType.SPOperateType_Close:
-                    if state["password"] and req.password != state["password"]:
-                        rsp.status = StatusCode.StatusCode_FAIL
-                        rsp.sp_check_status = False
-                    else:
-                        state["open"] = False
-                        state["password"] = ""
-                        rsp.sp_check_status = True
-                case _:
-                    logger.info("SPOperateReq 未知 operate_type=%s", req.operate_type)
-            rsp.sp_open_status = state["open"]
+        except payment_security.SecurityError:
+            logger.exception("Secondary-password security state is unavailable")
+            rsp.status = StatusCode.StatusCode_SYS_ERR
+            session.send(MsgId.SPOperateRsp, rsp, packet_id)
+            return
+        except Exception:
+            logger.exception("Secondary-password operation failed")
+            rsp.status = StatusCode.StatusCode_SYS_ERR
+            session.send(MsgId.SPOperateRsp, rsp, packet_id)
+            return
 
-        session.send(MsgId.SPOperateRsp, rsp, packet_id)  # 2695,2696
+        if ok and operation == "check" and verified_hash:
+            # Sensitive account operations require an explicit recent Check;
+            # setting or changing a password is not an authorization gesture.
+            payment_security.record_verification(session, session.player_id, verified_hash)
+        elif ok and operation == "close":
+            session._ofps_sp_verified = None
+        if not ok:
+            # Do not distinguish wrong passwords from lockouts to clients.
+            rsp.status = StatusCode.StatusCode_FAIL
+            if reason == "locked":
+                logger.info("Secondary-password lockout player_id=%s", session.player_id)
+        rsp.sp_open_status = bool(state.get("open"))
+        rsp.sp_check_status = bool(ok and (verified_hash or operation == "close"))
+        session.send(MsgId.SPOperateRsp, rsp, packet_id)

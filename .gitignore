@@ -17,9 +17,30 @@ build
 /player.db-wal
 /.vscode
 /venv
+/.venv
 /star.bat
 /dist
 /main.spec
 /server.spec
 /link_pool.json
 .idea
+
+# 本地运行产物（不入库）
+/logs/
+*.bak
+*.bak_*
+*.zip
+*.pcap
+*.pcapng
+*.etl
+*.key
+*.pem
+*.env
+.env.*
+*.exe
+*.dll
+/run_new.log
+/config.py.bak*
+
+# 方案文档不入库（本地留档）
+/docs/

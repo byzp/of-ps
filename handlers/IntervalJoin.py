@@ -10,6 +10,7 @@ from proto.net_pb2 import (
 )
 import utils.garden_state as garden_state
 import utils.db as db
+from server import social
 from server.scene_data import get_session
 
 """
@@ -29,71 +30,82 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = IntervalJoinRsp()
-        rsp.friend_id = str(req.friend_id)
+        info = None
+        changed = False
+        with social.relation_transaction(session.player_id, req.friend_id):
+            if (
+                req.friend_id == session.player_id
+                or req.friend_id <= 0
+                or not db.get_players_info(req.friend_id, "player_id")
+            ):
+                status = StatusCode.StatusCode_BAD_REQ
+            else:
+                status = social.private_chat_status(session.player_id, req.friend_id)
+                if status == StatusCode.StatusCode_OK:
+                    # 好友间隙可能未在内存态(如重启后), 容错创建
+                    info = garden_state.get_interval(req.friend_id, create=True)
+                    cfg = garden_state.interval_cfg(info["interval_id"])
+                    now = garden_state.now_ms()
+                    if info["finish_time"] <= now:
+                        status = StatusCode.StatusCode_INTERVAL_FINISH
+                    else:
+                        # 保留期校验(explore_interval.retention_time, 秒)
+                        retention_ms = (
+                            cfg.get("retention_time", 0) if cfg else 0
+                        ) * 1000
+                        if retention_ms and now > info["create_time"] + retention_ms:
+                            status = StatusCode.StatusCode_INTERVAL_OVERDUE
+                        elif any(
+                            member["player_id"] == session.player_id
+                            for member in info["member"]
+                        ):
+                            # 已参与过: 幂等返回当前状态, 不重复加速
+                            status = StatusCode.StatusCode_OK
+                        else:
+                            # 人数上限(explore_interval.member_count)
+                            member_limit = cfg.get("member_count", 0) if cfg else 0
+                            if member_limit and len(info["member"]) >= member_limit:
+                                status = StatusCode.StatusCode_FAIL
+                            else:
+                                # 加速: 每人缩短 time/member_count 秒
+                                if cfg and cfg.get("time") and cfg.get("member_count"):
+                                    speed_up_ms = (
+                                        cfg["time"] * 1000 // cfg["member_count"]
+                                    )
+                                else:
+                                    speed_up_ms = Config.INTERVAL_SPEED_UP_MS_FALLBACK
+                                info["finish_time"] = max(
+                                    now, info["finish_time"] - speed_up_ms
+                                )
+                                info["member"].append(
+                                    {
+                                        "player_id": session.player_id,
+                                        "nick_name": session.player_name,
+                                        "head": session.avatar_id,
+                                        "join_time": now,
+                                        "is_reward": False,
+                                    }
+                                )
+                                garden_state.set_interval(req.friend_id, info)
+                                status = StatusCode.StatusCode_OK
+                                changed = True
 
-        # 好友间隙可能未在内存态(如重启后), 容错创建
-        info = garden_state.get_interval(req.friend_id, create=True)
-        cfg = garden_state.interval_cfg(info["interval_id"])
-        rsp.explore_id = info["interval_id"]
-        rsp.finish_time = info["finish_time"]
+        rsp.status = status
+        if info is not None:
+            rsp.friend_id = str(req.friend_id)
+            rsp.explore_id = info["interval_id"]
+            rsp.finish_time = info["finish_time"]
+        session.send(MsgId.IntervalJoinRsp, rsp, packet_id)
 
-        now = garden_state.now_ms()
-        if info["finish_time"] <= now:
-            # 已完成的间隙不能再帮忙
-            rsp.status = StatusCode.StatusCode_INTERVAL_FINISH
-            session.send(MsgId.IntervalJoinRsp, rsp, packet_id)  # 1835,1836
-            return
-
-        # 保留期校验(explore_interval.retention_time, 秒)
-        retention_ms = (cfg.get("retention_time", 0) if cfg else 0) * 1000
-        if retention_ms and now > info["create_time"] + retention_ms:
-            rsp.status = StatusCode.StatusCode_INTERVAL_OVERDUE
-            session.send(MsgId.IntervalJoinRsp, rsp, packet_id)  # 1835,1836
-            return
-
-        if any(m["player_id"] == session.player_id for m in info["member"]):
-            # 已参与过: 幂等返回当前状态, 不重复加速
-            rsp.status = StatusCode.StatusCode_OK
-            session.send(MsgId.IntervalJoinRsp, rsp, packet_id)  # 1835,1836
-            return
-
-        # 人数上限(explore_interval.member_count)
-        member_limit = cfg.get("member_count", 0) if cfg else 0
-        if member_limit and len(info["member"]) >= member_limit:
-            rsp.status = StatusCode.StatusCode_FAIL  # 无专用"间隙人数已满"状态码
-            session.send(MsgId.IntervalJoinRsp, rsp, packet_id)  # 1835,1836
-            return
-
-        # 加速: 每人缩短 time/member_count 秒(见文件头注释)
-        if cfg and cfg.get("time") and cfg.get("member_count"):
-            speed_up_ms = cfg["time"] * 1000 // cfg["member_count"]
-        else:
-            speed_up_ms = Config.INTERVAL_SPEED_UP_MS_FALLBACK
-        info["finish_time"] = max(now, info["finish_time"] - speed_up_ms)
-
-        info["member"].append(
-            {
-                "player_id": session.player_id,
-                "nick_name": session.player_name,
-                "head": session.avatar_id,
-                "join_time": now,
-                "is_reward": False,
-            }
-        )
-
-        rsp.status = StatusCode.StatusCode_OK
-        rsp.finish_time = info["finish_time"]
-        garden_state.set_interval(req.friend_id, info)
-
-        session.send(MsgId.IntervalJoinRsp, rsp, packet_id)  # 1835,1836
-
-        # 通知在线的间隙主人: 完成时间发生变化
-        for s in get_session():
-            if s.player_id == req.friend_id:
-                notice = IntervalChangeNotice()
-                notice.status = StatusCode.StatusCode_OK
-                notice.player_id = req.friend_id
-                notice.interval_id = info["interval_id"]
-                notice.finish_time = info["finish_time"]
-                s.send(MsgId.IntervalChangeNotice, notice, 0)  # 1832
-                break
+        # 完成时间已持久化后再通知在线间隙主人。
+        if changed:
+            for other in get_session():
+                if other.player_id == req.friend_id:
+                    notice = IntervalChangeNotice(
+                        status=StatusCode.StatusCode_OK,
+                        player_id=req.friend_id,
+                        interval_id=info["interval_id"],
+                        finish_time=info["finish_time"],
+                    )
+                    other.send(MsgId.IntervalChangeNotice, notice, 0)
+                    break

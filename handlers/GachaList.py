@@ -4,9 +4,11 @@ from network.msg_id import MsgId
 import pickle
 
 from proto.net_pb2 import GachaListReq, GachaListRsp, StatusCode
+from handlers.Gacha import _configuration
 from utils.res_loader import res
 from config import Config
 import utils.db as db
+from utils import gacha_prob
 
 
 @packet_handler(MsgId.GachaListReq)
@@ -22,6 +24,12 @@ class Handler(PacketHandler):
             tmp = rsp.gachas.add()
             tmp.gacha_id = data["i_d"]
             tmp.gacha_times = db.get_total_gacha_num(session.player_id, data["i_d"])
+            configuration = _configuration(data["i_d"])
+            if configuration:
+                _, normal, guarantee = configuration
+                claimed = set(db.get_claimed(session.player_id, "gacha_full_pick"))
+                eligible = {str(item_id) for item_id in normal + guarantee}
+                tmp.has_full_pick = tmp.gacha_times >= Config.FULL_PICK_MIN_DRAWS and bool(eligible - claimed)
             if data.get("big_guarantee_pool_i_d"):
                 cap = int(data.get("max_times", 0) or 70)
                 tmp.guarantee = max(

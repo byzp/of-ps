@@ -5,20 +5,25 @@
 后台线程周期性脏检测保存, 重启不丢。
 """
 
+import copy
 import logging
 import pickle
 import threading
 import time
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 _PERSIST_KEY = ("photo_share", "snapshot")
 _autosave_started = [False]
 _last_snapshot = [None]
+# A corrupt/unreadable snapshot must not be replaced by an empty autosave, nor
+# may its photo files be mistaken for orphans during startup cleanup.
+_snapshot_valid = [True]
 
 # ---------------- 照片分享墙 ----------------
 photos = {}
-lock_photo = threading.Lock()
+lock_photo = threading.RLock()
 
 _next_code = [int(time.time()) * 100]  # 分享码, 用时间戳做基数避免重启后重复
 
@@ -115,15 +120,16 @@ lock_sp = threading.Lock()
 
 
 def _snapshot():
-    return {
-        "photos": photos,
-        "extra_upload_grid": extra_upload_grid,
-        "express_address": express_address,
-        "wish_lists": wish_lists,
-        "week_send_count": week_send_count,
-        "sp_state": sp_state,
-        "next_code": _next_code[0],
-    }
+    with lock_photo, lock_express, lock_wish, lock_sp:
+        return copy.deepcopy({
+            "photos": photos,
+            "extra_upload_grid": extra_upload_grid,
+            "express_address": express_address,
+            "wish_lists": wish_lists,
+            "week_send_count": week_send_count,
+            "sp_state": sp_state,
+            "next_code": _next_code[0],
+        })
 
 
 def _restore(snap: dict):
@@ -143,14 +149,41 @@ def load():
     try:
         raw = db.get_kv(0, *_PERSIST_KEY)
         if raw:
-            _restore(pickle.loads(raw))
+            snap = pickle.loads(raw)
+            if not isinstance(snap, dict) or any(
+                not isinstance(snap.get(key, {}), dict)
+                for key in (
+                    "photos", "extra_upload_grid", "express_address",
+                    "wish_lists", "week_send_count", "sp_state",
+                )
+            ) or type(snap.get("next_code", 0)) is not int:
+                raise ValueError("Invalid photo_share snapshot structure")
+            _restore(snap)
             logger.info(
                 "photo_share state restored: %d photos, %d wish lists",
                 len(photos),
                 len(wish_lists),
             )
+        _snapshot_valid[0] = True
     except Exception:
-        logger.exception("photo_share load failed")
+        _snapshot_valid[0] = False
+        logger.exception("photo_share load failed; preserving snapshot and photo files")
+        _start_autosave()
+        return
+    photo_directory = Path("data/photos")
+    if photo_directory.is_dir():
+        for path in photo_directory.glob("*.bin"):
+            try:
+                code = int(path.stem)
+            except ValueError:
+                continue
+            if code not in photos:
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError:
+                    # One inaccessible orphan must not abort startup or prevent
+                    # cleanup of the remaining files.
+                    logger.exception("Could not remove orphaned photo file %s", path)
     _start_autosave()
 
 
@@ -158,6 +191,9 @@ def save():
     """整体快照写入 player_kv"""
     import utils.db as db
 
+    if not _snapshot_valid[0]:
+        logger.error("photo_share save skipped: snapshot was not loaded safely")
+        return
     try:
         snap = pickle.dumps(_snapshot())
         if snap != _last_snapshot[0]:

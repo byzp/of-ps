@@ -1,6 +1,7 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
 import logging
+import os
 
 from proto.net_pb2 import (
     OperatePhotoShareReq,
@@ -43,17 +44,31 @@ class Handler(PacketHandler):
                     record["favorites"].discard(session.player_id)
                 case PhotoOperateType.PhotoOperateType_DEL:
                     if record["player_id"] == session.player_id:
-                        del ps.photos[req.code]
+                        path = os.path.join("data/photos", f"{req.code}.bin")
+                        try:
+                            if os.path.isfile(path):
+                                os.unlink(path)
+                        except OSError:
+                            # Keep the record when its file cannot be removed;
+                            # otherwise a later restart sees a live record whose
+                            # only photo was silently lost.
+                            logger.exception("Could not delete photo file %s", path)
+                            rsp.status = StatusCode.StatusCode_FAIL
+                        else:
+                            del ps.photos[req.code]
                     else:
                         rsp.status = StatusCode.StatusCode_FAIL
                 case PhotoOperateType.PhotoOperateType_MOVE:
-                    # 照片在活动区/普通区间移动: 切换记录的 activity 归属
-                    record["is_activity"] = not record.get("is_activity", False)
-                    if record["is_activity"]:
-                        record["activity_id"] = req.activity_id
+                    if record["player_id"] != session.player_id:
+                        rsp.status = StatusCode.StatusCode_FAIL
+                    else:
+                        record["is_activity"] = not record.get("is_activity", False)
+                        if record["is_activity"]:
+                            record["activity_id"] = req.activity_id
                 case _:
                     logger.info(
                         "OperatePhotoShareReq 未知 operate_type=%s", req.operate_type
                     )
+                    rsp.status = StatusCode.StatusCode_BAD_REQ
 
         session.send(MsgId.OperatePhotoShareRsp, rsp, packet_id)  # 2559,2560

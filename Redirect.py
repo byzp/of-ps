@@ -35,7 +35,7 @@ class Redirector:
             return
 
         self._redirect(flow, orig_host=full_host)
-        logger.info("重定向 %s → %s:%s", full_host, ip, port)
+        logger.info("Redirecting %s → %s:%s", full_host, ip, port)
 
     def _redirect(self, flow: http.HTTPFlow, orig_host: str) -> None:
         original_host_header = flow.request.host_header or orig_host

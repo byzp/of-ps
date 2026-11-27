@@ -2,6 +2,8 @@
 
 [中文介绍](https://github.com/byzp/of-ps/blob/main/README_zh.md)
 
+> 本地加固分支 `lab/v3.0-hardening` 包含 303 个处理器、奖励/社交/装备/活动/支付安全状态机和完整测试。详见[本地加固说明](docs/hardening-v3.0.md)。该分支尚未合并上游 PR #29。
+
 ## Deployment
 
 ### 1. Install Protocol Buffers
@@ -70,6 +72,8 @@ conda activate overfield
 pip install -r requirements-server.txt
 pip install -r requirements-client.txt
 ```
+
+Optional standalone build: install `pyinstaller` in the same environment before running `build.bat`.
 
 ### 4. Start the Server
 
@@ -162,7 +166,7 @@ The interconnection module allows servers to discover each other and link, enabl
 python utils/kcp/setup.py build_ext --inplace
 ```
 
-If you experience frequent disconnections, increase `KCP_MINRTO` at line 69 in `utils/kcp/_kcp.c`, then recompile.
+If you experience frequent disconnections, increase `KCP_MINRTO` in `utils/kcp/ikcp.c` or `utils/kcp/_kcp.cpp`, then recompile.
 
 ## 
 

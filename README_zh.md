@@ -1,5 +1,7 @@
 # of-ps
 
+> 本地加固分支 `lab/v3.0-hardening` 包含 303 个处理器、奖励/社交/装备/活动/支付安全状态机和完整测试。详见[本地加固说明](docs/hardening-v3.0.md)。该分支尚未合并上游 PR #29。
+
 ## 部署方法
 
 1. 项目使用 Protocol Buffers 定义网络通信格式。需要先安装 `protoc` 编译器，将项目中的协议文件（`proto/net.proto`）编译为Python可用的代码。
@@ -72,6 +74,8 @@
       pip install -r requirements-server.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
       pip install -r requirements-client.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
       ```
+
+   可选单文件构建：在同一环境额外安装 `pyinstaller`，再运行 `build.bat`。
 
 4. 开启一个命令行窗口，启动服务器（不要关闭此命令窗口）
 
@@ -149,7 +153,7 @@
 
 ## 可选操作
 
-- 互联模块允许服务器之间相互发现和连接，各个服务器的玩家可以在同一场景交互, 需要编译utils/kcp的扩展(如果频繁出现断线问题，请增大utils/kcp/_kcp.c第69行的KCP_MINRTO, 然后重新编译)
+- 互联模块允许服务器之间相互发现和连接，各个服务器的玩家可以在同一场景交互, 需要编译utils/kcp的扩展(如果频繁出现断线问题，请增大utils/kcp/ikcp.c或utils/kcp/_kcp.cpp中的KCP_MINRTO, 然后重新编译)
     ```
     python utils/kcp/setup.py build_ext --inplace
     ```

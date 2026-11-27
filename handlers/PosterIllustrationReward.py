@@ -1,26 +1,69 @@
-from proto.net_pb2 import ItemDetail
-
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-
 from proto.net_pb2 import (
     PosterIllustrationRewardReq,
     PosterIllustrationRewardRsp,
     StatusCode,
     RewardStatus,
-    EBagItemTag,
+    ItemDetail,
 )
-import utils.db as db
-from utils.res_loader import res
-from utils import item_mgr
-from utils import achieve_track
 
-"""
-# 映像图鉴领奖 1425 1426
-须已拥有对应映像; 奖励按映像品质取
-GlobalConfig.Gacha_Poster_Quality{quality}_Reward("货币:数量")。
-领取状态持久化 claimed_rewards(system=poster_illustration)。
-"""
+from server import character_growth as growth
+from utils import achieve_track, item_mgr
+import utils.db as db
+
+
+def _poster_item_ids(illustration_id):
+    ids = {
+        int(row.get("item_i_d", 0) or 0)
+        for row in growth.rows("Poster", "poster")
+        if row.get("illustration_i_d") == illustration_id
+    }
+    return ids - {0}
+
+
+def _owned(player_id, illustration_id, poster_ids):
+    for blob in db.get_item_detail(player_id, table="items_s"):
+        detail = ItemDetail()
+        try:
+            detail.ParseFromString(blob)
+        except Exception:
+            continue
+        if detail.main_item.WhichOneof("item") != "poster":
+            continue
+        poster = detail.main_item.poster
+        if (
+            poster.poster_id in poster_ids
+            and poster.instance_id > 0
+            and detail.main_item.item_id == poster.poster_id
+        ):
+            return True
+    return False
+
+
+def _reward(illustration_id):
+    poster_ids = _poster_item_ids(illustration_id)
+    if not poster_ids:
+        raise growth.GrowthError(StatusCode.StatusCode_CFG_NOT_FOUND)
+    quality = None
+    for poster_id in poster_ids:
+        cfg = growth.item_config(poster_id)
+        if cfg is not None:
+            quality = int(cfg.get("quality", 1) or 1)
+            break
+    if quality is None:
+        raise growth.GrowthError(StatusCode.StatusCode_CFG_NOT_FOUND)
+    key = f"Gacha_Poster_Quality{quality}_Reward"
+    entry = next(
+        (row for row in growth.rows("GlobalConfig", "config") if row.get("key") == key),
+        None,
+    )
+    grants = []
+    for pair in (entry.get("values", ()) if entry else ()):
+        item_id, separator, count = str(pair).partition(":")
+        if separator and item_id.isdigit():
+            grants.append((int(item_id), int(count or 1)))
+    return growth.normalize_costs(grants)
 
 
 @packet_handler(MsgId.PosterIllustrationRewardReq)
@@ -28,74 +71,32 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = PosterIllustrationRewardReq()
         req.ParseFromString(data)
-
-        rsp = PosterIllustrationRewardRsp()
-
-        # illustration -> 任一对应 poster 的 item_i_d(取品质)
-        quality = None
-        for row in res["Poster"]["poster"]["datas"]:
-            if (
-                isinstance(row, dict)
-                and row.get("illustration_i_d") == req.poster_illustration_id
-            ):
-                item_cfg = next(
-                    (
-                        e
-                        for e in res["Item"]["item"]["datas"]
-                        if isinstance(e, dict) and e.get("i_d") == row.get("item_i_d")
-                    ),
-                    None,
+        rsp = PosterIllustrationRewardRsp(status=StatusCode.StatusCode_OK)
+        try:
+            with growth.transaction(session.player_id):
+                poster_ids = _poster_item_ids(req.poster_illustration_id)
+                grants = _reward(req.poster_illustration_id)
+                if not grants or not _owned(
+                    session.player_id, req.poster_illustration_id, poster_ids
+                ):
+                    raise growth.GrowthError(
+                        StatusCode.StatusCode_POSTER_ILLUSTRATION_NOT_ACTIVE
+                    )
+                if not db.try_claim(
+                    session.player_id,
+                    "poster_illustration",
+                    str(req.poster_illustration_id),
+                ):
+                    raise growth.GrowthError(StatusCode.StatusCode_POSTER_ILLUSTRATION_REWARDED)
+                item_mgr.grant_items(
+                    session.player_id, grants, rsp_items=rsp.items, session=None
                 )
-                if item_cfg:
-                    quality = int(item_cfg.get("quality", 1))
-                break
-        if quality is None:
-            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+                rsp.poster_illustration.poster_illustration_id = req.poster_illustration_id
+                rsp.poster_illustration.status = RewardStatus.Reward
+        except growth.GrowthError as error:
+            rsp.status = error.status
             session.send(MsgId.PosterIllustrationRewardRsp, rsp, packet_id)
             return
 
-        # 是否拥有该映像任一实例
-        owned = False
-        for blob in db.get_item_detail(session.player_id, table="items_s"):
-
-            d = ItemDetail()
-            d.ParseFromString(blob)
-            if d.main_item.item_tag == EBagItemTag.EBagItemTag_Poster and any(
-                isinstance(r2, dict)
-                and r2.get("item_i_d") == d.main_item.poster.poster_id
-                and r2.get("illustration_i_d") == req.poster_illustration_id
-                for r2 in res["Poster"]["poster"]["datas"]
-            ):
-                owned = True
-                break
-
-        if not db.try_claim(
-            session.player_id, "poster_illustration", str(req.poster_illustration_id)
-        ):
-            rsp.status = StatusCode.StatusCode_REPEAT_GET_REWARD
-            session.send(MsgId.PosterIllustrationRewardRsp, rsp, packet_id)
-            return
-
-        rsp.status = StatusCode.StatusCode_OK
-        rsp.poster_illustration.poster_illustration_id = req.poster_illustration_id
-        rsp.poster_illustration.status = RewardStatus.Reward
-
-        # 奖励: Gacha_Poster_Quality{q}_Reward = '货币:数量'
-        key = f"Gacha_Poster_Quality{quality}_Reward"
-        grants = []
-        for e in res["GlobalConfig"]["config"]["datas"]:
-            if e.get("key") == key:
-                for pair in e.get("values", ()):
-                    cid, _, num = str(pair).partition(":")
-                    if cid.isdigit():
-                        grants.append((int(cid), int(num or 1)))
-                break
-        if grants and owned:
-            item_mgr.grant_items(
-                session.player_id, grants, session=session, rsp_items=rsp.items
-            )
-        if owned:
-            # 成就161: 领取映像收藏奖励。
-            achieve_track.report(session, "poster_illustration_reward")
-
-        session.send(MsgId.PosterIllustrationRewardRsp, rsp, packet_id)  # 1425,1426
+        session.send(MsgId.PosterIllustrationRewardRsp, rsp, packet_id)
+        achieve_track.report(session, "poster_illustration_reward")
