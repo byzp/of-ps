@@ -1,79 +1,38 @@
+import math
 import random
 
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-from proto.net_pb2 import (
-    EquipDisassembleReq,
-    EquipDisassembleRsp,
-    StatusCode,
-    ItemDetail,
-)
+from proto.net_pb2 import EquipDisassembleReq, EquipDisassembleRsp, StatusCode
 
+from server import character_growth as growth
+from utils import achieve_track, item_mgr
 import utils.db as db
-from utils.res_loader import res
-from utils import item_mgr, achieve_track
 
 
-def _rows(table, name):
-    if not isinstance(table, dict):
-        return ()
-    section = table.get(name)
-    if not isinstance(section, dict):
-        return ()
-    rows = section.get("datas")
-    if not isinstance(rows, (list, tuple)):
-        return ()
-    return tuple(row for row in rows if isinstance(row, dict))
-
-
-def _disassemble_row(equip, kind):
-    table = res.get(kind.capitalize())
-    equip_id = getattr(equip, f"{kind}_id")
-    cfg = next(
-        (
-            row
-            for row in _rows(table, kind)
-            if row.get("i_d") == equip_id or row.get("item_i_d") == equip_id
-        ),
-        None,
-    )
-    if not cfg or not cfg.get(f"{kind}_property_i_d"):
+def _rewards(kind, equip):
+    row = growth.disassemble_row(kind, equip)
+    entries = row.get(f"{kind}_disassemble_item", ())
+    if not isinstance(entries, (list, tuple)) or not entries:
         return None
-    prop = next(
-        (
-            row
-            for row in _rows(table, f"{kind}_property")
-            if row.get("i_d") == cfg[f"{kind}_property_i_d"]
-        ),
-        None,
-    )
-    if not prop:
-        return None
-    groups = prop.get(f"{kind}_property_group_info")
-    if not isinstance(groups, (list, tuple)):
-        return None
-    if 1 <= equip.property_index <= len(groups):
-        group = groups[equip.property_index - 1]
-    else:
-        group = next(
-            (
-                g
-                for g in groups
-                if isinstance(g, dict)
-                and g.get("min_level", 0) <= equip.level <= g.get("max_level", 0)
-            ),
-            None,
-        )
-    if not isinstance(group, dict) or not group.get("disassemble_i_d"):
-        return None
-    return next(
-        (
-            row
-            for row in _rows(table, f"{kind}_disassemble")
-            if row.get("i_d") == group["disassemble_i_d"]
-        ),
-        None,
-    )
+    parsed = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            return None
+        item_id = int(entry.get("item_i_d", 0) or 0)
+        rate = float(entry.get("item_rate", 1) or 0)
+        low = int(entry.get("item_min_count", 1) or 0)
+        high = int(entry.get("item_max_count", low) or 0)
+        if (
+            growth.item_config(item_id) is None
+            or not math.isfinite(rate)
+            or not 0 <= rate <= 1
+            or low <= 0
+            or high < low
+        ):
+            return None
+        parsed.append((item_id, rate, low, high))
+    return parsed
 
 
 @packet_handler(MsgId.EquipDisassembleReq)
@@ -82,55 +41,50 @@ class Handler(PacketHandler):
         req = EquipDisassembleReq()
         req.ParseFromString(data)
         rsp = EquipDisassembleRsp(status=StatusCode.StatusCode_OK)
-        grant_list = []
-        removed = set()
-        pending = []
-        for kind, ids, rsp_ids in (
-            ("weapon", req.weapon_ids, rsp.weapon_ids),
-            ("armor", req.armor_ids, rsp.armor_ids),
-        ):
-            for instance_id in ids:
-                if instance_id in removed:
-                    continue
-                blob = db.get_item_detail(session.player_id, None, instance_id)
-                if not blob:
-                    continue
-                item = ItemDetail()
-                item.ParseFromString(blob)
-                if not item.main_item.HasField(kind):
-                    continue
-                equip = getattr(item.main_item, kind)
-                if equip.is_lock or equip.wearer_id:
-                    continue
-                row = _disassemble_row(equip, kind)
-                if row is None:
-                    continue
-                rewards = row.get(f"{kind}_disassemble_item")
-                if not isinstance(rewards, (list, tuple)) or not rewards:
-                    continue
-                if any(
-                    not isinstance(it, dict) or not it.get("item_i_d") for it in rewards
+        try:
+            with growth.transaction(session.player_id):
+                seen = set()
+                pending = []
+                grant_list = []
+                for kind, ids, response_ids in (
+                    ("weapon", req.weapon_ids, rsp.weapon_ids),
+                    ("armor", req.armor_ids, rsp.armor_ids),
                 ):
-                    continue
-                for it in rewards:
-                    rate = float(it.get("item_rate", 1))
-                    lo = int(it.get("item_min_count", 1))
-                    hi = int(it.get("item_max_count", lo))
-                    item_id = int(it["item_i_d"])
-                    if random.random() < rate:
-                        grant_list.append((item_id, random.randint(lo, hi)))
-                removed.add(instance_id)
-                pending.append(instance_id)
-                rsp_ids.append(instance_id)
-        for instance_id in pending:
-            db.del_item_detail(session.player_id, instance_id)
-        if grant_list:
-            item_mgr.grant_items(
-                session.player_id,
-                grant_list,
-                session=session,
-                rsp_items=rsp.items,
-            )
+                    for instance_id in ids:
+                        if not instance_id or instance_id in seen:
+                            continue
+                        seen.add(instance_id)
+                        try:
+                            detail = growth.load_owned_instance(
+                                session.player_id, instance_id, kind
+                            )
+                            equip = getattr(detail.main_item, kind)
+                            if equip.is_lock or equip.wearer_id:
+                                continue
+                            if kind == "weapon" and equip.inscription1:
+                                continue
+                            rewards = _rewards(kind, equip)
+                            if rewards is None:
+                                continue
+                        except growth.GrowthError:
+                            # 批量分解保留跳过非法项语义；已接受项仍在同一事务内。
+                            continue
+                        for item_id, rate, low, high in rewards:
+                            if random.random() < rate:
+                                grant_list.append((item_id, random.randint(low, high)))
+                        pending.append(instance_id)
+                        response_ids.append(instance_id)
+                for instance_id in pending:
+                    db.del_item_detail(session.player_id, instance_id)
+                if grant_list:
+                    item_mgr.grant_items(
+                        session.player_id, grant_list, rsp_items=rsp.items, session=None
+                    )
+        except growth.GrowthError as error:
+            rsp.status = error.status
+            session.send(MsgId.EquipDisassembleRsp, rsp, packet_id)
+            return
+
         if rsp.weapon_ids or rsp.armor_ids:
             achieve_track.report(
                 session,

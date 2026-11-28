@@ -1,10 +1,8 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-
-
 from proto.net_pb2 import PlayerSceneRecordReq
-
-from server.scene_data import up_recorder
+from server import shared_projection
+from server.scene_data import up_recorder, save_session_location
 
 
 @packet_handler(MsgId.PlayerSceneRecordReq)
@@ -13,18 +11,25 @@ class Handler(PacketHandler):
         req = PlayerSceneRecordReq()
         req.ParseFromString(data)
 
-        up_recorder(
-            session.scene_id,
-            session.channel_id,
-            session.player_id,
-            req.data,
-        )
+        with shared_projection.store.locked():
+            shared_projection.store.update_from_recorder(
+                session.player_id,
+                session.scene_id,
+                session.channel_id,
+                req.data,
+            )
+            up_recorder(
+                session.scene_id,
+                session.channel_id,
+                session.player_id,
+                req.data,
+            )
 
         # 更新动作和角度
         rec = req.data.char_recorder_data_lst
         if rec:
             rec = rec[0]
-            if rec.pos.x != 0:
-                session.scene_player.team.char1.pos.CopyFrom(rec.pos)
-                session.scene_player.team.char1.rot.CopyFrom(rec.rot)
-                session.pos[session.scene_id] = rec.pos
+            session.scene_player.team.char1.pos.CopyFrom(rec.pos)
+            session.scene_player.team.char1.rot.CopyFrom(rec.rot)
+            session.pos[session.scene_id] = rec.pos
+            save_session_location(session)

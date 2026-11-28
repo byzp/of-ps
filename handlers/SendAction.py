@@ -3,6 +3,7 @@ from network.msg_id import MsgId
 
 
 from proto.net_pb2 import SendActionReq, SendActionRsp, SendActionNotice, StatusCode
+from server import shared_projection
 from server.scene_data import up_action
 
 import time
@@ -30,6 +31,15 @@ class Handler(PacketHandler):
         req = SendActionReq()
         req.ParseFromString(data)
 
+        rate_limiter = getattr(session, "rate_limiter", None)
+        if rate_limiter is not None and not rate_limiter.allow("action"):
+            session.send(
+                MsgId.SendActionRsp,
+                SendActionRsp(status=StatusCode.StatusCode_REQUESTS_TOO_FREQUENT),
+                packet_id,
+            )
+            return
+
         # 动作须在 Action.action_info 配置内: 校验先于广播,
         # 非法动作不得污染同频道(原实现先广播后校验)
         _actions = {
@@ -52,6 +62,12 @@ class Handler(PacketHandler):
 
         rsp.status = StatusCode.StatusCode_OK
         session.send(MsgId.SendActionRsp, rsp, packet_id)
+        shared_projection.store.record_action(
+            session.player_id,
+            session.scene_id,
+            session.channel_id,
+            req.action_id,
+        )
         achieve_track.report(session, "social_action", match=req.action_id)
         up_action(
             session.scene_id,

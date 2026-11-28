@@ -7,6 +7,7 @@ from proto.net_pb2 import (
     StatusCode,
     PackNotice,
 )
+from config import Config
 import utils.db as db
 from utils import achieve_track
 
@@ -37,10 +38,19 @@ class Handler(PacketHandler):
             )  # 4511,4512
             return
 
+        rewards = Config.ACTIVITY_RECALL_REWARDS.get(
+            (req.activity_id, req.condition_id),
+            Config.ACTIVITY_RECALL_REWARDS.get(('*', '*'), ()),
+        )
+        if not rewards:
+            db.rollback_claim(session.player_id, "activity_recall", f"{req.activity_id}:{req.condition_id}")
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+            session.send(MsgId.ActivityRecallRewardClaimRsp, rsp, packet_id)
+            return
+
         pack = PackNotice()
         pack.status = StatusCode.StatusCode_OK
-        # 回归活动奖励配置未知(condition_id 无表), 暂发500金币
-        db.grant_rewards(session.player_id, [(101, 500)], rsp.rewards, pack)
+        db.grant_rewards(session.player_id, rewards, rsp.rewards, pack)
 
         # 成就: 成功召回玩家
         achieve_track.report(session, "recall_player")

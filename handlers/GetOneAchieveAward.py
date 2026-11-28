@@ -31,22 +31,19 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = GetOneAchieveAwardRsp()
-
+        pack = PackNotice(status=StatusCode.StatusCode_OK)
         achieve_track.sync_scoped_progress(session, (req.achieve_id,))
         achieve_b = db.get_achieve(session.player_id, req.achieve_id)
         if not achieve_b:
             rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
             session.send(MsgId.GetOneAchieveAwardRsp, rsp, packet_id)
             return
-        # 成就须已达成(计数 >= Achieve.count_param)
-        _cur = achieve_track.progress(session.player_id, req.achieve_id)
-        _target = achieve_track.target_of(req.achieve_id)
-        if _target is not None and _cur < _target:
-            rsp.status = StatusCode.StatusCode_FAIL  # 成就未达成, 不可领
+        target = achieve_track.target_of(req.achieve_id)
+        if target is not None and achieve_track.progress(session.player_id, req.achieve_id) < target:
+            rsp.status = StatusCode.StatusCode_FAIL
             session.send(MsgId.GetOneAchieveAwardRsp, rsp, packet_id)
             return
 
-        # achieve_quest_group_info: achieve_condition_i_d -> reward_i_d
         reward_id = None
         for group in res["AchieveQuest"]["achieve_quest_group"]["datas"]:
             if not isinstance(group, dict):
@@ -64,26 +61,28 @@ class Handler(PacketHandler):
             session.send(MsgId.GetOneAchieveAwardRsp, rsp, packet_id)
             return
 
-        # 原子去重(claimed_rewards 表持久化)
-        if not db.try_claim(session.player_id, "achieve_one", req.achieve_id):
-            rsp.status = StatusCode.StatusCode_REPEAT_GET_REWARD
-            session.send(MsgId.GetOneAchieveAwardRsp, rsp, packet_id)
-            return
+        level_row = db.get_players_info(session.player_id, "level")
+        rewards = resolve_reward(reward_id, level_row[0] if level_row else 0)
+        try:
+            # 整批配置/数量先验证, 再进入 claim + 发奖事务。
+            item_mgr.validate_rewards(rewards)
+            with item_mgr.player_lock(session.player_id), item_mgr.deferred_notifications(), db.transaction():
+                if not db.try_claim(session.player_id, "achieve_one", req.achieve_id):
+                    rsp.status = StatusCode.StatusCode_REPEAT_GET_REWARD
+                else:
+                    item_mgr.grant_items(
+                        session.player_id,
+                        rewards,
+                        rsp_items=rsp.rewards,
+                        pack_notice=pack,
+                        session=session,
+                    )
+                    rsp.status = StatusCode.StatusCode_OK
+        except item_mgr.EconomyConfigError:
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+            del rsp.rewards[:]
+            del pack.items[:]
 
-        rsp.status = StatusCode.StatusCode_OK
-        # 玩家等级供 resolve_reward 按等级过滤奖池
-        row = db.get_players_info(session.player_id, "level")
-        reward_list = resolve_reward(reward_id, row[0] if row else 0)
-        pack = PackNotice()
-        pack.status = StatusCode.StatusCode_OK
-        with achieve_track.batch(session):
-            item_mgr.grant_items(
-                session.player_id,
-                reward_list,
-                rsp_items=rsp.rewards,
-                pack_notice=pack,
-                session=session,
-            )
-            session.send(MsgId.GetOneAchieveAwardRsp, rsp, packet_id)
-            if pack.items:
-                session.send(MsgId.PackNotice, pack, 0)
+        session.send(MsgId.GetOneAchieveAwardRsp, rsp, packet_id)
+        if rsp.status == StatusCode.StatusCode_OK and pack.items:
+            session.send(MsgId.PackNotice, pack, 0)

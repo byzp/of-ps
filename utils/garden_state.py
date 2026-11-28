@@ -185,6 +185,13 @@ def get_like_records(player_id):
 # ---------------- 发奖/扣道具(委托 utils/items.py) ----------------
 
 
+def adjust_furniture_count(player_id, delta):
+    like_num, access_num, current, limit, is_open = db.get_garden_info(player_id)
+    updated = max(0, current + int(delta))
+    db.set_garden_info(player_id, like_num, access_num, updated, limit, is_open)
+    return updated, limit
+
+
 def grant_stack_item(player_id, item_id, num):
     """给玩家增加 num 个可堆叠物品并持久化。
     返回 (gain, total): gain 为本次获得数量的 ItemDetail(放 Rsp 展示),

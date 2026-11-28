@@ -9,6 +9,7 @@ import random
 import struct
 from datetime import datetime
 from config import Config
+from network.msg_id import MsgId
 from network.game_session import GameSession, snappy
 from proto.net_pb2 import (
     LinkNegotiate,
@@ -20,8 +21,10 @@ from proto.net_pb2 import (
     ChatMsgNotice,
     PlayerSceneSyncDataNotice,
     PlayerInfo,
+    PopEmojiNotice,
     ScenePlayer,
 )
+from server import lobby_state, shared_projection
 from server.scene_data import (
     get_session,
     up_action,
@@ -30,6 +33,7 @@ from server.scene_data import (
     up_recorder,
     _session_list as session_list,
     lock_session,
+    remove_recorder,
 )
 
 logger = logging.getLogger(__name__)
@@ -45,10 +49,21 @@ RECONNECT_MIN = 5.0
 RECONNECT_MAX = 60.0
 SEEN_MSG_TTL = 60.0
 MAX_QUEUED_MSGS = 256
+MAX_QUEUED_BYTES = 1024 * 1024
+MAX_SEEN_MSGS = 10000
+MAX_LINK_MESSAGE_BYTES = 4 * 1024 * 1024
+MAX_SERVER_NAME_BYTES = 256
 
 DISCONNECTED = 0
 CONNECTING = 1
 CONNECTED = 2
+
+REMOTE_PLAYER_ID_BASE = Config.REMOTE_PLAYER_ID_BASE
+REMOTE_PLAYER_ID_STRIDE = Config.REMOTE_PLAYER_ID_STRIDE
+
+
+def is_remote_player_id(player_id):
+    return int(player_id) >= REMOTE_PLAYER_ID_BASE
 
 
 class _Link:
@@ -61,6 +76,7 @@ class _Link:
         "server_name",
         "last_seen",
         "queued",
+        "queued_bytes",
         "next_try",
         "tries",
         "reconnect_delay",
@@ -78,6 +94,7 @@ class _Link:
         self.server_name = ""
         self.last_seen = 0.0
         self.queued = []
+        self.queued_bytes = 0
         self.next_try = 0.0
         self.tries = 0
         self.reconnect_delay = RECONNECT_MIN
@@ -98,6 +115,10 @@ _lock = threading.Lock()
 _cache_dirty = False
 _socket = None
 _kcp = None
+_stopped = threading.Event()
+_lifecycle_lock = threading.Lock()
+_listen_thread = None
+_maintenance_thread = None
 _name = (
     f"{Config.SERVER_NAME}&{uuid.uuid4().hex[:8]}&{datetime.now():%Y-%m-%d %H:%M:%S}"
 )
@@ -112,15 +133,23 @@ except Exception:
 def _trans_id(server, pid):
     with _lock:
         if server not in _server_ids:
-            _server_ids[server] = (len(_server_ids) + 1) * 10000
-        return _server_ids[server] + pid
+            index = len(_server_ids) + 1
+            player_id = REMOTE_PLAYER_ID_BASE + index * REMOTE_PLAYER_ID_STRIDE + int(pid)
+            if player_id > 0xFFFFFFFF:
+                raise ValueError("remote player id space exhausted")
+            _server_ids[server] = player_id - int(pid)
+        player_id = _server_ids[server] + int(pid)
+        if player_id > 0xFFFFFFFF:
+            raise ValueError("remote player id space exhausted")
+        return player_id
 
 
 def _send_raw(data, addr):
     # UDP发送失败不能把异常抛给调用线程(心跳/监听/KCP更新线程)
     try:
-        if _socket is not None:
-            _socket.sendto(data, addr)
+        sock = _socket
+        if not _stopped.is_set() and sock is not None:
+            sock.sendto(data, addr)
     except OSError as e:
         logger.debug(f"sendto {addr} failed: {e}")
 
@@ -132,6 +161,7 @@ def _send_neg(addr, ntype, conv):
         server_name=_name,
         is_public=bool(Config.SELF_ADDR_IS_PUBLIC),
     )
+    logger.debug("Sending link negotiation type=%s conv=%s to %s", ntype, conv, addr)
     _send_raw(struct.pack("!B", PACKET_NEGOTIATE) + neg.SerializeToString(), addr)
 
 
@@ -181,30 +211,60 @@ def _establish_locked(link, conv, server_name, now, is_public):
         link.ever_connected = True
         _cache_dirty = True
     _conv_to_addr[conv] = link.addr
-    if server_name not in _server_ids:
-        _server_ids[server_name] = (len(_server_ids) + 1) * 10000
     queued, link.queued = link.queued, []
+    link.queued_bytes = 0
     return (link.addr, conv, server_name, queued, old_conv, prev_name)
 
 
 def _after_connected(ctx):
     addr, conv, server_name, queued, old_conv, prev_name = ctx
-    if old_conv and old_conv != conv:
-        _kcp.remove(old_conv)
-    if prev_name:
+    with _lifecycle_lock:
+        kcp = _kcp
+        if _stopped.is_set() or kcp is None:
+            return
+        if old_conv and old_conv != conv:
+            kcp.remove(old_conv)
+        session = kcp.get_or_create(conv)
+        for data in queued:
+            session.send(data)
+    if prev_name and not _stopped.is_set():
         # 已连接状态下对方提议了新conv => 对端重启过, 旧远程会话作废等待重新同步
         _drop_remote_sessions(prev_name)
-    session = _kcp.get_or_create(conv)
-    for data in queued:
-        session.send(data)
     logger.info(f"Server connected: {server_name} at {addr}")
-    threading.Thread(
-        target=_on_new_server, args=(server_name, addr), daemon=True
-    ).start()
+    if not _stopped.is_set():
+        threading.Thread(
+            target=_on_new_server, args=(server_name, addr), daemon=True
+        ).start()
+
+
+def _kcp_send(conv, data):
+    with _lifecycle_lock:
+        kcp = _kcp
+        if _stopped.is_set() or kcp is None:
+            return False
+        return kcp.send(conv, data)
+
+
+def _kcp_remove(conv):
+    with _lifecycle_lock:
+        kcp = _kcp
+        if _stopped.is_set() or kcp is None:
+            return False
+        return kcp.remove(conv)
+
+
+def _kcp_input(data):
+    with _lifecycle_lock:
+        kcp = _kcp
+        if _stopped.is_set() or kcp is None:
+            return None
+        return kcp.input(data)
 
 
 def _connect(addr, force=False):
     """确保与addr建立连接; 已在握手/已连接时为空操作, force=True忽略重连退避"""
+    if _stopped.is_set():
+        return
     addr = tuple(addr)
     if addr == tuple(Config.SELF_ADDR):
         return
@@ -232,27 +292,46 @@ def _disconnect(addr, reason):
         name = link.server_name
         link.state = DISCONNECTED
         link.queued.clear()
+        link.queued_bytes = 0
         link.tries = 0
         link.next_try = now + link.reconnect_delay
         link.reconnect_delay = min(link.reconnect_delay * 2, RECONNECT_MAX)
     logger.warning(f"Server disconnected: {name or addr} ({reason})")
     if old_conv:
-        _kcp.remove(old_conv)
+        _kcp_remove(old_conv)
     if name:
         _drop_remote_sessions(name)
 
 
+def _remove_remote_session_locked(session):
+    if session in session_list:
+        session_list.remove(session)
+    session.close()
+    shared_projection.store.remove(session.player_id)
+    remove_recorder(session.scene_id, session.channel_id, session.player_id)
+
+
 def _drop_remote_sessions(name):
     with lock_session:
-        for s in session_list:
-            if getattr(s, "remote", False) and getattr(s, "server_name", "") == name:
-                s.running = False
+        for session in list(session_list):
+            if getattr(session, "remote", False) and getattr(session, "server_name", "") == name:
+                _remove_remote_session_locked(session)
 
 
 def _on_negotiate(payload, addr):
     addr = tuple(addr)
     neg = LinkNegotiate()
     neg.ParseFromString(payload)
+    logger.debug(
+        "Received link negotiation type=%s conv=%s from %s",
+        neg.type,
+        neg.conv,
+        addr,
+    )
+    if _stopped.is_set():
+        return
+    if not 1 <= neg.conv <= 0x7FFFFFFF or len(neg.server_name.encode("utf-8")) > MAX_SERVER_NAME_BYTES:
+        return
     now = time.monotonic()
 
     if neg.type == LinkNegotiate.PROPOSE:
@@ -322,23 +401,52 @@ def _output(conv):
 
 
 def _pack(msg):
-    return snappy.compress_raw(msg.SerializeToString())
+    data = msg.SerializeToString()
+    if len(data) > MAX_LINK_MESSAGE_BYTES:
+        raise ValueError("link message exceeds size limit")
+    return bytes(snappy.compress_raw(data))
+
+
+def _snappy_length(data):
+    value = 0
+    shift = 0
+    for index, byte in enumerate(data[:5]):
+        value |= (byte & 0x7F) << shift
+        if not byte & 0x80:
+            return value
+        shift += 7
+    raise ValueError("invalid snappy length")
 
 
 def _unpack(data):
+    raw_len = _snappy_length(data)
+    if raw_len > MAX_LINK_MESSAGE_BYTES:
+        raise ValueError("link message exceeds size limit")
+    raw = bytes(snappy.decompress_raw(data))
+    if len(raw) != raw_len:
+        raise ValueError("invalid link message length")
     msg = LinkMessage()
-    msg.ParseFromString(snappy.decompress_raw(data))
+    msg.ParseFromString(raw)
     return msg
+
+
+def _remember_seen_locked(msg_id):
+    if len(_seen_msgs) >= MAX_SEEN_MSGS:
+        # dict preserves insertion order; evict the oldest deduplication entry.
+        _seen_msgs.pop(next(iter(_seen_msgs)), None)
+    _seen_msgs[msg_id] = time.time()
 
 
 def _make_msg(mtype):
     with _lock:
         msg = LinkMessage(id=uuid.uuid4().hex, origin=_name, type=mtype)
-        _seen_msgs[msg.id] = time.time()
+        _remember_seen_locked(msg.id)
     return msg
 
 
 def _send_to(msg, addr):
+    if _stopped.is_set():
+        return
     addr = tuple(addr)
     data = _pack(msg)
     conv = None
@@ -349,10 +457,17 @@ def _send_to(msg, addr):
             _links[addr] = link
         if link.state == CONNECTED:
             conv = link.conv
-        elif len(link.queued) < MAX_QUEUED_MSGS:
+        elif (
+            len(link.queued) < MAX_QUEUED_MSGS
+            and link.queued_bytes + len(data) <= MAX_QUEUED_BYTES
+        ):
             link.queued.append(data)
+            link.queued_bytes += len(data)
+        else:
+            logger.debug("Link queue full for %s", addr)
+            return
     if conv is not None:
-        _kcp.send(conv, data)
+        _kcp_send(conv, data)
     else:
         # 未连接: 消息已排队, 确保握手在进行
         _connect(addr)
@@ -368,7 +483,7 @@ def _broadcast(msg, exclude=None):
             if l.state == CONNECTED and l.server_name != exclude
         ]
     for conv in convs:
-        _kcp.send(conv, data)
+        _kcp_send(conv, data)
 
 
 def _sub_key(scene_id, channel_id):
@@ -379,7 +494,7 @@ def _local_subs():
     """本服有本地玩家的场景集合"""
     subs = set()
     for s in get_session():
-        if s.player_id < 1010000:
+        if not is_remote_player_id(s.player_id):
             subs.add(_sub_key(s.scene_id, s.channel_id))
     return subs
 
@@ -424,12 +539,12 @@ def _broadcast_data(msg, interest=None):
         if rt:
             del msg.relay_to[:]
             msg.relay_to.extend(rt)
-            _kcp.send(conv, _pack(msg))
+            _kcp_send(conv, _pack(msg))
         else:
             if plain is None:
                 del msg.relay_to[:]
                 plain = _pack(msg)
-            _kcp.send(conv, plain)
+            _kcp_send(conv, plain)
     del msg.relay_to[:]
 
 
@@ -448,7 +563,7 @@ def _relay_data(msg):
     if convs:
         data = _pack(msg)
         for conv in convs:
-            _kcp.send(conv, data)
+            _kcp_send(conv, data)
 
 
 def _handle_data(origin, datas, mid, payload):
@@ -456,6 +571,12 @@ def _handle_data(origin, datas, mid, payload):
         rsp = SendActionNotice()
         rsp.ParseFromString(payload)
         rsp.from_player_id = _trans_id(origin, rsp.from_player_id)
+        shared_projection.store.record_action(
+            rsp.from_player_id,
+            datas[0],
+            datas[1],
+            rsp.action_id,
+        )
         up_action(datas[0], datas[1], rsp)
     elif mid == 1208:
         rsp = ServerSceneSyncDataNotice()
@@ -464,10 +585,22 @@ def _handle_data(origin, datas, mid, payload):
             d.player_id = _trans_id(origin, d.player_id)
             for sd in d.server_data:
                 if sd.action_type == SceneActionType.SceneActionType_ENTER:
-                    for s in get_session():
-                        if s.player_id == d.player_id:
-                            s.scene_id, s.channel_id = datas[0], datas[1]
-                            break
+                    with lock_session:
+                        for s in list(session_list):
+                            if s.player_id == d.player_id and getattr(s, "remote", False):
+                                if (s.scene_id, s.channel_id) != (datas[0], datas[1]):
+                                    remove_recorder(s.scene_id, s.channel_id, s.player_id)
+                                s.scene_id, s.channel_id = datas[0], datas[1]
+                                shared_projection.store.move(
+                                    s.player_id, s.scene_id, s.channel_id
+                                )
+                                break
+                elif sd.action_type == SceneActionType.SceneActionType_LEAVE:
+                    with lock_session:
+                        for s in list(session_list):
+                            if s.player_id == d.player_id and getattr(s, "remote", False):
+                                _remove_remote_session_locked(s)
+                                break
                 if sd.player.player_id:
                     sd.player.player_id = _trans_id(origin, sd.player.player_id)
         up_scene_action(datas[0], datas[1], rsp)
@@ -476,12 +609,30 @@ def _handle_data(origin, datas, mid, payload):
         rsp.ParseFromString(payload)
         rsp.msg.player_id = _trans_id(origin, rsp.msg.player_id)
         up_chat_msg(datas[0], datas[1], datas[2], rsp)
+    elif mid == MsgId.PopEmojiNotice:
+        rsp = PopEmojiNotice()
+        rsp.ParseFromString(payload)
+        rsp.from_player_id = _trans_id(origin, rsp.from_player_id)
+        shared_projection.store.record_emoji(
+            rsp.from_player_id,
+            datas[0],
+            datas[1],
+            rsp.emoji_id,
+        )
+        for session in get_session():
+            if session.scene_id == datas[0] and session.channel_id == datas[1]:
+                session.send(MsgId.PopEmojiNotice, rsp, 0)
     elif mid == 1206:
         rsp = PlayerSceneSyncDataNotice()
         rsp.ParseFromString(payload)
         for d in rsp.data:
             d.player_id = _trans_id(origin, d.player_id)
-            up_recorder(datas[0], datas[1], d.player_id, d.data[0])
+            if d.data:
+                with shared_projection.store.locked():
+                    shared_projection.store.update_from_recorder(
+                        d.player_id, datas[0], datas[1], d.data[0]
+                    )
+                    up_recorder(datas[0], datas[1], d.player_id, d.data[0])
 
 
 def _share_servers(addr):
@@ -499,7 +650,7 @@ def _share_servers(addr):
 
 def _sync_players(addr):
     for s in get_session():
-        if s.player_id < 1010000:
+        if not is_remote_player_id(s.player_id):
             msg = _make_msg(LinkMessage.PLAYER)
             msg.player_info.CopyFrom(
                 PlayerInfo(
@@ -514,6 +665,11 @@ def _sync_players(addr):
                 )
             )
             _send_to(msg, addr)
+
+
+def sync_subscriptions():
+    msg, _ = _make_state_heartbeat()
+    _broadcast(msg)
 
 
 def sync_player(session):
@@ -531,11 +687,13 @@ def sync_player(session):
         )
     )
     _broadcast(msg)
+    sync_subscriptions()
 
 
 def _on_new_server(name, addr):
     _share_servers(addr)
     _sync_players(addr)
+    sync_subscriptions()
 
 
 def _add_remote_player(origin, info):
@@ -553,11 +711,14 @@ def _add_remote_player(origin, info):
 def _process(data, addr):
     global _name
     msg = _unpack(data)
+    if not lobby_state.host_lease_is_valid():
+        logger.warning("Discarding link message from %s: host lease expired", addr)
+        return
     now = time.monotonic()
     with _lock:
         if msg.id in _seen_msgs:
             return
-        _seen_msgs[msg.id] = time.time()
+        _remember_seen_locked(msg.id)
         my_name = _name
         # 能从该地址收到KCP数据即证明对端存活
         link = _links.get(addr)
@@ -642,17 +803,24 @@ def _on_kcp_packet(payload, addr):
             and get_conv(pkt.kcp_data) == pkt.conv
         )
     if ok:
-        # 必须在锁外调用: input会在本线程同步触发output回调
-        _kcp.input(pkt.kcp_data)
+        # 必须在 _lock 外调用: input会在本线程同步触发output回调
+        _kcp_input(pkt.kcp_data)
 
 
 def _listen():
-    while True:
+    sock = _socket
+    if sock is None:
+        return
+    while not _stopped.is_set():
         try:
-            data, addr = _socket.recvfrom(65535)
+            data, addr = sock.recvfrom(65535)
+        except socket.timeout:
+            continue
         except OSError as e:
+            if _stopped.is_set():
+                return
             logger.debug(f"recv error. {e}")
-            time.sleep(0.05)
+            _stopped.wait(0.05)
             continue
         try:
             if len(data) < 2:
@@ -685,9 +853,10 @@ def _maintenance():
     last_heartbeat = 0.0
     last_prune = 0.0
     last_subs = None
-    while True:
+    while not _stopped.is_set():
         try:
-            time.sleep(1.0)
+            if _stopped.wait(1.0):
+                break
             now = time.monotonic()
 
             proposes = []
@@ -700,6 +869,7 @@ def _maintenance():
                             _release_conv_locked(link)
                             link.state = DISCONNECTED
                             link.queued.clear()
+                            link.queued_bytes = 0
                             link.next_try = now + link.reconnect_delay
                             link.reconnect_delay = min(
                                 link.reconnect_delay * 2, RECONNECT_MAX
@@ -746,12 +916,25 @@ def _maintenance():
             logger.exception("Link maintenance error")
 
 
+def _valid_addr(addr):
+    return (
+        isinstance(addr, (list, tuple))
+        and len(addr) == 2
+        and isinstance(addr[0], str)
+        and bool(addr[0])
+        and isinstance(addr[1], int)
+        and 1 <= addr[1] <= 65535
+    )
+
+
 def _load_cache():
     try:
         if os.path.exists(Config.LINK_POOL_CACHE):
-            with open(Config.LINK_POOL_CACHE) as f:
-                return [tuple(a) for a in json.load(f)]
-    except (OSError, ValueError) as e:
+            with open(Config.LINK_POOL_CACHE, encoding="utf-8") as file:
+                data = json.load(file)
+            if isinstance(data, list):
+                return [tuple(addr) for addr in data if _valid_addr(addr)]
+    except (OSError, ValueError, TypeError) as e:
         logger.warning(f"load link cache failed: {e}")
     return []
 
@@ -759,45 +942,141 @@ def _load_cache():
 def _save_cache():
     with _lock:
         data = [
-            list(l.addr)
-            for l in _links.values()
-            if l.ever_connected and l.is_public and l.addr != tuple(Config.SELF_ADDR)
+            list(link.addr)
+            for link in _links.values()
+            if link.ever_connected and link.is_public and link.addr != tuple(Config.SELF_ADDR)
         ]
+    temporary = f"{Config.LINK_POOL_CACHE}.tmp-{uuid.uuid4().hex}"
     try:
-        with open(Config.LINK_POOL_CACHE, "w") as f:
-            json.dump(data, f)
+        with open(temporary, "w", encoding="utf-8") as file:
+            json.dump(data, file)
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temporary, Config.LINK_POOL_CACHE)
     except OSError as e:
         logger.warning(f"save link cache failed: {e}")
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+        except OSError:
+            pass
+
+
+def _reset_link_state_locked():
+    global _cache_dirty
+    _links.clear()
+    _conv_to_addr.clear()
+    _server_ids.clear()
+    _seen_msgs.clear()
+    _cache_dirty = False
 
 
 def init():
+    global _socket, _kcp, _listen_thread, _maintenance_thread, _name
     if not Config.LINK_OTHER_SERVER:
         return
-    if KCP_IMPORT_FAILED:
-        logger.warning("KCP import failed. Link module disabled.")
-        return
 
-    global _socket, _kcp
-    _socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    _socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    # 必须在第一次sendto前bind, 否则会占用临时端口导致对端回包到错误端口
-    _socket.bind(Config.LINK_LISTEN)
-    logger.info(f"Listening on {Config.LINK_LISTEN}")
+    with _lifecycle_lock:
+        if _socket is not None or _kcp is not None:
+            return
+        if (_listen_thread is not None and _listen_thread.is_alive()) or (
+            _maintenance_thread is not None and _maintenance_thread.is_alive()
+        ):
+            raise RuntimeError("remote link threads are still stopping")
+        if KCP_IMPORT_FAILED:
+            logger.warning("KCP import failed. Link module disabled.")
+            return
 
-    _kcp = KCPManager(output_factory=_output, on_recv=_on_recv, on_dead=_on_dead)
-    _kcp.start_update_loop(interval_ms=10)
+        _stopped.clear()
+        with _lock:
+            _reset_link_state_locked()
+        _name = (
+            f"{Config.SERVER_NAME}&{uuid.uuid4().hex[:8]}&{datetime.now():%Y-%m-%d %H:%M:%S}"
+        )
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.settimeout(0.5)
+        kcp = None
+        try:
+            # 必须在第一次sendto前bind, 否则会占用临时端口导致对端回包到错误端口
+            sock.bind(Config.LINK_LISTEN)
+            kcp = KCPManager(output_factory=_output, on_recv=_on_recv, on_dead=_on_dead)
+            _socket = sock
+            _kcp = kcp
+            kcp.start_update_loop(interval_ms=10)
+            _listen_thread = threading.Thread(target=_listen, daemon=True, name="link-listen")
+            _maintenance_thread = threading.Thread(
+                target=_maintenance, daemon=True, name="link-maintenance"
+            )
+            _listen_thread.start()
+            _maintenance_thread.start()
+        except Exception:
+            _stopped.set()
+            try:
+                kcp.close_all()
+            except Exception:
+                pass
+            sock.close()
+            _socket = None
+            _kcp = None
+            _listen_thread = None
+            _maintenance_thread = None
+            raise
+        logger.info(f"Listening on {Config.LINK_LISTEN}")
 
-    threading.Thread(target=_listen, daemon=True, name="link-listen").start()
-    threading.Thread(target=_maintenance, daemon=True, name="link-maintenance").start()
-
-    servers = set(_load_cache()) | {tuple(s) for s in Config.LINK_POOL}
+    servers = set(_load_cache()) | {tuple(server) for server in Config.LINK_POOL if _valid_addr(server)}
     servers.discard(tuple(Config.SELF_ADDR))
     for addr in servers:
         _connect(addr, force=True)
 
 
+def stop():
+    global _socket, _kcp, _listen_thread, _maintenance_thread, _cache_dirty
+    with _lifecycle_lock:
+        _stopped.set()
+        sock = _socket
+        kcp = _kcp
+        listen_thread = _listen_thread
+        maintenance_thread = _maintenance_thread
+        _socket = None
+        _kcp = None
+        _listen_thread = None
+        _maintenance_thread = None
+
+    if kcp is not None:
+        kcp.close_all()
+    if sock is not None:
+            try:
+                sock.close()
+            except OSError:
+                pass
+
+    if listen_thread is not None and listen_thread is not threading.current_thread():
+        listen_thread.join()
+    if maintenance_thread is not None and maintenance_thread is not threading.current_thread():
+        maintenance_thread.join()
+
+    with _lock:
+        dirty = _cache_dirty
+        _cache_dirty = False
+    if dirty:
+        _save_cache()
+    with lock_session:
+        remote_sessions = [session for session in session_list if getattr(session, "remote", False)]
+        for session in remote_sessions:
+            _remove_remote_session_locked(session)
+    with _lock:
+        _reset_link_state_locked()
+
+
 def rsend(msg_id, proto_msg, datas=None):
-    if not Config.LINK_OTHER_SERVER:
+    if (
+        not Config.LINK_OTHER_SERVER
+        or _stopped.is_set()
+        or not lobby_state.host_lease_is_valid()
+    ):
         return
     msg = _make_msg(LinkMessage.DATA)
     if datas:
@@ -847,3 +1126,6 @@ class RemoteSession(GameSession):
 
     def send(self, msg_id, message, packet_id, is_bin=False):
         pass
+
+    def close(self):
+        self.running = False

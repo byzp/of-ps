@@ -19,30 +19,56 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = VerifyLoginTokenRsp()
-        rsp.status = StatusCode.StatusCode_OK
-        if not req.sdk_uid:
-            req.sdk_uid = "9000000"
-        _uid = db.get_user_id(req.sdk_uid)
-        user_id = int(_uid)
-        if Config.VERIFY_TOKEN and not db.verify_sdk_user_info(
-            user_id, req.login_token
-        ):
+        if not req.sdk_uid or not req.sdk_uid.isdigit() or len(req.sdk_uid) > 10:
             rsp.status = StatusCode.StatusCode_FAIL
             session.send(MsgId.VerifyLoginTokenRsp, rsp, packet_id)
             return
+        _uid = db.get_user_id(req.sdk_uid)
+        user_id = int(_uid)
+        if not 1 <= user_id <= 0xffffffff:
+            rsp.status = StatusCode.StatusCode_FAIL
+            session.send(MsgId.VerifyLoginTokenRsp, rsp, packet_id)
+            return
+        rsp.status = StatusCode.StatusCode_OK
+        if Config.VERIFY_TOKEN:
+            local_token_allowed = (
+                Config.ALLOW_LOCAL_TOKEN
+                and req.login_token == "local-session"
+                and int(req.sdk_uid) in Config.LOCAL_TOKEN_UIDS
+            )
+            if not local_token_allowed and not db.verify_sdk_user_info(
+                user_id, req.login_token
+            ):
+                rsp.status = StatusCode.StatusCode_FAIL
+                session.send(MsgId.VerifyLoginTokenRsp, rsp, packet_id)
+                return
 
         player_id = db.get_player_id(user_id)
+        if player_id >= Config.REMOTE_PLAYER_ID_BASE:
+            rsp.status = StatusCode.StatusCode_FAIL
+            session.send(MsgId.VerifyLoginTokenRsp, rsp, packet_id)
+            return
+        old_session = None
         with lock_session:
             for i in session_list:
-                if i.player_id == player_id:
-                    rsp1 = PlayerOfflineRsp()
-                    rsp1.status = StatusCode.StatusCode_OK
-                    rsp1.reason = PlayerOfflineReason.PlayerOfflineReason_ANOTHER_LOGIN
-                    if i.running == True and i.logged_in == True:
-                        i.send(MsgId.PlayerOfflineRsp, rsp1, 0)
-                        i.running = False
-                        session_list.remove(i)
-                        break
+                if i is not session and i.player_id == player_id:
+                    old_session = i
+                    break
+
+        if old_session is not None:
+            rsp1 = PlayerOfflineRsp()
+            rsp1.status = StatusCode.StatusCode_OK
+            rsp1.reason = PlayerOfflineReason.PlayerOfflineReason_ANOTHER_LOGIN
+            if old_session.running and old_session.logged_in:
+                old_session.send(MsgId.PlayerOfflineRsp, rsp1, 0)
+            old_session.close()
+            old_session.running = False
+            from server import notice_sync
+
+            notice_sync.finalize_session(old_session)
+            with lock_session:
+                if old_session in session_list:
+                    session_list.remove(old_session)
 
         session.verified = True
         session.player_id = player_id

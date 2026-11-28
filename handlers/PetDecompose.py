@@ -1,18 +1,49 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
+from proto.net_pb2 import PetDecomposeReq, PetDecomposeRsp, PackNotice, StatusCode
 
-from proto.net_pb2 import (
-    PetDecomposeReq,
-    PetDecomposeRsp,
-    PackNotice,
-    StatusCode,
-    ItemDetail,
-)
-
-import utils.db as db
+from server import character_growth as growth
 from utils import item_mgr
-from utils.res_loader import res
-from utils.pb_create import make_item
+import utils.db as db
+
+
+def _pet_rewards(item_id):
+    pet_cfg = next(
+        (row for row in growth.rows("Pet", "pet") if row.get("i_d") == item_id),
+        None,
+    )
+    if pet_cfg is None:
+        raise growth.GrowthError(StatusCode.StatusCode_CFG_NOT_FOUND)
+    reward_ids = pet_cfg.get("release_reward", ())
+    if isinstance(reward_ids, int):
+        reward_ids = (reward_ids,)
+    if not isinstance(reward_ids, (tuple, list)):
+        raise growth.GrowthError(StatusCode.StatusCode_CFG_NOT_FOUND)
+    costs = []
+    for reward_id in reward_ids:
+        if not reward_id:
+            continue
+        group = next(
+            (
+                row
+                for row in growth.rows("Pet", "release_reward")
+                if row.get("i_d") == reward_id
+            ),
+            None,
+        )
+        entries = group.get("release_reward_item", ()) if group else ()
+        if group is None or not isinstance(entries, (tuple, list)):
+            raise growth.GrowthError(StatusCode.StatusCode_CFG_NOT_FOUND)
+        for entry in entries:
+            if not isinstance(entry, dict):
+                raise growth.GrowthError(StatusCode.StatusCode_CFG_NOT_FOUND)
+            costs.append(
+                (
+                    int(entry.get("release_reward_i_d", 0) or 0),
+                    int(entry.get("release_reward_count", 0) or 0),
+                )
+            )
+    return growth.normalize_costs(costs)
 
 
 @packet_handler(MsgId.PetDecomposeReq)
@@ -20,51 +51,43 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = PetDecomposeReq()
         req.ParseFromString(data)
+        rsp = PetDecomposeRsp(status=StatusCode.StatusCode_OK)
+        notice = PackNotice(status=StatusCode.StatusCode_OK)
+        try:
+            with growth.transaction(session.player_id):
+                if not req.pet_instance_ids or any(
+                    not instance_id for instance_id in req.pet_instance_ids
+                ):
+                    raise growth.GrowthError(StatusCode.StatusCode_BAD_REQ)
+                ids = list(dict.fromkeys(req.pet_instance_ids))
+                active_rows = db.get_players_info(session.player_id, "pet_instance_id")
+                active_id = int(active_rows[0] or 0) if active_rows else 0
+                if active_id in ids:
+                    raise growth.GrowthError(StatusCode.StatusCode_BAD_REQ)
+                pets = []
+                rewards = []
+                for instance_id in ids:
+                    detail = growth.load_owned_instance(session.player_id, instance_id, "pet")
+                    pets.append(detail)
+                    rewards.extend(_pet_rewards(detail.main_item.item_id))
+                rewards = growth.normalize_costs(rewards)
+                for detail in pets:
+                    db.del_item_detail(
+                        session.player_id, detail.main_item.pet.instance_id
+                    )
+                if rewards:
+                    item_mgr.grant_items(
+                        session.player_id,
+                        rewards,
+                        pack_notice=notice,
+                        session=None,
+                    )
+                rsp.pet_instance_ids.extend(ids)
+        except growth.GrowthError as error:
+            rsp.status = error.status
+            session.send(MsgId.PetDecomposeRsp, rsp, packet_id)
+            return
 
-        rsp = PetDecomposeRsp()
-        rsp.status = StatusCode.StatusCode_OK
-        rsp1 = PackNotice()
-        rsp1.status = StatusCode.StatusCode_OK
-        rsp.pet_instance_ids.extend(req.pet_instance_ids)
-
-        reward_items = {}
-        for pet_instance_id in req.pet_instance_ids:
-            pet_b = db.get_item_detail(session.player_id, None, pet_instance_id)
-            if not pet_b:
-                continue
-            tmp = ItemDetail()
-            tmp.ParseFromString(pet_b)
-            pet_item_id = tmp.main_item.item_id
-            for pet in res["Pet"]["pet"]["datas"]:
-                if pet["i_d"] == pet_item_id:
-                    for reward_id in pet.get("release_reward", []):
-                        if reward_id == 0:
-                            continue
-                        for reward_group in res["Pet"]["release_reward"]["datas"]:
-                            if reward_group["i_d"] == reward_id:
-                                for reward_item in reward_group["release_reward_item"]:
-                                    item_id = reward_item["release_reward_i_d"]
-                                    num = reward_item["release_reward_count"]
-                                    reward_items[item_id] = (
-                                        reward_items.get(item_id, 0) + num
-                                    )
-                                break
-                    break
-            db.del_item_detail(session.player_id, pet_instance_id)
-
-        for item_id, total_num in reward_items.items():
-            existing = db.get_item_detail(session.player_id, item_id)
-            item_detail = ItemDetail()
-            if not existing:
-                make_item(item_id, total_num, session.player_id, item_detail)
-            else:
-                item_detail.ParseFromString(existing)
-                item_detail.main_item.base_item.num += total_num
-            item_mgr.mark_new_item(session.player_id, item_detail)
-            rsp1.items.add().CopyFrom(item_detail)
-            db.set_item_detail(
-                session.player_id, item_detail.SerializeToString(), item_id, None
-            )
-
-        session.send(MsgId.PackNotice, rsp1, 0)
+        if notice.items:
+            session.send(MsgId.PackNotice, notice, 0)
         session.send(MsgId.PetDecomposeRsp, rsp, packet_id)

@@ -1,15 +1,16 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-
 from proto.net_pb2 import ExploreCancelReq, ExploreCancelRsp, StatusCode
 import utils.garden_state as garden_state
 import utils.db as db
-from utils.res_loader import res
-import pickle
-
-"""
-# 取消探索派遣 1827 1828
-"""
+from utils import item_mgr
+from handlers.Explore import (
+    activity_config,
+    load_activity_state,
+    load_area_state,
+    save_activity_state,
+    save_area_state,
+)
 
 
 @packet_handler(MsgId.ExploreCancelReq)
@@ -17,51 +18,67 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = ExploreCancelReq()
         req.ParseFromString(data)
+        rsp = ExploreCancelRsp(
+            status=StatusCode.StatusCode_OK,
+            explore_id=req.explore_id,
+            is_activity=req.is_activity,
+        )
+        try:
+            if req.is_activity:
+                self._cancel_activity(session, req, rsp)
+            else:
+                self._cancel_area(session, req, rsp)
+        except (item_mgr.EconomyConfigError, TypeError, ValueError):
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+        session.send(MsgId.ExploreCancelRsp, rsp, packet_id)
 
-        rsp = ExploreCancelRsp()
-        rsp.status = StatusCode.StatusCode_OK
-        rsp.explore_id = req.explore_id
-        rsp.is_activity = req.is_activity
-
-        if req.is_activity:
-            _act = next(
-                (
-                    row
-                    for row in res["Explore"]["explore_activity"]["datas"]
-                    if isinstance(row, dict) and row.get("i_d") == req.explore_id
-                ),
-                None,
-            )
-            if not _act:
-                rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
-                session.send(MsgId.ExploreCancelRsp, rsp, packet_id)
+    @staticmethod
+    def _cancel_activity(session, req, rsp):
+        cfg = activity_config(req.explore_id)
+        if cfg is None:
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+            return
+        key = str(cfg["i_d"])
+        with (
+            item_mgr.player_lock(session.player_id),
+            item_mgr.deferred_notifications(),
+            db.transaction(),
+        ):
+            state = load_activity_state(session.player_id, key)
+            if not state["start_time"]:
+                rsp.status = StatusCode.StatusCode_EXPLORE_NOT_EXISTS
                 return
-            key = str(_act["i_d"])
-            raw = db.get_kv(session.player_id, "activity_explore", key, b"")
-            st = pickle.loads(raw) if raw else {}
+            state["start_time"] = 0
+            state["is_quick_finish"] = False
+            state["collectable"] = False
+            # 次数是开始时的预留; 取消必须归还, 否则一次取消会永久消耗挑战次数。
+            state["times"] = item_mgr.validate_counter(
+                state["times"] - 1, label="explore times"
+            )
+            save_activity_state(session.player_id, key, state)
             info = rsp.explore
             info.explore_id = req.explore_id
-            info.times = int(st.get("times", 0))
-            if not st.get("start_time"):
-                rsp.status = StatusCode.StatusCode_EXPLORE_NOT_EXISTS
-                session.send(MsgId.ExploreCancelRsp, rsp, packet_id)
-                return
-            st["start_time"] = 0
-            st["is_quick_finish"] = False
-            db.set_kv(
-                session.player_id,
-                "activity_explore",
-                key,
-                pickle.dumps(st),
+            info.times = item_mgr.validate_counter(
+                int(state.get("times", 0)), label="explore times"
             )
             info.start_time = 0
-            session.send(MsgId.ExploreCancelRsp, rsp, packet_id)
+
+    @staticmethod
+    def _cancel_area(session, req, rsp):
+        if garden_state.explore_area_cfg(req.explore_id) is None:
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
             return
-
-        e = garden_state.get_explore(session.player_id, req.explore_id)
-        e["start_time"] = 0
-        e["is_quick_finish"] = False
-        garden_state.fill_explore_info(rsp.explore, req.explore_id, e)
-        garden_state.set_explore(session.player_id, req.explore_id, e)
-
-        session.send(MsgId.ExploreCancelRsp, rsp, packet_id)  # 1827,1828
+        with (
+            item_mgr.player_lock(session.player_id),
+            item_mgr.deferred_notifications(),
+            db.transaction(),
+        ):
+            state = load_area_state(session.player_id, req.explore_id)
+            if not state["start_time"]:
+                rsp.status = StatusCode.StatusCode_EXPLORE_NOT_EXISTS
+            else:
+                state["start_time"] = 0
+                state["is_quick_finish"] = False
+                save_area_state(session.player_id, req.explore_id, state)
+                rsp.status = StatusCode.StatusCode_OK
+            garden_state.fill_explore_info(rsp.explore, req.explore_id, state)

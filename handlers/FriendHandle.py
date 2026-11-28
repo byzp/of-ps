@@ -1,18 +1,20 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
-
+import logging
 
 from proto.net_pb2 import (
     FriendHandleReq,
     FriendHandleRsp,
-    FriendHandleNotice,
-    StatusCode,
     FriendHandleType,
+    StatusCode,
 )
 
-import utils.db as db
+from server import social
 from server.scene_data import get_session
 from utils import achieve_track
+
+
+logger = logging.getLogger(__name__)
 
 
 @packet_handler(MsgId.FriendHandleReq)
@@ -21,53 +23,32 @@ class Handler(PacketHandler):
         req = FriendHandleReq()
         req.ParseFromString(data)
 
-        rsp = FriendHandleRsp()
-        rsp.status = StatusCode.StatusCode_OK
-
-        stat = db.get_friend_info(session.player_id, req.player_id, "friend_status")[0]
-
-        if stat != None:
-            match stat:
-                case 0:  # 非好友
-                    rsp.status = StatusCode.StatusCode_FRIEND_NOT_APPLY
-                case 1:  # 已发过申请
-                    rsp1 = FriendHandleNotice()
-                    rsp1.status = StatusCode.StatusCode_OK
-                    if req.is_agree:
-                        # 双方添加好友
-                        db.set_friend_info(
-                            req.player_id, session.player_id, "friend_status", 2
-                        )
-                        db.set_friend_info(
-                            session.player_id, req.player_id, "friend_status", 2
-                        )
-
-                        # 成就: 交1名新朋友
-                        achieve_track.report(session, "new_friend")
-                        rsp1.type = FriendHandleType.FriendHandleType_ADD
-                        rsp1.target_player_id = req.player_id
-                        session.send(MsgId.FriendHandleNotice, rsp1, 0)
-                        for s in get_session():
-                            if s.player_id == req.player_id:
-                                rsp1.target_player_id = session.player_id
-                                s.send(MsgId.FriendHandleNotice, rsp1, 0)
-                                break
-                    else:
-                        db.set_friend_info(
-                            session.player_id, req.player_id, "friend_status", 0
-                        )
-                        # 对方不需要知道被拒绝
-                        rsp1.type = FriendHandleType.FriendHandleType_DEL
-                        rsp1.target_player_id = req.player_id
-                        session.send(MsgId.FriendHandleNotice, rsp1, 0)
-                case 2 | 3:  # 好友/黑名单
-                    if req.is_agree:
-                        rsp.status = StatusCode.StatusCode_FRIEND_NOT_APPLY
-                    else:
-                        rsp1 = FriendHandleNotice()
-                        rsp1.status = StatusCode.StatusCode_OK
-                        rsp1.type = FriendHandleType.FriendHandleType_DEL
-                        rsp1.target_player_id = req.player_id
-                        session.send(MsgId.FriendHandleNotice, rsp1, 0)
-
+        status, accepted = social.handle_friend(
+            session.player_id, req.player_id, req.is_agree
+        )
+        rsp = FriendHandleRsp(status=status)
         session.send(MsgId.FriendHandleRsp, rsp, packet_id)
+        if not accepted:
+            if status == StatusCode.StatusCode_OK:
+                # 有效拒绝：通知本地列表移除待申请项。
+                social.send_friend_notice(
+                    session.player_id,
+                    req.player_id,
+                    FriendHandleType.FriendHandleType_DEL,
+                    (),
+                    self_session=session,
+                )
+            return
+
+        # 关系已提交；成就失败不得回滚或阻止双方收到关系通知。
+        try:
+            achieve_track.report(session, "new_friend")
+        except Exception:
+            logger.exception("Failed to report new_friend achievement")
+        social.send_friend_notice(
+            session.player_id,
+            req.player_id,
+            FriendHandleType.FriendHandleType_ADD,
+            get_session(),
+            self_session=session,
+        )

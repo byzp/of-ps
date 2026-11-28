@@ -1,17 +1,10 @@
-from network.packet_handler import PacketHandler, packet_handler
-from network.msg_id import MsgId
-
-from proto.net_pb2 import (
-    BossRushLeaveStageReq,
-    BossRushLeaveStageRsp,
-    BossRushInfo,
-    StatusCode,
-)
-
-from utils import db
-from utils.res_loader import res
 import time
-from datetime import datetime
+
+from network.msg_id import MsgId
+from network.packet_handler import PacketHandler, packet_handler
+from proto.net_pb2 import BossRushLeaveStageReq, BossRushLeaveStageRsp, StatusCode
+from server import boss_rush
+import utils.db as db
 
 
 @packet_handler(MsgId.BossRushLeaveStageReq)
@@ -19,109 +12,75 @@ class Handler(PacketHandler):
     def handle(self, session, data: bytes, packet_id: int):
         req = BossRushLeaveStageReq()
         req.ParseFromString(data)
-
         rsp = BossRushLeaveStageRsp()
-        rsp.status = StatusCode.StatusCode_OK
-
-        info_blob = db.get_boss_rush_info(session.player_id, req.season_id)
-        if not info_blob:
-            rsp.stage_best_score = 0
-            rsp.best_total_score = 0
-            rsp.total_rank_ratio = 0
+        season_data = boss_rush.season(req.season_id)
+        if season_data is None or not boss_rush.season_active(season_data):
+            rsp.status = StatusCode.StatusCode_BAD_REQ
             session.send(MsgId.BossRushLeaveStageRsp, rsp, packet_id)
             return
 
-        info = BossRushInfo()
-        info.ParseFromString(info_blob)
+        with boss_rush.lock, db.transaction():
+            info, run, dirty = boss_rush.load_state(session.player_id, season_data)
+            if dirty:
+                boss_rush.save_state(session.player_id, req.season_id, info, run)
+            if (
+                not boss_rush.run_active(run)
+                or run.get("status") != "battle"
+                or not 0 <= info.current_stage_index < len(info.stage_infos)
+                or run.get("stage_index") != info.current_stage_index
+            ):
+                rsp.status = StatusCode.StatusCode_BAD_REQ
+                session.send(MsgId.BossRushLeaveStageRsp, rsp, packet_id)
+                return
+            stage = boss_rush.stage_config(season_data, info.current_stage_index)
+            damage = boss_rush.validate_battle_report(req, season_data, info.current_stage_index)
+            if damage is None or stage is None:
+                rsp.status = StatusCode.StatusCode_BAD_REQ
+                session.send(MsgId.BossRushLeaveStageRsp, rsp, packet_id)
+                return
+            now_ms = int(time.time() * 1000)
+            battle_start = int(run.get("battle_start_ms", 0) or 0)
+            battle_end = int(run.get("battle_end_ms", 0) or 0)
+            if not battle_start or not battle_end or now_ms > battle_end:
+                rsp.status = StatusCode.StatusCode_BAD_REQ
+                session.send(MsgId.BossRushLeaveStageRsp, rsp, packet_id)
+                return
 
-        total_damage_hp = req.total_damage_hp
-        win = req.win
+            stage_info = info.stage_infos[info.current_stage_index]
+            max_hp = int(stage["max_h_p"])
+            elapsed_ms = max(0, now_ms - battle_start)
+            remaining = max(0, max_hp - int(stage_info.total_score))
+            damage = min(damage, remaining)
+            passed = remaining > 0 and damage >= remaining
+            if bool(req.win) != passed:
+                rsp.status = StatusCode.StatusCode_BAD_REQ
+                session.send(MsgId.BossRushLeaveStageRsp, rsp, packet_id)
+                return
 
-        stage_index = info.current_stage_index
-        if stage_index < 0 or stage_index >= len(info.stage_infos):
-            stage_index = 0
+            stage_info.total_score += damage
+            stage_info.total_damage_hp += damage
+            stage_info.total_consume_time += elapsed_ms
+            run["damage"] += damage
+            run["elapsed_ms"] += elapsed_ms
+            if passed:
+                stage_info.is_passed = True
+                boss_rush.settle(info)
+                run["status"] = "settled"
+                run["settled_at_ms"] = now_ms
+                stage_best_score = stage_info.best_score
+            else:
+                stage_best_score = stage_info.total_score
+                # 失败后释放本阶段队伍名额，但仍禁止复用本次挑战已使用的角色。
+                run["status"] = "active"
+                run["team"] = []
+                run["team_index"] = -1
+                run["battle_start_ms"] = 0
+                run["battle_end_ms"] = 0
+            boss_rush.save_state(session.player_id, req.season_id, info, run)
+            db.del_kv(session.player_id, "boss_rush", f"{req.season_id}:battle_start")
 
-        stage_info = info.stage_infos[stage_index]
-
-        # 获取当前关卡的目标血量
-        max_hp = 0
-        for stage in res["BossRush"]["boss_rush_stage"]["datas"]:
-            if stage["i_d"] == info.season_id:
-                stage_group = stage["boss_rush_stage_group_info"]
-                if stage_index < len(stage_group):
-                    max_hp = stage_group[stage_index].get("max_h_p", 0)
-                break
-
-        # 耗时
-        total_consume_time = 0
-        if info.start_time > 0 and info.start_time < 1776000000000:
-            total_consume_time = int(time.time() * 1000) - info.start_time
-
-        # 更新最后一个team的数据
-        if len(stage_info.teams) > 0:
-            team = stage_info.teams[-1]
-            team.total_damage_hp = total_damage_hp
-            team.total_consume_time = total_consume_time
-            if max_hp > 0 and team.total_damage_hp > max_hp:
-                team.total_damage_hp = max_hp
-
-        # 累加当前对局的分数和伤害（不超过最大值）
-        stage_info.total_score += total_damage_hp
-        stage_info.total_damage_hp += total_damage_hp
-        if max_hp > 0 and stage_info.total_damage_hp > max_hp:
-            stage_info.total_damage_hp = max_hp
-        stage_info.total_consume_time += total_consume_time
-
-        # 检查是否达到目标血量
-        is_passed = False
-        if max_hp > 0 and stage_info.total_damage_hp >= max_hp:
-            stage_info.is_passed = True
-            is_passed = True
-
-        # 更新累计信息
-        info.best_total_score = 0
-        for si in info.stage_infos:
-            info.best_total_score += si.best_score
-        info.total_rank_ratio = 0
-
-        # 重置赛季时间
-
-        season_data = None
-        for s in res["BossRush"]["boss_rush_season"]["datas"]:
-            if s["i_d"] == info.season_id:
-                season_data = s
-                break
-        if season_data:
-            start_dt = datetime.strptime(season_data["start_time"], "%Y-%m-%d %H:%M:%S")
-            end_dt = datetime.strptime(season_data["end_time"], "%Y-%m-%d %H:%M:%S")
-            info.start_time = int(start_dt.timestamp() * 1000)
-            info.end_time = int(end_dt.timestamp() * 1000)
-
-        # 如果通过，触发结算
-        if is_passed:
-            info.challenge_end_time = 0
-            info.current_stage_index = -1
-            info.used_characters.clear()
-            # 结算每个stage
-            for si in info.stage_infos:
-                if si.total_score > si.best_score:
-                    si.best_score = si.total_score
-                si.total_score = 0
-                si.total_damage_hp = 0
-                si.teams.clear()
-
-            # 重新计算总最佳分数
-            info.best_total_score = 0
-            for si in info.stage_infos:
-                info.best_total_score += si.best_score
-
-        # 保存并序列化
-        db.set_boss_rush_info(
-            session.player_id, info.season_id, info.SerializeToString()
-        )
-
-        rsp.stage_best_score = stage_info.best_score
+        rsp.status = StatusCode.StatusCode_OK
+        rsp.stage_best_score = stage_best_score
         rsp.best_total_score = info.best_total_score
         rsp.total_rank_ratio = info.total_rank_ratio
-
         session.send(MsgId.BossRushLeaveStageRsp, rsp, packet_id)

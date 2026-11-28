@@ -3,6 +3,7 @@ from network.msg_id import MsgId
 
 from proto.net_pb2 import AbyssFriendRankReq, AbyssFriendRankRsp, StatusCode
 
+from server import abyss
 import utils.db as db
 from utils.rank_service import friend_ids, abyss_season_summary, fill_abyss_season_info
 from utils.pb_create import make_PlayerBriefInfo
@@ -20,6 +21,10 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = AbyssFriendRankRsp()
+        if abyss.season(req.season_id) is None:
+            rsp.status = StatusCode.StatusCode_CFG_NOT_FOUND
+            session.send(MsgId.AbyssFriendRankRsp, rsp, packet_id)
+            return
         rsp.status = StatusCode.StatusCode_OK
 
         entries = []

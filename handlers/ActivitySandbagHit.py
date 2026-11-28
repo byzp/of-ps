@@ -1,4 +1,5 @@
 from config import Config
+import logging
 import pickle
 import random
 import time
@@ -32,6 +33,8 @@ output_ceiling 产出上限, reset_type 1=每日重置(缺省不重置), special
 sandbag_state = {}
 lock_sandbag = Lock()
 _sb_loaded = [False]
+_sb_thread = [None]
+logger = logging.getLogger(__name__)
 
 
 def sb_load():
@@ -45,25 +48,31 @@ def sb_load():
             sandbag_state[pid] = st
     _sb_loaded[0] = True
 
-    def _loop():
-        while True:
-            time.sleep(5)
-            db.set_kv(
-                0,
-                "sandbag",
-                "snapshot",
-                pickle.dumps(
-                    {
-                        pid: {
-                            **st,
-                            "server_claimed": list(st["server_claimed"]),
+    if _sb_thread[0] is None or not _sb_thread[0].is_alive():
+        def _loop():
+            while True:
+                time.sleep(5)
+                if db.db is None:
+                    return
+                with lock_sandbag:
+                    snapshot = pickle.dumps(
+                        {
+                            pid: {
+                                **st,
+                                "server_claimed": list(st["server_claimed"]),
+                            }
+                            for pid, st in sandbag_state.items()
                         }
-                        for pid, st in sandbag_state.items()
-                    }
-                ),
-            )
+                    )
+                try:
+                    db.set_kv(0, "sandbag", "snapshot", snapshot)
+                except AttributeError:
+                    return
+                except Exception:
+                    logger.exception("sandbag autosave failed")
 
-    threading.Thread(target=_loop, daemon=True, name="sandbag-autosave").start()
+        _sb_thread[0] = threading.Thread(target=_loop, daemon=True, name="sandbag-autosave")
+        _sb_thread[0].start()
 
 
 def sb_save():

@@ -17,14 +17,16 @@ class Handler(PacketHandler):
         req.ParseFromString(data)
 
         rsp = PlayerLoginRsp()
-
-        player_id = session.player_id
-        if req.is_reconnect == True:
+        if req.is_reconnect and session.logged_in:
             rsp.status = StatusCode.StatusCode_FAIL
             session.send(MsgId.PlayerLoginRsp, rsp, packet_id)
             return
+
+        player_id = session.player_id
         rsp.status = StatusCode.StatusCode_OK
         rsp.server_time_ms = int(time.time() * 1000)
+        rsp.is_reconnect = req.is_reconnect
+        restored_location = False
         # 成就: 每日登录82(每自然日一次) + 队长等级36族同步
         # , 合并为一个动作帧
         with achieve_track.batch(session, notify=False):
@@ -49,9 +51,17 @@ class Handler(PacketHandler):
             or db.get_kv(player_id, "profile", "tutorial_pending", 0)
         ):
             session.scene_id = 100  # 新玩家
+            session.channel_id = scene_data.get_channel_id(player_id)
         else:
-            session.scene_id = scene_data.get_scene_id(player_id)
-        session.channel_id = scene_data.get_channel_id(player_id)
+            restored_location = scene_data.restore_session_location(session)
+            if not restored_location:
+                session.scene_id = scene_data.get_scene_id(player_id)
+                session.channel_id = scene_data.get_channel_id(player_id)
+        rsp.reconnect_success = bool(req.is_reconnect and restored_location)
+        rsp.client_seq_id = req.client_seq_id
+        rsp.server_seq_id = req.server_seq_id
         rsp.scene_id = session.scene_id
         rsp.channel_id = session.channel_id
+        session.player_name = rsp.player_name
+        session.logged_in = True
         session.send(MsgId.PlayerLoginRsp, rsp, packet_id)  # 1003,1004

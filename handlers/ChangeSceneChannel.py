@@ -4,6 +4,7 @@ from handlers.GardenPlaceCharacter import replay_placements
 
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
+from network.remote_link import sync_subscriptions
 from config import Config
 
 from proto.net_pb2 import (
@@ -15,15 +16,19 @@ from proto.net_pb2 import (
     PackNotice,
     SceneActionType,
     ChatMsgRecordInitNotice,
+    SceneWeatherChangeNotice,
 )
 
 import server.scene_data as scene_data
+import server.notice_sync as notice_sync
+from server import shared_projection
 import utils.db as db
 from utils.res_loader import res
 from utils import refresh
 from utils import mail_rewards
 from utils.pb_create import make_SceneDataNotice
 from utils import achieve_track
+from utils import weather
 
 
 @packet_handler(MsgId.ChangeSceneChannelReq)
@@ -79,11 +84,19 @@ class Handler(PacketHandler):
             and req.scene_id != session.scene_id
         ):
             db.del_kv(session.player_id, "profile", "tutorial_pending")
-        session.scene_id = req.scene_id
-        if target_sid is not None:
-            session.channel_id = target_sid.channel_id
-        else:
-            session.channel_id = req.channel_label or session.player_id
+        with shared_projection.store.locked():
+            scene_data.remove_recorder(
+                session.scene_id, session.channel_id, session.player_id
+            )
+            session.scene_id = req.scene_id
+            if target_sid is not None:
+                session.channel_id = target_sid.channel_id
+            else:
+                session.channel_id = req.channel_label or session.player_id
+            shared_projection.store.move(
+                session.player_id, session.scene_id, session.channel_id
+            )
+        scene_data.save_session_location(session, force=True)
 
         # 主线任务条件: 进入指定空间
 
@@ -103,6 +116,11 @@ class Handler(PacketHandler):
         rsp = SceneDataNotice()
         rsp.CopyFrom(make_SceneDataNotice(session))
         session.send(MsgId.SceneDataNotice, rsp, 0)
+        weather_notice = SceneWeatherChangeNotice(
+            status=StatusCode.StatusCode_OK,
+            weather_type=weather.weather_at(int(notice_sync.game_time_seconds // 3600)),
+        )
+        session.send(MsgId.SceneWeatherChangeNotice, weather_notice, 0)
 
         for i in db.get_chat_history(session.player_id):
             if not i["msg"]:
@@ -131,3 +149,4 @@ class Handler(PacketHandler):
         sd.action_type = SceneActionType.SceneActionType_ENTER
         sd.player.CopyFrom(session.scene_player)
         scene_data.up_scene_action(session.scene_id, session.channel_id, notice)
+        sync_subscriptions()

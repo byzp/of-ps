@@ -9,6 +9,7 @@ from proto.net_pb2 import (
 )
 import utils.db as db
 from server.scene_data import get_session
+from utils import garden_state
 
 """
 # 移除花园内全部家具 2611 2612 -> 2614
@@ -25,11 +26,14 @@ class Handler(PacketHandler):
         rsp.status = StatusCode.StatusCode_OK
 
         # 删除当前场景内自己放置的全部家具
+        removed = 0
         for row in db.get_furniture(session.scene_id, session.channel_id):
             if row[2] == session.player_id:
                 db.del_furniture(
                     session.scene_id, session.channel_id, session.player_id, row[3]
                 )
+                removed += 1
+        garden_state.adjust_furniture_count(session.player_id, -removed)
 
         session.send(MsgId.GardenFurnitureRemoveAllRsp, rsp, packet_id)  # 2611,2612
 

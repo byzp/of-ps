@@ -8,6 +8,7 @@ from proto.net_pb2 import PlayerBuff as _PB
 
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
+from server import social
 import time
 import logging
 
@@ -51,6 +52,8 @@ from utils.res_loader import res
 from utils.pb_create import make_SceneDataNotice, make_ScenePlayer
 from utils import quest_track
 from utils import activity_state
+from utils import action_unlock
+from utils import expression_unlock
 from network.remote_link import sync_player
 import server.notice_sync as notice_sync
 from server.scene_data import up_scene_action
@@ -209,6 +212,13 @@ class Handler(PacketHandler):
 
         rsp = PrivateChatOfflineNotice()
         rsp.status = StatusCode.StatusCode_OK
+        for entry in social.private_chat_offline(session.player_id):
+            offline = rsp.offline_msg.add()
+            offline.player_id = entry["player_id"]
+            offline.name = entry["name"]
+            offline.head = entry["head"]
+            offline.is_new_msg = entry["is_new_msg"]
+            offline.avatar_frame = entry["avatar_frame"]
         session.send(MsgId.PrivateChatOfflineNotice, rsp, 0)
 
         activity_state.send_login_notices(session)
@@ -218,6 +228,11 @@ class Handler(PacketHandler):
         for k, v in db.get_bless_tree(session.player_id).items():
             rsp.trees[k].tree_ids.extend(v)
         session.send(MsgId.BlessTreeNotice, rsp, 0)
+
+        # 永久解锁的动作(舞蹈/表情动作道具, kv ns=actions_perm)
+        action_unlock.send_perm_notice(session)
+        # 已解锁的聊天表情(tag=40 道具, kv ns=expr_perm)
+        expression_unlock.send_perm_notice(session)
 
         for notice_cls, notice_msg_id in (
             (IntimacyGiftDayCountNotice, MsgId.IntimacyGiftDayCountNotice),
@@ -275,18 +290,18 @@ class Handler(PacketHandler):
         for i in db.get_chat_history(player_id):
             if not i["msg"]:
                 continue
-            rsp = ChatMsgRecordInitNotice()
-            rsp.status = StatusCode.StatusCode_OK
-            rsp.type = i["type"]
+            history = ChatMsgRecordInitNotice()
+            history.status = StatusCode.StatusCode_OK
+            history.type = i["type"]
             for m in i["msg"]:
-                tmp = rsp.msg.add()
+                tmp = history.msg.add()
                 for k, v in m.items():
                     setattr(tmp, k, v)
-            session.send(MsgId.ChatMsgRecordInitNotice, rsp, packet_id)
+            session.send(MsgId.ChatMsgRecordInitNotice, history, packet_id)
 
-        # 视为完成登录，同步场景玩家并广播加入事件
-        if session.logged_in == False:
-            session.logged_in = True
+        # 首次完成主数据初始化后，广播一次加入事件并同步场景时间。
+        if not session.scene_announced:
+            session.scene_announced = True
 
             notice = ServerSceneSyncDataNotice()
             notice.status = StatusCode.StatusCode_OK
