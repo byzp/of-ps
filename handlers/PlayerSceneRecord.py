@@ -11,18 +11,19 @@ class Handler(PacketHandler):
         req = PlayerSceneRecordReq()
         req.ParseFromString(data)
 
-        shared_projection.store.update_from_recorder(
-            session.player_id,
-            session.scene_id,
-            session.channel_id,
-            req.data,
-        )
-        up_recorder(
-            session.scene_id,
-            session.channel_id,
-            session.player_id,
-            req.data,
-        )
+        with shared_projection.store.locked():
+            shared_projection.store.update_from_recorder(
+                session.player_id,
+                session.scene_id,
+                session.channel_id,
+                req.data,
+            )
+            up_recorder(
+                session.scene_id,
+                session.channel_id,
+                session.player_id,
+                req.data,
+            )
 
         # 更新动作和角度
         rec = req.data.char_recorder_data_lst

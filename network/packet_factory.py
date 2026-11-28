@@ -31,7 +31,15 @@ class PacketFactory:
     MAX_PENDING_BYTES = 32 * 1024 * 1024
 
     # 需要同步处理的
-    _SYNC_CMDS = frozenset((1001, 1003, 1005))
+    _SYNC_CMDS = frozenset(
+        (
+            1001,
+            1003,
+            1005,
+            MsgId.ChangeSceneChannelReq,
+            MsgId.PlayerSceneRecordReq,
+        )
+    )
 
     @classmethod
     def initialize_handlers(cls, package_name: str):

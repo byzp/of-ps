@@ -1,5 +1,6 @@
 from network.packet_handler import PacketHandler, packet_handler
 from network.msg_id import MsgId
+from network.remote_link import rsend
 
 
 from proto.net_pb2 import PopEmojiReq, PopEmojiRsp, PopEmojiNotice, StatusCode
@@ -40,6 +41,11 @@ class Handler(PacketHandler):
         for s in get_session():
             if s.scene_id == session.scene_id and s.channel_id == session.channel_id:
                 s.send(MsgId.PopEmojiNotice, notice, 0)  # 1910
+        rsend(
+            MsgId.PopEmojiNotice,
+            notice,
+            [session.scene_id, session.channel_id],
+        )
 
         rsp.status = StatusCode.StatusCode_OK
         # 成就: 发送任意表情

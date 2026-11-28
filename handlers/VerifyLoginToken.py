@@ -44,18 +44,31 @@ class Handler(PacketHandler):
                 return
 
         player_id = db.get_player_id(user_id)
+        if player_id >= Config.REMOTE_PLAYER_ID_BASE:
+            rsp.status = StatusCode.StatusCode_FAIL
+            session.send(MsgId.VerifyLoginTokenRsp, rsp, packet_id)
+            return
+        old_session = None
         with lock_session:
             for i in session_list:
                 if i is not session and i.player_id == player_id:
-                    rsp1 = PlayerOfflineRsp()
-                    rsp1.status = StatusCode.StatusCode_OK
-                    rsp1.reason = PlayerOfflineReason.PlayerOfflineReason_ANOTHER_LOGIN
-                    if i.running == True and i.logged_in == True:
-                        i.send(MsgId.PlayerOfflineRsp, rsp1, 0)
-                    i.close()
-                    i.running = False
-                    session_list.remove(i)
+                    old_session = i
                     break
+
+        if old_session is not None:
+            rsp1 = PlayerOfflineRsp()
+            rsp1.status = StatusCode.StatusCode_OK
+            rsp1.reason = PlayerOfflineReason.PlayerOfflineReason_ANOTHER_LOGIN
+            if old_session.running and old_session.logged_in:
+                old_session.send(MsgId.PlayerOfflineRsp, rsp1, 0)
+            old_session.close()
+            old_session.running = False
+            from server import notice_sync
+
+            notice_sync.finalize_session(old_session)
+            with lock_session:
+                if old_session in session_list:
+                    session_list.remove(old_session)
 
         session.verified = True
         session.player_id = player_id

@@ -9,6 +9,7 @@ import random
 import struct
 from datetime import datetime
 from config import Config
+from network.msg_id import MsgId
 from network.game_session import GameSession, snappy
 from proto.net_pb2 import (
     LinkNegotiate,
@@ -20,9 +21,10 @@ from proto.net_pb2 import (
     ChatMsgNotice,
     PlayerSceneSyncDataNotice,
     PlayerInfo,
+    PopEmojiNotice,
     ScenePlayer,
 )
-from server import lobby_state
+from server import lobby_state, shared_projection
 from server.scene_data import (
     get_session,
     up_action,
@@ -31,6 +33,7 @@ from server.scene_data import (
     up_recorder,
     _session_list as session_list,
     lock_session,
+    remove_recorder,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,6 +57,13 @@ MAX_SERVER_NAME_BYTES = 256
 DISCONNECTED = 0
 CONNECTING = 1
 CONNECTED = 2
+
+REMOTE_PLAYER_ID_BASE = Config.REMOTE_PLAYER_ID_BASE
+REMOTE_PLAYER_ID_STRIDE = Config.REMOTE_PLAYER_ID_STRIDE
+
+
+def is_remote_player_id(player_id):
+    return int(player_id) >= REMOTE_PLAYER_ID_BASE
 
 
 class _Link:
@@ -123,8 +133,15 @@ except Exception:
 def _trans_id(server, pid):
     with _lock:
         if server not in _server_ids:
-            _server_ids[server] = (len(_server_ids) + 1) * 10000
-        return _server_ids[server] + pid
+            index = len(_server_ids) + 1
+            player_id = REMOTE_PLAYER_ID_BASE + index * REMOTE_PLAYER_ID_STRIDE + int(pid)
+            if player_id > 0xFFFFFFFF:
+                raise ValueError("remote player id space exhausted")
+            _server_ids[server] = player_id - int(pid)
+        player_id = _server_ids[server] + int(pid)
+        if player_id > 0xFFFFFFFF:
+            raise ValueError("remote player id space exhausted")
+        return player_id
 
 
 def _send_raw(data, addr):
@@ -144,6 +161,7 @@ def _send_neg(addr, ntype, conv):
         server_name=_name,
         is_public=bool(Config.SELF_ADDR_IS_PUBLIC),
     )
+    logger.debug("Sending link negotiation type=%s conv=%s to %s", ntype, conv, addr)
     _send_raw(struct.pack("!B", PACKET_NEGOTIATE) + neg.SerializeToString(), addr)
 
 
@@ -193,8 +211,6 @@ def _establish_locked(link, conv, server_name, now, is_public):
         link.ever_connected = True
         _cache_dirty = True
     _conv_to_addr[conv] = link.addr
-    if server_name not in _server_ids:
-        _server_ids[server_name] = (len(_server_ids) + 1) * 10000
     queued, link.queued = link.queued, []
     link.queued_bytes = 0
     return (link.addr, conv, server_name, queued, old_conv, prev_name)
@@ -287,17 +303,31 @@ def _disconnect(addr, reason):
         _drop_remote_sessions(name)
 
 
+def _remove_remote_session_locked(session):
+    if session in session_list:
+        session_list.remove(session)
+    session.close()
+    shared_projection.store.remove(session.player_id)
+    remove_recorder(session.scene_id, session.channel_id, session.player_id)
+
+
 def _drop_remote_sessions(name):
     with lock_session:
-        for session in session_list:
+        for session in list(session_list):
             if getattr(session, "remote", False) and getattr(session, "server_name", "") == name:
-                session.close()
+                _remove_remote_session_locked(session)
 
 
 def _on_negotiate(payload, addr):
     addr = tuple(addr)
     neg = LinkNegotiate()
     neg.ParseFromString(payload)
+    logger.debug(
+        "Received link negotiation type=%s conv=%s from %s",
+        neg.type,
+        neg.conv,
+        addr,
+    )
     if _stopped.is_set():
         return
     if not 1 <= neg.conv <= 0x7FFFFFFF or len(neg.server_name.encode("utf-8")) > MAX_SERVER_NAME_BYTES:
@@ -374,7 +404,7 @@ def _pack(msg):
     data = msg.SerializeToString()
     if len(data) > MAX_LINK_MESSAGE_BYTES:
         raise ValueError("link message exceeds size limit")
-    return snappy.compress_raw(data)
+    return bytes(snappy.compress_raw(data))
 
 
 def _snappy_length(data):
@@ -392,7 +422,7 @@ def _unpack(data):
     raw_len = _snappy_length(data)
     if raw_len > MAX_LINK_MESSAGE_BYTES:
         raise ValueError("link message exceeds size limit")
-    raw = snappy.decompress_raw(data)
+    raw = bytes(snappy.decompress_raw(data))
     if len(raw) != raw_len:
         raise ValueError("invalid link message length")
     msg = LinkMessage()
@@ -464,7 +494,7 @@ def _local_subs():
     """本服有本地玩家的场景集合"""
     subs = set()
     for s in get_session():
-        if s.player_id < 1010000:
+        if not is_remote_player_id(s.player_id):
             subs.add(_sub_key(s.scene_id, s.channel_id))
     return subs
 
@@ -541,6 +571,12 @@ def _handle_data(origin, datas, mid, payload):
         rsp = SendActionNotice()
         rsp.ParseFromString(payload)
         rsp.from_player_id = _trans_id(origin, rsp.from_player_id)
+        shared_projection.store.record_action(
+            rsp.from_player_id,
+            datas[0],
+            datas[1],
+            rsp.action_id,
+        )
         up_action(datas[0], datas[1], rsp)
     elif mid == 1208:
         rsp = ServerSceneSyncDataNotice()
@@ -549,10 +585,22 @@ def _handle_data(origin, datas, mid, payload):
             d.player_id = _trans_id(origin, d.player_id)
             for sd in d.server_data:
                 if sd.action_type == SceneActionType.SceneActionType_ENTER:
-                    for s in get_session():
-                        if s.player_id == d.player_id:
-                            s.scene_id, s.channel_id = datas[0], datas[1]
-                            break
+                    with lock_session:
+                        for s in list(session_list):
+                            if s.player_id == d.player_id and getattr(s, "remote", False):
+                                if (s.scene_id, s.channel_id) != (datas[0], datas[1]):
+                                    remove_recorder(s.scene_id, s.channel_id, s.player_id)
+                                s.scene_id, s.channel_id = datas[0], datas[1]
+                                shared_projection.store.move(
+                                    s.player_id, s.scene_id, s.channel_id
+                                )
+                                break
+                elif sd.action_type == SceneActionType.SceneActionType_LEAVE:
+                    with lock_session:
+                        for s in list(session_list):
+                            if s.player_id == d.player_id and getattr(s, "remote", False):
+                                _remove_remote_session_locked(s)
+                                break
                 if sd.player.player_id:
                     sd.player.player_id = _trans_id(origin, sd.player.player_id)
         up_scene_action(datas[0], datas[1], rsp)
@@ -561,12 +609,30 @@ def _handle_data(origin, datas, mid, payload):
         rsp.ParseFromString(payload)
         rsp.msg.player_id = _trans_id(origin, rsp.msg.player_id)
         up_chat_msg(datas[0], datas[1], datas[2], rsp)
+    elif mid == MsgId.PopEmojiNotice:
+        rsp = PopEmojiNotice()
+        rsp.ParseFromString(payload)
+        rsp.from_player_id = _trans_id(origin, rsp.from_player_id)
+        shared_projection.store.record_emoji(
+            rsp.from_player_id,
+            datas[0],
+            datas[1],
+            rsp.emoji_id,
+        )
+        for session in get_session():
+            if session.scene_id == datas[0] and session.channel_id == datas[1]:
+                session.send(MsgId.PopEmojiNotice, rsp, 0)
     elif mid == 1206:
         rsp = PlayerSceneSyncDataNotice()
         rsp.ParseFromString(payload)
         for d in rsp.data:
             d.player_id = _trans_id(origin, d.player_id)
-            up_recorder(datas[0], datas[1], d.player_id, d.data[0])
+            if d.data:
+                with shared_projection.store.locked():
+                    shared_projection.store.update_from_recorder(
+                        d.player_id, datas[0], datas[1], d.data[0]
+                    )
+                    up_recorder(datas[0], datas[1], d.player_id, d.data[0])
 
 
 def _share_servers(addr):
@@ -584,7 +650,7 @@ def _share_servers(addr):
 
 def _sync_players(addr):
     for s in get_session():
-        if s.player_id < 1010000:
+        if not is_remote_player_id(s.player_id):
             msg = _make_msg(LinkMessage.PLAYER)
             msg.player_info.CopyFrom(
                 PlayerInfo(
@@ -599,6 +665,11 @@ def _sync_players(addr):
                 )
             )
             _send_to(msg, addr)
+
+
+def sync_subscriptions():
+    msg, _ = _make_state_heartbeat()
+    _broadcast(msg)
 
 
 def sync_player(session):
@@ -616,11 +687,13 @@ def sync_player(session):
         )
     )
     _broadcast(msg)
+    sync_subscriptions()
 
 
 def _on_new_server(name, addr):
     _share_servers(addr)
     _sync_players(addr)
+    sync_subscriptions()
 
 
 def _add_remote_player(origin, info):
@@ -992,9 +1065,8 @@ def stop():
         _save_cache()
     with lock_session:
         remote_sessions = [session for session in session_list if getattr(session, "remote", False)]
-        session_list[:] = [session for session in session_list if not getattr(session, "remote", False)]
-    for session in remote_sessions:
-        session.close()
+        for session in remote_sessions:
+            _remove_remote_session_locked(session)
     with _lock:
         _reset_link_state_locked()
 

@@ -102,7 +102,7 @@ E:\TapTap\PC Games\176228\launcher.exe
 
 ## Public Lobby Experiment (In Progress)
 
-The experiment branch adds shared player projections, persistent channel snapshots, low-frequency global plus AOI position sync, separate normal/bulk send queues, multiplayer metrics, host leases, and snapshot failover. It does **not** yet provide public automatic host election, multi-shard coordination, client prediction, or dozens-of-real-clients acceptance, and must not be described as a production-ready public lobby.
+The experiment branch adds shared player projections, persistent channel snapshots, low-frequency global plus AOI position sync, separate normal/bulk send queues, multiplayer metrics, host leases, and snapshot failover. Two independent real game clients have completed login, same-scene bidirectional position sync, and real NetSession chat/emoji send and receive on a hidden desktop. It does **not** yet provide public automatic host election, multi-shard coordination, client prediction, or dozens-of-real-clients acceptance, and must not be described as a production-ready public lobby.
 
 Key settings in `config.py`:
 

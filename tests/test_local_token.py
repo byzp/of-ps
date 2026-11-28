@@ -1,6 +1,6 @@
 import unittest
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from config import Config
 from handlers.VerifyLoginToken import Handler
@@ -58,6 +58,35 @@ class LocalTokenTests(unittest.TestCase):
             session = self.handle(1000001, "local-session")
         self.assertFalse(session.verified)
         self.assertEqual(session.sent[0][1].status, StatusCode.StatusCode_FAIL)
+
+    def test_duplicate_login_finalizes_old_session_before_replacement(self):
+        old = SimpleNamespace(
+            player_id=1000001,
+            player_name="old",
+            running=True,
+            logged_in=True,
+            send=Mock(),
+            close=Mock(),
+        )
+        session = FakeSession()
+        request = VerifyLoginTokenReq(
+            sdk_uid="1",
+            login_token="local-session",
+            account_type=1,
+            device_uuid="test-device",
+        )
+        with patch.object(Config, "ALLOW_LOCAL_TOKEN", True), patch.object(
+            Config, "LOCAL_TOKEN_UIDS", (1,)
+        ), patch("handlers.VerifyLoginToken.db.get_user_id", return_value=1), patch(
+            "handlers.VerifyLoginToken.db.get_player_id", return_value=1000001
+        ), patch("handlers.VerifyLoginToken.lock_session"), patch(
+            "handlers.VerifyLoginToken.session_list", [old]
+        ), patch("server.notice_sync.finalize_session") as finalize:
+            Handler().handle(session, request.SerializeToString(), 1)
+        old.close.assert_called_once()
+        finalize.assert_called_once_with(old)
+        self.assertTrue(session.verified)
+        self.assertEqual(session.player_id, 1000001)
 
     def test_wrong_token_is_rejected(self):
         with patch.object(Config, "ALLOW_LOCAL_TOKEN", True), patch.object(

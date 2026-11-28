@@ -15,7 +15,7 @@ from proto.net_pb2 import (
     StatusCode,
 )
 from network.msg_id import MsgId
-from network.remote_link import rsend
+from network.remote_link import is_remote_player_id, rsend, sync_subscriptions
 from server import lobby_state, shared_projection
 from server.scene_data import (
     _action as action,
@@ -32,7 +32,7 @@ from server.scene_data import (
     lock_scene,
     lock_scene_action,
     lock_session,
-    remove_scene_snapshot,
+    remove_recorder,
     save_session_location,
     up_scene_action,
 )
@@ -110,7 +110,7 @@ def init():
 
 def _dispatch_action(scene_id, channel_id, notice):
     """发送一个场景频道内的动作，并转发给对端服务器。"""
-    if notice.from_player_id < 1010000:
+    if not is_remote_player_id(notice.from_player_id):
         rsend(MsgId.SendActionNotice, notice, [scene_id, channel_id])
     for session in get_scene_sessions(scene_id, channel_id):
         session.send(MsgId.SendActionNotice, notice, 0)
@@ -192,22 +192,22 @@ def _broadcast_position_updates(start_t):
         local_updated = [
             (player_id, value)
             for player_id, value in updated_records
-            if player_id < 1010000
+            if not is_remote_player_id(player_id)
         ]
         remote_updated = [
             (player_id, value)
             for player_id, value in updated_records
-            if player_id >= 1010000
+            if is_remote_player_id(player_id)
         ]
         local_snapshot = [
             (player_id, value)
             for player_id, value in snapshot_records
-            if player_id < 1010000
+            if not is_remote_player_id(player_id)
         ]
         remote_snapshot = [
             (player_id, value)
             for player_id, value in snapshot_records
-            if player_id >= 1010000
+            if is_remote_player_id(player_id)
         ]
 
         key = (scene_id, channel_id)
@@ -324,30 +324,44 @@ def _save_local_session(session, timestamp):
         logger.exception("Unable to save logout time for player %s", session.player_id)
 
 
+def _finalize_session_locked(session, timestamp):
+    if getattr(session, "running", False) or not getattr(session, "logged_in", False):
+        return False
+    if _is_local(session):
+        try:
+            mail_rewards.recover_drops(session)
+        except Exception:
+            logger.exception("Unable to recover drops for player %s", session.player_id)
+    _save_local_session(session, timestamp)
+    logger.info("Player logout: %s(%s)", session.player_name, session.player_id)
+
+    notice = ServerSceneSyncDataNotice()
+    notice.status = StatusCode.StatusCode_OK
+    data = notice.data.add()
+    data.player_id = session.player_id
+    server_data = data.server_data.add()
+    server_data.action_type = SceneActionType.SceneActionType_LEAVE
+    up_scene_action(session.scene_id, session.channel_id, notice)
+    session.logged_in = False
+    with shared_projection.store.locked():
+        shared_projection.store.remove(session.player_id)
+        remove_recorder(session.scene_id, session.channel_id, session.player_id)
+    if session in session_list:
+        session_list.remove(session)
+    return True
+
+
+def finalize_session(session):
+    with lock_session:
+        finalized = _finalize_session_locked(session, time.time())
+    if finalized:
+        sync_subscriptions()
+    return finalized
+
+
 def _cleanup_disconnected_locked(timestamp):
     for session in list(session_list):
-        if getattr(session, "running", False) or not getattr(session, "logged_in", False):
-            continue
-        if _is_local(session):
-            try:
-                mail_rewards.recover_drops(session)
-            except Exception:
-                logger.exception("Unable to recover drops for player %s", session.player_id)
-        _save_local_session(session, timestamp)
-        logger.info("Player logout: %s(%s)", session.player_name, session.player_id)
-
-        notice = ServerSceneSyncDataNotice()
-        notice.status = StatusCode.StatusCode_OK
-        data = notice.data.add()
-        data.player_id = session.player_id
-        server_data = data.server_data.add()
-        server_data.action_type = SceneActionType.SceneActionType_LEAVE
-        up_scene_action(session.scene_id, session.channel_id, notice)
-        session.logged_in = False
-        shared_projection.store.remove(session.player_id)
-        remove_scene_snapshot(session.scene_id, session.channel_id, session.player_id)
-
-    session_list[:] = [session for session in session_list if getattr(session, "running", False)]
+        _finalize_session_locked(session, timestamp)
 
 
 def _shutdown_sessions_locked(timestamp):
@@ -410,7 +424,7 @@ def notice_sync_loop():
                 # 1970 玩家动作广播
                 action_count = len(action)
                 for scene_id, channel_id, action_notice in action:
-                    if action_notice.from_player_id < 1010000:
+                    if not is_remote_player_id(action_notice.from_player_id):
                         rsend(MsgId.SendActionNotice, action_notice, [scene_id, channel_id])
                     for session in session_list:
                         if session.scene_id == scene_id and session.channel_id == channel_id:
@@ -438,7 +452,7 @@ def notice_sync_loop():
                     for channel_id, channel in scene_t.items():
                         for notice in channel:
                             for data in notice.data:
-                                if data.player_id < 1010000:
+                                if not is_remote_player_id(data.player_id):
                                     rsend(
                                         MsgId.ServerSceneSyncDataNotice,
                                         notice,
@@ -464,17 +478,18 @@ def notice_sync_loop():
                                 if session.chat_channel_id == msg[0]:
                                     session.send(MsgId.ChatMsgNotice, msg[3], 0)
                 for msg in chat_msg:
-                    if msg[3].msg.player_id < 1010000:
+                    if not is_remote_player_id(msg[3].msg.player_id):
                         rsend(MsgId.ChatMsgNotice, msg[3], [msg[0], msg[1], msg[2]])
                 chat_count = len(chat_msg)
                 chat_msg.clear()
-            with lock_scene:
-                with lock_rec_list:
-                    position_count = sum(
-                        len(scene[scene_id][channel_id])
-                        for scene_id, channel_id in rec_list
-                    )
-                    _broadcast_position_updates(start_t)
+            with shared_projection.store.locked():
+                with lock_scene:
+                    with lock_rec_list:
+                        position_count = sum(
+                            len(scene[scene_id][channel_id])
+                            for scene_id, channel_id in rec_list
+                        )
+                        _broadcast_position_updates(start_t)
             if start_t - _last_stamina_sync_time > STAMINA_INTERVAL:
                 _stamina_requested.set()
                 _last_stamina_sync_time = start_t

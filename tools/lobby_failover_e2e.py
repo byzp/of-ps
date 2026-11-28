@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import queue
+import shutil
 import socket
 import subprocess
 import sys
@@ -252,6 +253,18 @@ def run(python, directory):
                 process.wait(timeout=5.0)
 
 
+def cleanup_directory(path):
+    for _ in range(40):
+        try:
+            shutil.rmtree(path)
+            return
+        except PermissionError:
+            time.sleep(0.05)
+        except FileNotFoundError:
+            return
+    raise PermissionError(f"unable to remove test directory {path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--python", default=sys.executable)
@@ -259,8 +272,8 @@ def main():
     args = parser.parse_args()
     runtime = Path(r"C:\OverFieldLab\runtime\ofps-failover-e2e")
     runtime.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="run-", dir=runtime) as temporary:
-        directory = Path(temporary)
+    directory = Path(tempfile.mkdtemp(prefix="run-", dir=runtime))
+    try:
         result = run(args.python, directory)
         if not result["passed"]:
             result["server_logs"] = {}
@@ -276,6 +289,8 @@ def main():
             args.output.write_text(text + "\n", encoding="utf-8")
         if not result["passed"]:
             raise SystemExit(1)
+    finally:
+        cleanup_directory(directory)
 
 
 if __name__ == "__main__":

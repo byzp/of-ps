@@ -21,10 +21,15 @@ from proto.net_pb2 import (
     PacketHead,
     PlayerLoginReq,
     PlayerMainDataReq,
+    PlayerMainDataRsp,
     PlayerRecorderData,
     PlayerSceneRecordReq,
+    PlayerSceneSyncDataNotice,
     PopEmojiReq,
+    SceneActionType,
+    SceneDataNotice,
     SendChatMsgReq,
+    ServerSceneSyncDataNotice,
     StatusCode,
     Vector3,
     VerifyLoginTokenReq,
@@ -70,6 +75,8 @@ class Bot:
         self.reader = None
         self.stop = threading.Event()
         self.messages = queue.Queue()
+        self.deferred = []
+        self.received_ids = []
         self.errors = []
 
     def next_id(self):
@@ -112,27 +119,45 @@ class Bot:
         self.sock.sendall(
             frame(MsgId.PlayerMainDataReq, PlayerMainDataReq().SerializeToString(), self.next_id())
         )
+        self.wait_for(MsgId.PlayerMainDataRsp, timeout=5.0)
         return self
 
     def _read_loop(self):
         try:
             while not self.stop.is_set():
                 head, body = recv_packet(self.sock)
+                self.received_ids.append(head.msg_id)
                 self.messages.put((head.msg_id, body))
         except Exception as error:
             if not self.stop.is_set():
                 self.errors.append(f"{type(error).__name__}: {error}")
 
+    def next_message(self, timeout=0.0):
+        if self.deferred:
+            return self.deferred.pop(0)
+        return self.messages.get(timeout=timeout)
+
     def wait_for(self, msg_id, timeout=5.0):
         deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            try:
-                current_id, body = self.messages.get(timeout=0.1)
-            except queue.Empty:
-                continue
-            if current_id == msg_id:
-                return current_id, body
-        raise TimeoutError(f"message {msg_id} not received")
+        pending = []
+        try:
+            while time.monotonic() < deadline:
+                if self.deferred:
+                    current_id, body = self.deferred.pop(0)
+                else:
+                    try:
+                        current_id, body = self.messages.get(timeout=0.1)
+                    except queue.Empty:
+                        continue
+                if current_id == msg_id:
+                    return current_id, body
+                pending.append((current_id, body))
+            raise TimeoutError(
+                f"player {self.uid}: message {msg_id} not received; "
+                f"recent={self.received_ids[-20:]}; first={self.received_ids[:10]}"
+            )
+        finally:
+            self.deferred = pending + self.deferred
 
     def send_position(self, x, y, z=0):
         data = PlayerRecorderData()
@@ -168,11 +193,50 @@ class Bot:
         self.stop.set()
         if self.sock is not None:
             try:
+                self.sock.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+            try:
                 self.sock.close()
             except OSError:
                 pass
         if self.reader is not None:
             self.reader.join(timeout=1.0)
+
+
+def wait_for_scene_action(bot, player_id, action_type, timeout=5.0):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            msg_id, body = bot.next_message(timeout=0.1)
+        except queue.Empty:
+            continue
+        if msg_id != MsgId.ServerSceneSyncDataNotice:
+            continue
+        notice = ServerSceneSyncDataNotice.FromString(body)
+        for item in notice.data:
+            if item.player_id != player_id:
+                continue
+            if any(
+                action.action_type == action_type
+                for action in item.server_data
+            ):
+                return True
+    return False
+
+
+def wait_for_scene_roster(bot, player_id, timeout=5.0):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            msg_id, body = bot.next_message(timeout=0.1)
+        except queue.Empty:
+            continue
+        if msg_id == MsgId.SceneDataNotice:
+            notice = SceneDataNotice.FromString(body)
+            if any(item.player_id == player_id for item in notice.data.players):
+                return True
+    return False
 
 
 def run(host, port):
@@ -182,6 +246,15 @@ def run(host, port):
         first = Bot(1000000, host, port).start()
         second = Bot(1000001, host, port).start()
         bots = [first, second]
+
+        result["checks"]["enter_visible_to_existing_player"] = wait_for_scene_action(
+            first,
+            second.player_id,
+            SceneActionType.SceneActionType_ENTER,
+        )
+        result["checks"]["initial_roster_contains_existing_player"] = wait_for_scene_roster(
+            second, first.player_id
+        )
 
         for index in range(10):
             first.send_position(index * 2, 0)

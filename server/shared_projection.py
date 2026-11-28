@@ -56,6 +56,9 @@ class ProjectionStore:
         self._lock = threading.RLock()
         self._items: Dict[int, SharedProjection] = {}
 
+    def locked(self):
+        return self._lock
+
     def update(self, projection: SharedProjection) -> SharedProjection:
         with self._lock:
             previous = self._items.get(projection.player_id)
@@ -212,7 +215,7 @@ class ProjectionStore:
                     emoji_id=int(data.get("emoji_id", 0)),
                     version=int(data.get("version", 1)),
                     updated_at=float(data.get("updated_at", 0.0)),
-                    restored=bool(data.get("restored", True)),
+                    restored=True,
                 )
             self._items = restored
             metrics_registry.metrics.set("ofps.projection.active", len(restored))

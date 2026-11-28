@@ -101,6 +101,7 @@ class GameSession:
         "running",
         "verified",
         "logged_in",
+        "scene_announced",
         "remote",
         "rate_limiter",
     )
@@ -178,6 +179,7 @@ class GameSession:
         self.running = True
         self.verified = False
         self.logged_in = False
+        self.scene_announced = False
         self.remote = False
         self.rate_limiter = SessionRateLimiter(
             {
@@ -281,6 +283,9 @@ class GameSession:
             sender = self._send_thread
             if sender is not None and sender is not current_thread():
                 sender.join(timeout=self.WRITE_TIMEOUT + 1.0)
+            from server import notice_sync
+
+            notice_sync.finalize_session(self)
             self._unregister()
             self.closed.set()
 

@@ -185,6 +185,16 @@ def get_scene_snapshot(scene_id: int, channel_id: int):
         return get_scene_snapshot_unlocked(scene_id, channel_id)
 
 
+def remove_recorder(scene_id: int, channel_id: int, player_id: int) -> None:
+    with lock_scene:
+        players = _scene.get(scene_id, {}).get(channel_id)
+        if players is not None:
+            players.pop(player_id, None)
+        snapshot_players = _scene_snapshot.get(scene_id, {}).get(channel_id)
+        if snapshot_players is not None:
+            snapshot_players.pop(player_id, None)
+
+
 def remove_scene_snapshot(scene_id: int, channel_id: int, player_id: int) -> None:
     with lock_scene:
         players = _scene_snapshot.get(scene_id, {}).get(channel_id)

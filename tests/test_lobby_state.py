@@ -82,6 +82,7 @@ class LobbyStateTests(unittest.TestCase):
         self.assertEqual(projection.action_id, 99)
         self.assertEqual(projection.emoji_id, 88)
         self.assertEqual(projection.version, 3)
+        self.assertTrue(projection.restored)
         snapshot = scene_data.get_scene_snapshot(1, 2)
         self.assertIn(1000000, snapshot)
         self.assertEqual(snapshot[1000000].char_recorder_data_lst[0].pos.x, 1)
@@ -207,7 +208,7 @@ class LobbyStateTests(unittest.TestCase):
 
     def test_maintenance_loop_renews_lease(self):
         renewed = threading.Event()
-        with patch.object(Config, "LOBBY_LEASE_SECONDS", 0.03), patch.object(
+        with patch.object(Config, "LOBBY_LEASE_SECONDS", 0.2), patch.object(
             Config, "LOBBY_SNAPSHOT_INTERVAL_SEC", 100.0
         ):
             server = GameServer()
@@ -257,6 +258,16 @@ class LobbyHostLeaseTests(unittest.TestCase):
         lease = lobby_state.LobbyHostLease("host-a", 2, 10.0)
         with self.assertRaises(lobby_state.StaleEpochError):
             lease.renew(epoch=1)
+
+    def test_expired_lease_cannot_be_renewed(self):
+        now = [100.0]
+        lease = lobby_state.LobbyHostLease(
+            "host-a", 1, 1.0, clock=lambda: now[0]
+        )
+        now[0] = 102.0
+        with self.assertRaises(lobby_state.StaleEpochError):
+            lease.renew()
+        self.assertFalse(lease.is_valid())
 
     def test_expired_lease_fails_assertion(self):
         now = [100.0]

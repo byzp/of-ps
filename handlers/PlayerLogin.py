@@ -58,6 +58,8 @@ class Handler(PacketHandler):
                 session.scene_id = scene_data.get_scene_id(player_id)
                 session.channel_id = scene_data.get_channel_id(player_id)
         rsp.reconnect_success = bool(req.is_reconnect and restored_location)
+        rsp.client_seq_id = req.client_seq_id
+        rsp.server_seq_id = req.server_seq_id
         rsp.scene_id = session.scene_id
         rsp.channel_id = session.channel_id
         session.player_name = rsp.player_name

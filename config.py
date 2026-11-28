@@ -113,6 +113,8 @@ class Config:
     SELF_ADDR = ("127.0.0.1", 11000)
     LINK_POOL = []
     LINK_POOL_CACHE = "./link_pool.json"
+    REMOTE_PLAYER_ID_BASE = 1_000_000_000
+    REMOTE_PLAYER_ID_STRIDE = 1_000_000
 
     # database
     DB_PATH = "./player.db"

@@ -26,22 +26,24 @@ class StaleEpochError(LobbyStateError):
 
 def capture_lobby_state(host_id, epoch):
     scene_snapshots = {}
-    for scene_id, channels in export_scene_snapshots().items():
-        scene_snapshots[str(scene_id)] = {}
-        for channel_id, players in channels.items():
-            scene_snapshots[str(scene_id)][str(channel_id)] = {
-                str(player_id): base64.b64encode(payload).decode("ascii")
-                for player_id, payload in players.items()
-            }
+    with shared_projection.store.locked():
+        for scene_id, channels in export_scene_snapshots().items():
+            scene_snapshots[str(scene_id)] = {}
+            for channel_id, players in channels.items():
+                scene_snapshots[str(scene_id)][str(channel_id)] = {
+                    str(player_id): base64.b64encode(payload).decode("ascii")
+                    for player_id, payload in players.items()
+                }
+        projections = {
+            str(player_id): projection
+            for player_id, projection in shared_projection.store.snapshot().items()
+        }
     return {
         "version": STATE_VERSION,
         "host_id": str(host_id),
         "epoch": int(epoch),
         "captured_at": time.time(),
-        "projections": {
-            str(player_id): projection
-            for player_id, projection in shared_projection.store.snapshot().items()
-        },
+        "projections": projections,
         "scene_snapshots": scene_snapshots,
     }
 
@@ -190,7 +192,10 @@ class LobbyHostLease:
         with self._lock:
             if epoch is not None and int(epoch) != self.epoch:
                 raise StaleEpochError("cannot renew a lease with a stale epoch")
-            self._lease_until = self._clock() + self.lease_seconds
+            current = self._clock()
+            if current >= self._lease_until:
+                raise StaleEpochError("cannot renew an expired host lease")
+            self._lease_until = current + self.lease_seconds
 
     def is_valid(self, now=None):
         with self._lock:

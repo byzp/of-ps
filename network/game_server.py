@@ -9,7 +9,7 @@ from config import Config
 from network.game_session import GameSession
 from network.packet_factory import PacketFactory
 from server import lobby_state, shared_projection
-from server.scene_data import _session_list as session_list, lock_session, remove_scene_snapshot
+from server.scene_data import _session_list as session_list, lock_session, remove_recorder
 import server.notice_sync as notice_sync
 
 logger = logging.getLogger(__name__)
@@ -176,7 +176,7 @@ class GameServer:
                     for projection in shared_projection.store.prune_restored(
                         Config.LOBBY_RESTORED_PROJECTION_TTL_SEC
                     ):
-                        remove_scene_snapshot(
+                        remove_recorder(
                             projection.scene_id,
                             projection.channel_id,
                             projection.player_id,

@@ -299,9 +299,9 @@ class Handler(PacketHandler):
                     setattr(tmp, k, v)
             session.send(MsgId.ChatMsgRecordInitNotice, history, packet_id)
 
-        # 视为完成登录，同步场景玩家并广播加入事件
-        if session.logged_in == False:
-            session.logged_in = True
+        # 首次完成主数据初始化后，广播一次加入事件并同步场景时间。
+        if not session.scene_announced:
+            session.scene_announced = True
 
             notice = ServerSceneSyncDataNotice()
             notice.status = StatusCode.StatusCode_OK
